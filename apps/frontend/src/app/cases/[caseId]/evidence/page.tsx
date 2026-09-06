@@ -172,8 +172,7 @@ function EvidenceContent() {
       </div>
 
       <div className="mt-12">
-        {/* For Milestone 8 demonstration, we hardcode doc-1. A real system would list documents and allow selecting one. */}
-        <ExtractionReviewPanel documentId="doc-1" />
+        <ExtractionReviewPanel documentId="doc-1" caseId={caseId} />
       </div>
 
     </div>

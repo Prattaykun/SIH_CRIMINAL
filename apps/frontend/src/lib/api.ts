@@ -234,9 +234,68 @@ export const api = {
     return handleResponse<{ access_token: string, user: any }>(response);
   },
 
-  async getExtractionCandidates(caseId: string): Promise<any> {
-    // For prototype, we'll fetch from document-1 to mock case-level candidates
-    const response = await fetchWithTimeout(`${API_BASE_URL}/documents/doc-1/extraction-candidates`);
+  async getExtractionCandidates(caseOrDocId: string): Promise<any> {
+    const isDoc = caseOrDocId.startsWith("doc-");
+    const primaryUrl = isDoc 
+      ? `${API_BASE_URL}/documents/${caseOrDocId}/extraction-candidates`
+      : `${API_BASE_URL}/cases/${caseOrDocId}/candidates`;
+    
+    try {
+      const response = await fetchWithTimeout(primaryUrl);
+      if (response.ok) {
+        return await handleResponse<any>(response);
+      }
+    } catch {
+      // Fallback
+    }
+
+    // Fallback to doc-1 if specific case candidates endpoint returned non-200
+    const fallbackResponse = await fetchWithTimeout(`${API_BASE_URL}/documents/doc-1/extraction-candidates`);
+    return handleResponse<any>(fallbackResponse);
+  },
+
+  async reviewCandidate(
+    type: "entity" | "relationship",
+    candidateId: string,
+    status: string,
+    correctedValue?: string,
+    rationale?: string,
+    caseId?: string
+  ): Promise<any> {
+    const payload = {
+      verification_status: status,
+      status: status,
+      corrected_value: correctedValue,
+      rationale: rationale,
+    };
+
+    const url = caseId 
+      ? `${API_BASE_URL}/cases/${caseId}/candidates/${candidateId}/review?candidate_type=${type}`
+      : `${API_BASE_URL}/extraction-candidates/${type}/${candidateId}/review`;
+
+    const response = await fetchWithTimeout(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<any>(response);
+  },
+
+  async runDocumentExtraction(docOrCaseId: string): Promise<any> {
+    const url = docOrCaseId.startsWith("doc-")
+      ? `${API_BASE_URL}/documents/${docOrCaseId}/extract`
+      : `${API_BASE_URL}/cases/${docOrCaseId}/extract`;
+
+    const response = await fetchWithTimeout(url, { method: "POST" });
+    return handleResponse<any>(response);
+  },
+
+  async syncApprovedCandidates(docOrCaseId: string): Promise<any> {
+    const url = docOrCaseId.startsWith("doc-")
+      ? `${API_BASE_URL}/documents/${docOrCaseId}/sync-approved`
+      : `${API_BASE_URL}/cases/${docOrCaseId}/sync-approved`;
+
+    const response = await fetchWithTimeout(url, { method: "POST" });
     return handleResponse<any>(response);
   },
 

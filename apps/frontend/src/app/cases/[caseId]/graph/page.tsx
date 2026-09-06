@@ -4,27 +4,35 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { CaseResponse, GraphResponse } from '@/types/api';
+import { CaseResponse, GraphResponse, GraphHealthResponse } from '@/types/api';
 import { NetworkGraph } from '@/components/graph/NetworkGraph';
 
 export default function GraphPage() {
   const { caseId } = useParams() as { caseId: string };
   const [caseData, setCaseData] = useState<CaseResponse | null>(null);
   const [graphData, setGraphData] = useState<GraphResponse | null>(null);
+  const [health, setHealth] = useState<GraphHealthResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<{ message: string, graphUnavailable: boolean } | null>(null);
   const [depth, setDepth] = useState(500); // UI max bound for limit
+  const [reloadKey, setReloadKey] = useState(0);
+  const [isSnapshotMode, setIsSnapshotMode] = useState(false);
 
   useEffect(() => {
     async function loadGraph() {
       try {
         setLoading(true);
         setError(null);
-        const caseRes = await api.getCase(caseId);
-        setCaseData(caseRes);
+        const [caseRes, healthRes] = await Promise.all([
+          api.getCase(caseId).catch(() => null),
+          api.getGraphHealth().catch(() => null),
+        ]);
+        if (caseRes) setCaseData(caseRes);
+        setHealth(healthRes);
         
         const graphRes = await api.getCaseGraph(caseId, depth);
         setGraphData(graphRes);
+        setIsSnapshotMode(false);
       } catch (err: unknown) {
         const errorObj = err as { message?: string; graphUnavailable?: boolean };
         setError({
@@ -36,7 +44,30 @@ export default function GraphPage() {
       }
     }
     loadGraph();
-  }, [caseId, depth]);
+  }, [caseId, depth, reloadKey]);
+
+  const handleRetry = () => {
+    setIsSnapshotMode(false);
+    setReloadKey(prev => prev + 1);
+  };
+
+  const handleLoadSnapshot = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const { getMockCaseGraph } = await import('@/lib/mockGraphData');
+      const snapshot = getMockCaseGraph(caseId);
+      setGraphData(snapshot);
+      setIsSnapshotMode(true);
+    } catch (err: unknown) {
+      setError({
+        message: 'Failed to load snapshot: ' + (err instanceof Error ? err.message : String(err)),
+        graphUnavailable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -65,14 +96,21 @@ export default function GraphPage() {
                 Mock Mode
               </span>
             )}
+            {isSnapshotMode && (
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/40 px-2 py-0.5 rounded">
+                Offline Snapshot (Seeded)
+              </span>
+            )}
           </h2>
         </div>
 
         {graphData && (
           <div className="flex items-center gap-4 bg-slate-900 border border-slate-700 px-4 py-2 rounded-lg text-sm">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span className="text-slate-300">Neo4j Online</span>
+              <span className={`w-2 h-2 rounded-full ${health?.neo4j_available ? 'bg-emerald-500' : isSnapshotMode ? 'bg-blue-500' : api.isMockEnabled() ? 'bg-purple-500' : 'bg-amber-500'}`}></span>
+              <span className="text-slate-300">
+                {health?.neo4j_available ? 'Neo4j Online' : isSnapshotMode ? 'Seeded Snapshot' : api.isMockEnabled() ? 'Mock Graph' : 'Neo4j Offline'}
+              </span>
             </div>
             <div className="w-px h-4 bg-slate-700"></div>
             <div className="text-slate-400">
@@ -111,12 +149,20 @@ export default function GraphPage() {
             {error.graphUnavailable ? 'Graph Synchronization Offline' : 'Failed to Load Graph'}
           </h3>
           <p className="text-slate-400 max-w-md mb-6">{error.message}</p>
-          <button 
-            onClick={() => setDepth(depth)} // re-trigger effect
-            className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition border border-slate-700"
-          >
-            Retry Connection
-          </button>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={handleRetry}
+              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg transition"
+            >
+              Retry Connection
+            </button>
+            <button 
+              onClick={handleLoadSnapshot}
+              className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-sm rounded-lg transition border border-slate-700"
+            >
+              Load Seeded Snapshot (Read-Only)
+            </button>
+          </div>
         </div>
       ) : graphData?.nodes.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-xl bg-slate-900/50 p-8 text-center">

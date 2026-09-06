@@ -110,11 +110,15 @@ export function NetworkGraph({ data }: NetworkGraphProps) {
           style: {
             'background-color': 'data(color)',
             'label': 'data(label)',
-            'color': '#f8fafc',
-            'font-size': 12,
             'text-valign': 'bottom',
             'text-halign': 'center',
             'text-margin-y': 6,
+            'font-size': '11px',
+            'color': '#cbd5e1',
+            'text-background-opacity': 0.7,
+            'text-background-color': '#0f172a',
+            'text-background-padding': '2px',
+            'text-background-shape': 'roundrectangle',
             'width': 32,
             'height': 32,
             'border-width': 2,
@@ -128,14 +132,14 @@ export function NetworkGraph({ data }: NetworkGraphProps) {
             'line-color': '#475569',
             'target-arrow-color': '#475569',
             'target-arrow-shape': 'triangle',
-            'curve-style': 'bezier',
             'label': 'data(label)',
-            'font-size': 10,
-            'color': '#cbd5e1',
+            'curve-style': 'bezier',
+            'font-size': '9px',
+            'color': '#94a3b8',
             'text-rotation': 'autorotate',
-            'text-background-opacity': 1,
+            'text-background-opacity': 0.8,
             'text-background-color': '#0f172a',
-            'text-background-padding': '2px'
+            'text-background-padding': '1px'
           }
         },
         // Edge statuses
@@ -187,9 +191,11 @@ export function NetworkGraph({ data }: NetworkGraphProps) {
       layout: {
         name: 'cose',
         animate: false,
-        randomize: true,
-        nodeRepulsion: () => 4000,
-        idealEdgeLength: () => 100,
+        randomize: false,
+        nodeDimensionsIncludeLabels: true,
+        idealEdgeLength: () => 120,
+        nodeRepulsion: () => 8000,
+        padding: 40,
       }
     });
 

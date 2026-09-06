@@ -10,7 +10,15 @@ export function getMockCaseGraph(caseId: string): GraphResponse {
       entity_type: 'PERSON',
       case_id: caseId,
       source_document_ids: ['DOC001'],
-      properties: { name: 'John Doe Synthetic', person_id: 'P001' }
+      properties: { name: 'Aditya Malhotra', person_id: 'P001' }
+    },
+    {
+      id: 'ORG001',
+      label: 'Organization',
+      entity_type: 'ORGANIZATION',
+      case_id: caseId,
+      source_document_ids: ['DOC001'],
+      properties: { name: 'Apex Traders', org_id: 'ORG001' }
     },
     {
       id: 'P002',
@@ -18,7 +26,7 @@ export function getMockCaseGraph(caseId: string): GraphResponse {
       entity_type: 'PERSON',
       case_id: caseId,
       source_document_ids: ['DOC001'],
-      properties: { name: 'Jane Roe Synthetic', person_id: 'P002' }
+      properties: { name: 'Priya Sharma', person_id: 'P002' }
     },
     {
       id: 'PH001',
@@ -26,7 +34,7 @@ export function getMockCaseGraph(caseId: string): GraphResponse {
       entity_type: 'PHONE',
       case_id: caseId,
       source_document_ids: ['DOC002'],
-      properties: { phone_number: '+15550100123' }
+      properties: { phone_number: '+91 98765 43210' }
     },
     {
       id: 'V001',
@@ -34,7 +42,7 @@ export function getMockCaseGraph(caseId: string): GraphResponse {
       entity_type: 'VEHICLE',
       case_id: caseId,
       source_document_ids: ['DOC003'],
-      properties: { license_plate: 'SYN-1234', make: 'Generic Motors', model: 'Sedan' }
+      properties: { license_plate: 'DL-01-AB-1234', make: 'Hyundai', model: 'Creta' }
     },
     {
       id: 'LOC001',
@@ -42,7 +50,7 @@ export function getMockCaseGraph(caseId: string): GraphResponse {
       entity_type: 'LOCATION',
       case_id: caseId,
       source_document_ids: ['DOC004'],
-      properties: { address: '123 Synthetic Ave, Testville' }
+      properties: { address: 'Sector 18 Warehouse, Noida' }
     },
     {
       id: 'BA001',
@@ -50,7 +58,7 @@ export function getMockCaseGraph(caseId: string): GraphResponse {
       entity_type: 'BANK_ACCOUNT',
       case_id: caseId,
       source_document_ids: ['DOC005'],
-      properties: { account_number: 'ACCT-9999-8888', bank_name: 'Test Bank' }
+      properties: { account_number: 'HDFC-ACCT-40912', bank_name: 'HDFC Bank' }
     },
     {
       id: 'CASE001',
@@ -58,7 +66,7 @@ export function getMockCaseGraph(caseId: string): GraphResponse {
       entity_type: 'CASE',
       case_id: caseId,
       source_document_ids: [],
-      properties: { title: 'Synthetic Demo Case', case_number: caseId }
+      properties: { title: 'Synthetic Syndicate Operations', case_number: caseId }
     }
   ];
 

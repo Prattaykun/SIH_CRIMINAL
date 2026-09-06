@@ -9,19 +9,23 @@ import ExtractionStatus from "./ExtractionStatus";
 import { api } from "@/lib/api";
 
 interface Props {
-  documentId: string;
+  documentId?: string;
+  caseId?: string;
 }
 
-export default function ExtractionReviewPanel({ documentId }: Props) {
+export default function ExtractionReviewPanel({ documentId, caseId }: Props) {
+  const targetId = caseId || documentId || "doc-1";
   const [entities, setEntities] = useState<EntityCandidate[]>([]);
   const [relationships, setRelationships] = useState<RelationshipCandidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<{ message: string; isSuccess: boolean } | null>(null);
 
   const fetchCandidates = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await api.getExtractionCandidates(documentId);
+      setError(null);
+      const data = await api.getExtractionCandidates(targetId);
       setEntities(data.entities || []);
       setRelationships(data.relationships || []);
     } catch (err: unknown) {
@@ -29,11 +33,11 @@ export default function ExtractionReviewPanel({ documentId }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [documentId]);
+  }, [targetId]);
 
   useEffect(() => {
     let active = true;
-    api.getExtractionCandidates(documentId)
+    api.getExtractionCandidates(targetId)
       .then(data => {
         if (active) {
           setEntities(data.entities || []);
@@ -51,77 +55,101 @@ export default function ExtractionReviewPanel({ documentId }: Props) {
     return () => {
       active = false;
     };
-  }, [documentId]);
+  }, [targetId]);
 
-  const handleReview = async (type: "entity" | "relationship", id: string, status: VerificationStatus, correctedValue?: string, rationale?: string) => {
+  const handleReview = async (
+    type: "entity" | "relationship", 
+    id: string, 
+    status: VerificationStatus, 
+    correctedValue?: string, 
+    rationale?: string
+  ) => {
     try {
-      const res = await fetch(`/api/v1/extraction-candidates/${type}/${id}/review`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ verification_status: status, corrected_value: correctedValue, rationale })
-      });
-      if (!res.ok) throw new Error("Review failed");
+      await api.reviewCandidate(type, id, status, correctedValue, rationale, caseId);
       
-      // Update local state
+      // Update local state smoothly
       if (type === "entity") {
         setEntities(prev => prev.map(e => e.id === id ? { ...e, verification_status: status } : e));
       } else {
         setRelationships(prev => prev.map(r => r.id === id ? { ...r, verification_status: status } : r));
       }
     } catch (err: unknown) {
-      alert("Error: " + (err instanceof Error ? err.message : String(err)));
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Review action failed: ${msg}`);
     }
   };
 
   const handleSync = async () => {
     try {
-      const res = await fetch(`/api/v1/documents/${documentId}/sync-approved`, { method: "POST" });
-      if (!res.ok) throw new Error("Sync failed");
-      const data = await res.json();
-      alert("Sync completed: " + data.status);
+      setSyncStatus(null);
+      const data = await api.syncApprovedCandidates(targetId);
+      const isSuccess = data?.status === "SUCCESS";
+      setSyncStatus({
+        message: isSuccess 
+          ? "Successfully synced approved candidates to graph." 
+          : `Sync status: ${data?.status || 'QUEUED'} (${data?.reason || 'Graph synchronization stored'})`,
+        isSuccess,
+      });
     } catch (err: unknown) {
-      alert("Sync Error: " + (err instanceof Error ? err.message : String(err)));
+      setSyncStatus({
+        message: `Graph synchronization offline: ${err instanceof Error ? err.message : String(err)}`,
+        isSuccess: false,
+      });
     }
   };
 
   const handleExtract = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/v1/documents/${documentId}/extract`, { method: "POST" });
-      if (!res.ok) throw new Error("Extraction failed");
+      setError(null);
+      await api.runDocumentExtraction(targetId);
       await fetchCandidates();
     } catch (err: unknown) {
-      alert("Extraction Error: " + (err instanceof Error ? err.message : String(err)));
+      setError(`Extraction notice: ${err instanceof Error ? err.message : String(err)}`);
       setLoading(false);
     }
   };
 
-  if (loading) return <div className="p-4 text-center">Loading extraction candidates...</div>;
-  if (error) return <div className="p-4 text-red-400">Error: {error}</div>;
+  if (loading) return <div className="p-4 text-center text-slate-400">Loading extraction candidates...</div>;
 
   const pendingCount = [...entities, ...relationships].filter(x => x.verification_status === "UNREVIEWED").length;
 
   return (
     <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-lg p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-[var(--color-text-primary)]">NLP Document Extraction Review</h2>
+        <div>
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">NLP Document Extraction Review</h2>
+          <p className="text-xs text-slate-400 mt-0.5">Human-in-the-loop candidate verification for evidence traceability</p>
+        </div>
         <div className="space-x-2">
-          <button onClick={handleExtract} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-white">
+          <button onClick={handleExtract} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-white text-sm font-medium transition">
             Run Extraction
           </button>
           <button 
             onClick={handleSync} 
             disabled={pendingCount > 0}
-            className={`px-4 py-2 rounded text-white ${pendingCount > 0 ? "bg-gray-600 cursor-not-allowed" : "bg-green-600 hover:bg-green-500"}`}
+            className={`px-4 py-2 rounded text-white text-sm font-medium transition ${pendingCount > 0 ? "bg-gray-600 cursor-not-allowed opacity-60" : "bg-green-600 hover:bg-green-500"}`}
           >
             Sync Verified to Graph
           </button>
         </div>
       </div>
 
-      <div className="bg-yellow-900 border-l-4 border-yellow-500 p-4 mb-6">
+      {syncStatus && (
+        <div className={`p-3 mb-4 rounded text-sm ${syncStatus.isSuccess ? 'bg-green-950/60 border border-green-700/50 text-green-300' : 'bg-amber-950/60 border border-amber-700/50 text-amber-300'}`}>
+          {syncStatus.message}
+        </div>
+      )}
+
+      {error && (
+        <div className="p-3 mb-4 rounded text-sm bg-red-950/60 border border-red-700/50 text-red-300">
+          {error}
+        </div>
+      )}
+
+      <div className="bg-yellow-900/40 border-l-4 border-yellow-500 p-4 mb-6 rounded-r">
         <p className="text-yellow-200 text-sm font-bold">Synthetic Data &amp; Verification Warning</p>
-        <p className="text-yellow-100 text-sm mt-1">
+        <p className="text-yellow-100 text-xs mt-1 leading-relaxed">
           Models trained on synthetic data do not represent real-world accuracy. Predictions are for investigative prioritization only and require human verification. Do not interpret as claims of wrongdoing.
         </p>
       </div>

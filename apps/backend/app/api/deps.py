@@ -16,6 +16,42 @@ from apps.backend.app.models.case import Case
 from apps.backend.app.services.audit import log_action
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_PREFIX}/auth/login")
+oauth2_optional_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_PREFIX}/auth/login", auto_error=False)
+
+
+def get_optional_user(
+    db: Annotated[Session, Depends(get_db)],
+    token: Annotated[str | None, Depends(oauth2_optional_scheme)],
+) -> User | None:
+    """Validate JWT if token is provided; return None if unauthenticated or invalid."""
+    if not token:
+        return None
+    try:
+        unverified_headers = jwt.get_unverified_headers(token)
+        if unverified_headers.get("alg") != ALGORITHM:
+            return None
+
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={
+                "verify_signature": True,
+                "verify_exp": True,
+                "verify_sub": True,
+                "require_exp": True,
+                "require_sub": True,
+            },
+        )
+        user_id: str = payload.get("sub")
+        if not user_id:
+            return None
+        user = db.query(User).filter(User.id == user_id).first()
+        if user and user.is_active:
+            return user
+        return None
+    except Exception:
+        return None
 
 
 def get_current_user(

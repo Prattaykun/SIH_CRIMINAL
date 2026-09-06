@@ -1,5 +1,5 @@
 """Extraction Pydantic schemas."""
-from typing import Literal, List, Optional
+from typing import Literal, List, Optional, Any
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 VerificationStatus = Literal["UNREVIEWED", "ACCEPTED", "REJECTED", "CORRECTED", "NEEDS_MORE_INFORMATION"]
@@ -100,9 +100,20 @@ class DocumentExtractionResult(BaseModel):
     version: str
 
 class ReviewDecision(BaseModel):
-    verification_status: VerificationStatus
+    verification_status: VerificationStatus = "ACCEPTED"
+    status: Optional[VerificationStatus] = None
     corrected_value: Optional[str] = None
     rationale: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def handle_status_alias(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "status" in data and ("verification_status" not in data or not data.get("verification_status")):
+                data["verification_status"] = data["status"]
+            elif "verification_status" in data and ("status" not in data or not data.get("status")):
+                data["status"] = data["verification_status"]
+        return data
 
     @model_validator(mode="after")
     def validate_dependencies(self) -> 'ReviewDecision':
