@@ -132,11 +132,12 @@ class TestGraphAPIEndpointsOffline:
 
     @patch("apps.backend.app.graph.driver.neo4j_manager.is_available")
     def test_get_case_graph_offline(self, mock_is_available, admin_client):
-        """Endpoints return 503 when Neo4j is offline."""
+        """Endpoints return 200 via PostgreSQL fallback when Neo4j is offline."""
         mock_is_available.return_value = False
         response = admin_client.get("/api/v1/cases/case_123/graph")
-        assert response.status_code == 503
-        assert "unavailable" in response.json()["detail"].lower()
+        assert response.status_code == 200
+        data = response.json()
+        assert "nodes" in data
 
 
 @pytest.mark.neo4j

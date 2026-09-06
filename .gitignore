@@ -38,7 +38,7 @@ htmlcov/
 coverage.xml
 *.cover
 *.log
-apps/backend/model_artifacts/artifacts/2026/09/05/
+apps/backend/model_artifacts/artifacts/
 
 # Databases & local state
 *.db
