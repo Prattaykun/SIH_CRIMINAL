@@ -92,19 +92,22 @@ class DocumentExtractionService:
 
         # 1. Regex Patterns
         patterns = {
-            "PHONE_NUMBER": r'(\+?91[-\s]?)?[6-9]\d{9}|\+1\d{10}',
+            "PHONE_NUMBER": r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|(?:\+?91[-\s]?)?[6-9]\d{9}|\+1\d{10}',
             "VEHICLE": r'\b[A-Z]{2}[-\s]?\d{2}[-\s]?[A-Z]{1,2}[-\s]?\d{4}\b|\b(?:Hyundai Creta|Maruti Swift|Honda Activa|Black SUV)\b',
             "ACCOUNT": r'\b(?:ACCT-)?\d{9,16}\b',
             "MONEY": r'(?:INR|₹|Rs\.?)\s?[\d,]+(?:\s?(?:lakhs?|crores?|thousand))?',
             "ORGANIZATION": r'\b[A-Z][A-Za-z0-9\s&]+(?:Pvt Ltd|Ltd|Logistics|Bank|Traders|Corporation)\b',
-            "PERSON": r'\b(?:Aditya Malhotra|Sneha Kapoor|Rajesh Kumar|Priya Mehta|Amit Sharma|Deepak|Rohit|Mike Johnson)\b'
+            "PERSON": r'\b(?:Aditya Malhotra|Sneha Kapoor|Rajesh Kumar|Priya Mehta|Amit Sharma|Deepak|Rohit|Mike Johnson|[A-Z][a-z]+ [A-Z][a-z]+)\b'
         }
         
         for ent_type, pat in patterns.items():
             for match in re.finditer(pat, text, flags=re.IGNORECASE if ent_type == "VEHICLE" else 0):
+                val = match.group(0).strip()
+                if ent_type == "PERSON" and val in ["Case Report", "Synthetic Case", "Pvt Ltd"]:
+                    continue
                 extracted_entities_data.append({
                     "type": ent_type,
-                    "value": match.group(0).strip(),
+                    "value": val,
                     "start": match.start(),
                     "end": match.end()
                 })
