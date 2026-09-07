@@ -281,6 +281,28 @@ export const api = {
     return handleResponse<any>(response);
   },
 
+  async uploadDocument(caseId: string, file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    // We can't use standard fetchWithTimeout easily with FormData since Content-Type should be auto-set by browser (no explicit headers in options)
+    const token = getMemoryToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    const response = await fetch(`${API_BASE_URL}/cases/${caseId}/documents/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    return handleResponse<any>(response);
+  },
+
+  async getExtractionStatus(documentId: string): Promise<any> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/documents/${documentId}/extraction-status`);
+    return handleResponse<any>(response);
+  },
+
   async runDocumentExtraction(docOrCaseId: string): Promise<any> {
     const url = docOrCaseId.startsWith("doc-")
       ? `${API_BASE_URL}/documents/${docOrCaseId}/extract`

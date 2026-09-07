@@ -1,6 +1,9 @@
 """Document API endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
+import hashlib
+import shutil
+from pathlib import Path
 from sqlalchemy.orm import Session
 
 from apps.backend.app.db.session import get_db
@@ -53,6 +56,76 @@ def create_document(
     except Exception as exc:
         db.rollback()
         raise HTTPException(status_code=500, detail="Failed to upload document.") from exc
+
+
+@router.post(
+    "/upload",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload a physical document file and extract content",
+)
+def upload_document(
+    case_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([Role.INVESTIGATOR, Role.ADMINISTRATOR])),
+    access: CaseAccess = Depends(require_case_access(CaseAccessLevel.MANAGE)),
+) -> DocumentResponse:
+    """Upload a physical document and dispatch extraction."""
+    from apps.backend.app.models.document import Document
+    from apps.backend.app.core.config import settings
+    from apps.backend.app.tasks.extraction import async_extract_document
+    
+    case_repo = CaseRepository(db)
+    case = case_repo.get_by_id(case_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail="Case not found.")
+
+    # File storage
+    upload_dir = Path(settings.UPLOAD_DIR) / case_id
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    file_bytes = file.file.read()
+    sha256 = hashlib.sha256(file_bytes).hexdigest()
+    
+    # Check for deduplication
+    existing_doc = db.query(Document).filter(Document.case_id == case_id, Document.file_hash == sha256).first()
+    if existing_doc:
+        # Return existing document if we've already uploaded this exact file
+        return DocumentResponse.model_validate(existing_doc)
+
+    safe_filename = file.filename.replace(" ", "_") if file.filename else "unknown"
+    file_path = upload_dir / f"{sha256}_{safe_filename}"
+    
+    with open(file_path, "wb") as f:
+        f.write(file_bytes)
+        
+    doc = Document(
+        case_id=case_id,
+        file_name=file.filename or "unknown",
+        file_type="TEXT_REPORT",  # simplify for now
+        file_hash=sha256,
+        file_path=str(file_path),
+        mime_type=file.content_type,
+        status="UPLOADED",
+        uploaded_by=current_user.id
+    )
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+    
+    log_action(
+        db=db,
+        action=DOCUMENT_UPLOADED,
+        target_type="DOCUMENT",
+        target_id=doc.id,
+        user_id=current_user.id,
+    )
+    
+    # Dispatch extraction
+    async_extract_document.delay(doc.id)
+    
+    return DocumentResponse.model_validate(doc)
 
 
 @router.get(

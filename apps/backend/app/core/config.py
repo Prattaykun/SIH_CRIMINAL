@@ -42,6 +42,18 @@ class Settings(BaseSettings):
         description="SQLAlchemy database connection string",
     )
 
+    # Redis configuration for Celery
+    REDIS_URL: str = Field(
+        default="redis://localhost:6379/0",
+        description="Redis broker URI for Celery tasks",
+    )
+
+    # File Upload configuration
+    UPLOAD_DIR: str = Field(
+        default="data/uploads",
+        description="Local directory for storing uploaded files",
+    )
+
     # Neo4j Graph Database (future milestone)
     NEO4J_URI: str = Field(
         default="bolt://localhost:7687",

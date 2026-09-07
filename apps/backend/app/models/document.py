@@ -19,10 +19,13 @@ class Document(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         String(50), nullable=False
     )  # CDR | TEXT_REPORT | BANK_STATEMENT | LOCATION_LOG | VEHICLE_LOG
     file_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    file_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     raw_content: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
         String(50), nullable=False, default="UPLOADED"
     )  # UPLOADED | PROCESSING | PROCESSED | FAILED
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     uploaded_by: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("users.id"), nullable=True
     )

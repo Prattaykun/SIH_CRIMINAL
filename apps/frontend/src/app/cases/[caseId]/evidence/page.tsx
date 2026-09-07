@@ -17,6 +17,7 @@ function EvidenceContent() {
   const [evidence, setEvidence] = useState<RelationshipEvidenceResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeDocumentId, setActiveDocumentId] = useState<string>('doc-1');
 
   useEffect(() => {
     async function loadData() {
@@ -166,15 +167,114 @@ function EvidenceContent() {
         </div>
       ) : null}
 
+      <div className="mb-12">
+        <h3 className="text-lg font-semibold text-slate-200 mb-6 border-b border-slate-800 pb-2">Ingest New Evidence</h3>
+        <DocumentUploadZone caseId={caseId} onUploadComplete={(docId) => setActiveDocumentId(docId)} />
+      </div>
+
       <div>
         <h3 className="text-lg font-semibold text-slate-200 mb-6 border-b border-slate-800 pb-2">Event Timeline</h3>
         <CaseTimeline events={timelineEvents} />
       </div>
 
       <div className="mt-12">
-        <ExtractionReviewPanel documentId="doc-1" caseId={caseId} />
+        <ExtractionReviewPanel documentId={activeDocumentId} caseId={caseId} />
       </div>
 
+    </div>
+  );
+}
+
+function DocumentUploadZone({ caseId, onUploadComplete }: { caseId: string, onUploadComplete: (docId: string) => void }) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState<{ status: string, entities: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await handleUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      await handleUpload(e.target.files[0]);
+    }
+  };
+
+  const handleUpload = async (file: File) => {
+    setError(null);
+    setIsUploading(true);
+    setProgress({ status: 'UPLOADING', entities: 0 });
+    
+    try {
+      const doc = await api.uploadDocument(caseId, file);
+      pollStatus(doc.id);
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload document');
+      setIsUploading(false);
+    }
+  };
+
+  const pollStatus = async (docId: string) => {
+    let complete = false;
+    while (!complete) {
+      try {
+        const statusData = await api.getExtractionStatus(docId);
+        setProgress({ status: statusData.status || 'PROCESSING', entities: statusData.entity_count || 0 });
+        
+        if (statusData.status === 'PROCESSED' || statusData.is_complete) {
+          complete = true;
+          setIsUploading(false);
+          onUploadComplete(docId);
+          break;
+        } else if (statusData.status === 'FAILED') {
+          complete = true;
+          setIsUploading(false);
+          setError('Extraction failed during processing.');
+          break;
+        }
+      } catch (err) {
+        console.error(err);
+      }
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  };
+
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+      <div 
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        className={`border-2 border-dashed rounded-lg p-10 text-center transition-colors ${isDragging ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-700 bg-slate-950 hover:border-slate-600'}`}
+      >
+        {!isUploading ? (
+          <div>
+            <svg className="w-12 h-12 mx-auto text-slate-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+            <p className="text-slate-300 font-medium mb-1">Drag and drop evidence files here</p>
+            <p className="text-slate-500 text-sm mb-4">Supports .pdf, .docx, .txt</p>
+            <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded font-medium text-sm transition-colors">
+              Browse Files
+              <input type="file" className="hidden" accept=".pdf,.txt,.docx" onChange={handleFileSelect} />
+            </label>
+            {error && <p className="text-red-400 text-sm mt-4">{error}</p>}
+          </div>
+        ) : (
+          <div className="space-y-4 max-w-md mx-auto">
+            <div className="flex justify-between text-sm text-slate-300">
+              <span className="font-semibold text-emerald-400 animate-pulse">{progress?.status === 'UPLOADING' ? 'Uploading...' : 'Extracting Entities...'}</span>
+              <span>{progress?.entities || 0} candidates found</span>
+            </div>
+            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+              <div className="bg-emerald-500 h-2 rounded-full w-full animate-[progress_2s_ease-in-out_infinite]" style={{ transformOrigin: 'left' }}></div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -320,6 +320,10 @@ def api_evaluate_extraction(providers: List[str] = ["MOCK"]):
 @router.get("/documents/{document_id}/extraction-status")
 def get_extraction_status(document_id: str, db: Session = Depends(get_db)):
     from apps.backend.app.models.entity import ExtractedEntity
+    from apps.backend.app.models.document import Document
+
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    doc_status = doc.status if doc else "NOT_FOUND"
 
     total = db.query(ExtractedEntity).filter(
         ExtractedEntity.document_id == document_id
@@ -330,7 +334,9 @@ def get_extraction_status(document_id: str, db: Session = Depends(get_db)):
     ).count()
 
     return {
+        "status": doc_status,
         "total_candidates": total,
+        "entity_count": total,
         "unreviewed_candidates": unreviewed,
         "is_complete": total > 0 and unreviewed == 0,
     }
@@ -349,8 +355,18 @@ def review_candidate(
     try:
         if candidate_type == "entity":
             svc.review_entity(candidate_id, decision, reviewer_id)
+            if decision.verification_status in ["ACCEPTED", "CORRECTED"]:
+                from apps.backend.app.models.entity import ExtractedEntity
+                ent = db.query(ExtractedEntity).filter(ExtractedEntity.id == candidate_id).first()
+                if ent:
+                    svc.sync_approved_to_graph(ent.document_id)
         elif candidate_type == "relationship":
             svc.review_relationship(candidate_id, decision, reviewer_id)
+            if decision.verification_status in ["ACCEPTED", "CORRECTED"]:
+                from apps.backend.app.models.relationship import ExtractedRelationship
+                rel = db.query(ExtractedRelationship).filter(ExtractedRelationship.id == candidate_id).first()
+                if rel:
+                    svc.sync_approved_to_graph(rel.document_id)
         else:
             raise HTTPException(status_code=400, detail="Invalid candidate type")
         return {"status": "success"}
@@ -383,8 +399,17 @@ def review_case_candidate(
     try:
         if is_rel:
             svc.review_relationship(candidate_id, decision, reviewer_id)
+            if decision.verification_status in ["ACCEPTED", "CORRECTED"]:
+                rel = db.query(ExtractedRelationship).filter(ExtractedRelationship.id == candidate_id).first()
+                if rel:
+                    svc.sync_approved_to_graph(rel.document_id)
         else:
             svc.review_entity(candidate_id, decision, reviewer_id)
+            if decision.verification_status in ["ACCEPTED", "CORRECTED"]:
+                from apps.backend.app.models.entity import ExtractedEntity
+                ent = db.query(ExtractedEntity).filter(ExtractedEntity.id == candidate_id).first()
+                if ent:
+                    svc.sync_approved_to_graph(ent.document_id)
         return {"status": "success"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

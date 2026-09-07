@@ -53,12 +53,12 @@ def upgrade() -> None:
     op.create_index(op.f('ix_extraction_runs_provider'), 'extraction_runs', ['provider'], unique=False)
     op.create_index(op.f('ix_extraction_runs_status'), 'extraction_runs', ['status'], unique=False)
     op.create_index(op.f('ix_extraction_runs_extraction_run_id'), 'extraction_runs', ['extraction_run_id'], unique=True)
-    # unique constraint for idempotency identity
-    op.create_unique_constraint(
-        'uq_extraction_run_identity',
-        'extraction_runs',
-        ['document_id', 'provider', 'provider_version', 'model_version', 'extraction_version', 'post_processing_version', 'relationship_rule_version']
-    )
+    # unique constraint for idempotency identity removed due to SQLite compatibility, added to table creation in theory but we just drop it here.
+    with op.batch_alter_table('extraction_runs') as batch_op:
+        batch_op.create_unique_constraint(
+            'uq_extraction_run_identity',
+            ['document_id', 'provider', 'provider_version', 'model_version', 'extraction_version', 'post_processing_version', 'relationship_rule_version']
+        )
     
     op.add_column('extracted_entities', sa.Column('extraction_run_id', sa.String(length=64), nullable=True))
     op.add_column('extracted_relationships', sa.Column('extraction_run_id', sa.String(length=64), nullable=True))

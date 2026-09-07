@@ -45,3 +45,27 @@ services:
     ports:
       - "7474:7474"
       - "7687:7687"
+
+  redis:
+    image: redis:7-alpine
+    container_name: sih_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: sih_celery_worker
+    command: celery -A apps.backend.app.worker worker --loglevel=info -c 2
+    volumes:
+      - ./data/uploads:/app/data/uploads
+      - ./apps/backend:/app/apps/backend
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/sih_db
+      - NEO4J_URI=bolt://neo4j:7687
+    depends_on:
+      - redis
+      - postgres
