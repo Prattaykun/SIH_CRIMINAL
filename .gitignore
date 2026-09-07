@@ -46,6 +46,7 @@ apps/backend/model_artifacts/artifacts/
 *.sqlite3
 sih_dev.db
 test_sih.db
+data/uploads/
 
 # Node & Next.js
 node_modules/

@@ -10,8 +10,15 @@ def test_document_upload_and_extraction(investigator_client, db_session):
     # The client/db_session fixture should create it, or we use doc-1's case: 16d5cee3-d1c4-4ff8-b9a2-bfd31932453f
     case_id = "16d5cee3-d1c4-4ff8-b9a2-bfd31932453f"
     from apps.backend.app.models.case import Case
+    from apps.backend.app.models.case_access import CaseAccess, CaseAccessLevel
     if not db_session.query(Case).filter_by(id=case_id).first():
         db_session.add(Case(id=case_id, case_number="CASE-TEST", title="Test", description="Test", status="OPEN"))
+        
+        # Get the investigator user from DB.
+        from apps.backend.app.models.user import User
+        test_user = db_session.query(User).filter_by(email="test_investigator@example.com").first()
+        if test_user:
+            db_session.add(CaseAccess(case_id=case_id, user_id=test_user.id, access_level=CaseAccessLevel.MANAGE))
         db_session.commit()
     
     response = investigator_client.post(

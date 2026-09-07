@@ -118,6 +118,15 @@ export const api = {
     return handleResponse<CaseListResponse>(response);
   },
 
+  async createCase(data: { case_number: string, title: string, description: string, priority: string }): Promise<CaseResponse> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<CaseResponse>(response);
+  },
+
   async getCase(caseId: string): Promise<CaseResponse> {
     const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}`);
     return handleResponse<CaseResponse>(response);
@@ -234,9 +243,8 @@ export const api = {
     return handleResponse<{ access_token: string, user: any }>(response);
   },
 
-  async getExtractionCandidates(caseOrDocId: string): Promise<any> {
-    const isDoc = caseOrDocId.startsWith("doc-");
-    const primaryUrl = isDoc 
+  async getExtractionCandidates(caseOrDocId: string, type: "document" | "case" = "document"): Promise<any> {
+    const primaryUrl = type === "document" 
       ? `${API_BASE_URL}/documents/${caseOrDocId}/extraction-candidates`
       : `${API_BASE_URL}/cases/${caseOrDocId}/candidates`;
     
@@ -285,14 +293,8 @@ export const api = {
     const formData = new FormData();
     formData.append("file", file);
     
-    // We can't use standard fetchWithTimeout easily with FormData since Content-Type should be auto-set by browser (no explicit headers in options)
-    const token = getMemoryToken();
-    const headers: Record<string, string> = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    
-    const response = await fetch(`${API_BASE_URL}/cases/${caseId}/documents/upload`, {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/documents/upload`, {
       method: 'POST',
-      headers,
       body: formData,
     });
     return handleResponse<any>(response);

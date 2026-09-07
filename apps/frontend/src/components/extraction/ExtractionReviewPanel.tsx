@@ -14,7 +14,8 @@ interface Props {
 }
 
 export default function ExtractionReviewPanel({ documentId, caseId }: Props) {
-  const targetId = caseId || documentId || "doc-1";
+  const targetId = documentId || caseId || "";
+  const targetType = documentId ? "document" : "case";
   const [entities, setEntities] = useState<EntityCandidate[]>([]);
   const [relationships, setRelationships] = useState<RelationshipCandidate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,10 +23,11 @@ export default function ExtractionReviewPanel({ documentId, caseId }: Props) {
   const [syncStatus, setSyncStatus] = useState<{ message: string; isSuccess: boolean } | null>(null);
 
   const fetchCandidates = useCallback(async () => {
+    if (!targetId) return;
     try {
       setLoading(true);
       setError(null);
-      const data = await api.getExtractionCandidates(targetId);
+      const data = await api.getExtractionCandidates(targetId, targetType);
       setEntities(data.entities || []);
       setRelationships(data.relationships || []);
     } catch (err: unknown) {
@@ -33,11 +35,15 @@ export default function ExtractionReviewPanel({ documentId, caseId }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [targetId]);
+  }, [targetId, targetType]);
 
   useEffect(() => {
+    if (!targetId) {
+      setLoading(false);
+      return;
+    }
     let active = true;
-    api.getExtractionCandidates(targetId)
+    api.getExtractionCandidates(targetId, targetType)
       .then(data => {
         if (active) {
           setEntities(data.entities || []);

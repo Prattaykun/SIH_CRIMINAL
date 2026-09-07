@@ -78,22 +78,22 @@ def get_case_extraction_candidates(
 ):
     from apps.backend.app.models.entity import ExtractedEntity
     from apps.backend.app.models.relationship import ExtractedRelationship
+    from apps.backend.app.models.case import Case
+
+    case = db.query(Case).filter((Case.id == case_id) | (Case.case_number == case_id)).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    real_case_id = case.id
+    
+    db.expire_all()
 
     entities = db.query(ExtractedEntity).filter(
-        ExtractedEntity.case_id == case_id
+        ExtractedEntity.case_id == real_case_id
     ).all()
     relationships = db.query(ExtractedRelationship).filter(
-        ExtractedRelationship.case_id == case_id
+        ExtractedRelationship.case_id == real_case_id
     ).all()
-
-    # Fallback to document_id == doc-1 if no entities matched directly on case_id
-    if not entities and not relationships:
-        entities = db.query(ExtractedEntity).filter(
-            ExtractedEntity.document_id == "doc-1"
-        ).all()
-        relationships = db.query(ExtractedRelationship).filter(
-            ExtractedRelationship.document_id == "doc-1"
-        ).all()
 
     return {
         "entities": [
@@ -320,25 +320,36 @@ def api_evaluate_extraction(providers: List[str] = ["MOCK"]):
 @router.get("/documents/{document_id}/extraction-status")
 def get_extraction_status(document_id: str, db: Session = Depends(get_db)):
     from apps.backend.app.models.entity import ExtractedEntity
+    from apps.backend.app.models.relationship import ExtractedRelationship
     from apps.backend.app.models.document import Document
 
+    db.expire_all()  # Prevent stale cache reads
     doc = db.query(Document).filter(Document.id == document_id).first()
-    doc_status = doc.status if doc else "NOT_FOUND"
+    if not doc:
+        return {
+            "document_id": document_id,
+            "status": "NOT_FOUND",
+            "entity_count": 0,
+            "relationship_count": 0,
+            "error_message": "Document not found."
+        }
 
-    total = db.query(ExtractedEntity).filter(
+    doc_status = doc.status
+
+    entity_count = db.query(ExtractedEntity).filter(
         ExtractedEntity.document_id == document_id
     ).count()
-    unreviewed = db.query(ExtractedEntity).filter(
-        ExtractedEntity.document_id == document_id,
-        ExtractedEntity.verification_status == "UNREVIEWED",
+    
+    relationship_count = db.query(ExtractedRelationship).filter(
+        ExtractedRelationship.document_id == document_id
     ).count()
 
     return {
+        "document_id": document_id,
         "status": doc_status,
-        "total_candidates": total,
-        "entity_count": total,
-        "unreviewed_candidates": unreviewed,
-        "is_complete": total > 0 and unreviewed == 0,
+        "entity_count": entity_count,
+        "relationship_count": relationship_count,
+        "error_message": getattr(doc, 'error_message', None)
     }
 
 

@@ -1,6 +1,6 @@
 """Document API endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, BackgroundTasks
 import hashlib
 import shutil
 from pathlib import Path
@@ -66,6 +66,7 @@ def create_document(
 )
 def upload_document(
     case_id: str,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role([Role.INVESTIGATOR, Role.ADMINISTRATOR])),
@@ -75,21 +76,30 @@ def upload_document(
     from apps.backend.app.models.document import Document
     from apps.backend.app.core.config import settings
     from apps.backend.app.tasks.extraction import async_extract_document
+    from apps.backend.app.extraction.service import DocumentExtractionService
+    import kombu.exceptions
+    import redis.exceptions
     
     case_repo = CaseRepository(db)
-    case = case_repo.get_by_id(case_id)
+    case = case_repo.get_by_id(case_id) or case_repo.get_by_case_number(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail="Case not found.")
+    
+    # Use the resolved case.id for directories and database links
+    real_case_id = str(case.id)
 
     # File storage
-    upload_dir = Path(settings.UPLOAD_DIR) / case_id
+    upload_dir = Path(settings.UPLOAD_DIR) / real_case_id
     upload_dir.mkdir(parents=True, exist_ok=True)
     
     file_bytes = file.file.read()
+    if not file_bytes or len(file_bytes) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
     sha256 = hashlib.sha256(file_bytes).hexdigest()
     
     # Check for deduplication
-    existing_doc = db.query(Document).filter(Document.case_id == case_id, Document.file_hash == sha256).first()
+    existing_doc = db.query(Document).filter(Document.case_id == real_case_id, Document.file_hash == sha256).first()
     if existing_doc:
         # Return existing document if we've already uploaded this exact file
         return DocumentResponse.model_validate(existing_doc)
@@ -99,15 +109,26 @@ def upload_document(
     
     with open(file_path, "wb") as f:
         f.write(file_bytes)
+
+    # Extract text immediately as a safeguard
+    try:
+        raw_text = file_bytes.decode("utf-8")
+    except Exception:
+        try:
+            from apps.backend.app.services.document_parser import extract_text_from_file
+            raw_text = extract_text_from_file(str(file_path), file.content_type)
+        except Exception:
+            raw_text = ""
         
     doc = Document(
-        case_id=case_id,
+        case_id=real_case_id,
         file_name=file.filename or "unknown",
         file_type="TEXT_REPORT",  # simplify for now
         file_hash=sha256,
         file_path=str(file_path),
         mime_type=file.content_type,
-        status="UPLOADED",
+        raw_content=raw_text,
+        status="PROCESSING",  # Set to PROCESSING instead of UPLOADED so the UI sees it working
         uploaded_by=current_user.id
     )
     db.add(doc)
@@ -123,9 +144,59 @@ def upload_document(
     )
     
     # Dispatch extraction
-    async_extract_document.delay(doc.id)
+    try:
+        import redis
+        from apps.backend.app.core.config import settings
+        r = redis.Redis.from_url(settings.REDIS_URL, socket_connect_timeout=1)
+        r.ping()
+        async_extract_document.delay(doc.id)
+    except Exception as e:
+        def run_sync_extraction(doc_id: str):
+            from apps.backend.app.db.session import SessionLocal, get_db
+            from apps.backend.app.main import app
+            from apps.backend.app.models.document import Document
+            from apps.backend.app.services.document_parser import extract_text_from_file
+            from apps.backend.app.extraction.service import DocumentExtractionService
+            
+            if get_db in app.dependency_overrides:
+                gen = app.dependency_overrides[get_db]()
+                session = next(gen)
+            else:
+                session = SessionLocal()
+                
+            try:
+                doc_obj = session.query(Document).filter(Document.id == doc_id).first()
+                if not doc_obj:
+                    return
+                doc_obj.status = "PROCESSING"
+                session.commit()
+
+                if not doc_obj.raw_content or len(doc_obj.raw_content.strip()) == 0:
+                    raw_text = extract_text_from_file(doc_obj.file_path, doc_obj.mime_type)
+                    doc_obj.raw_content = raw_text
+                    session.commit()
+
+                service = DocumentExtractionService(session)
+                res = service.process_document(doc_id, extract_relationships=True)
+                if res.get("status") == "FAILED":
+                    doc_obj.status = "FAILED"
+                    doc_obj.error_message = res.get("error", "Extraction failed")
+                else:
+                    doc_obj.status = "PROCESSED"
+                session.commit()
+            except Exception as exc:
+                session.rollback()
+                if doc_obj:
+                    doc_obj.status = "FAILED"
+                    doc_obj.error_message = str(exc)
+                    session.commit()
+            finally:
+                session.close()
+        
+        background_tasks.add_task(run_sync_extraction, doc.id)
     
     return DocumentResponse.model_validate(doc)
+
 
 
 @router.get(
