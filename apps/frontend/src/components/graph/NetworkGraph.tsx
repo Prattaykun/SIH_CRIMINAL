@@ -40,7 +40,6 @@ export function NetworkGraph({ data }: NetworkGraphProps) {
     setFilters({ search: '', verifiedOnly: false, minConfidence: 0.0 });
   };
 
-  // Convert API data to Cytoscape format safely bounded
   const elements = useMemo(() => {
     const nodes = data.nodes.slice(0, 1000).map(n => ({
       data: {
@@ -52,17 +51,22 @@ export function NetworkGraph({ data }: NetworkGraphProps) {
       }
     }));
 
-    const edges = data.edges.slice(0, 2000).map(e => ({
-      data: {
-        id: e.id,
-        source: e.source_id,
-        target: e.target_id,
-        label: e.relationship_type,
-        verified: e.verified,
-        confidence: e.confidence ?? 1.0,
-        original: e
-      }
-    }));
+    const nodeIds = new Set(nodes.map(n => n.data.id));
+
+    const edges = data.edges
+      .filter(e => nodeIds.has(e.source_id) && nodeIds.has(e.target_id))
+      .slice(0, 2000)
+      .map(e => ({
+        data: {
+          id: e.id,
+          source: e.source_id,
+          target: e.target_id,
+          label: e.relationship_type,
+          verified: e.verified,
+          confidence: e.confidence ?? 1.0,
+          original: e
+        }
+      }));
 
     return { nodes, edges };
   }, [data]);
