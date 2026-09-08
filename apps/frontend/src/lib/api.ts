@@ -104,6 +104,15 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export const api = {
+  async get<T = any>(endpoint: string): Promise<{ data: T }> {
+    const cleanUrl = endpoint.startsWith('http') 
+      ? endpoint 
+      : `${API_BASE_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+    const response = await fetchWithTimeout(cleanUrl);
+    const data = await handleResponse<T>(response);
+    return { data };
+  },
+
   async getCaseSummary(caseId: string): Promise<any> {
     const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/summary`);
     return handleResponse<any>(response);
@@ -264,12 +273,10 @@ export const api = {
         return await handleResponse<any>(response);
       }
     } catch {
-      // Fallback
+      // Fallback to empty candidates if request fails
     }
 
-    // Fallback to doc-1 if specific case candidates endpoint returned non-200
-    const fallbackResponse = await fetchWithTimeout(`${API_BASE_URL}/documents/doc-1/extraction-candidates`);
-    return handleResponse<any>(fallbackResponse);
+    return { entities: [], relationships: [] };
   },
 
   async reviewCandidate(
@@ -306,6 +313,22 @@ export const api = {
     const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/documents/upload`, {
       method: 'POST',
       body: formData,
+    });
+    return handleResponse<any>(response);
+  },
+
+  async ingestReportText(
+    caseId: string,
+    data: { title: string; content: string; file_type?: string }
+  ): Promise<any> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/documents/text`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: data.title,
+        content: data.content,
+        file_type: data.file_type || 'TEXT_REPORT',
+      }),
     });
     return handleResponse<any>(response);
   },

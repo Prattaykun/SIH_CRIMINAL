@@ -96,15 +96,24 @@ class DocumentExtractionService:
             "VEHICLE": r'\b[A-Z]{2}[-\s]?\d{2}[-\s]?[A-Z]{1,2}[-\s]?\d{4}\b|\b(?:Hyundai Creta|Maruti Swift|Honda Activa|Black SUV)\b',
             "ACCOUNT": r'\b(?:ACCT-)?\d{9,16}\b',
             "MONEY": r'(?:INR|₹|Rs\.?)\s?[\d,]+(?:\s?(?:lakhs?|crores?|thousand))?',
-            "ORGANIZATION": r'\b[A-Z][A-Za-z0-9\s&]+(?:Pvt Ltd|Ltd|Logistics|Bank|Traders|Corporation)\b',
+            "ORGANIZATION": r'\b[A-Z][A-Za-z0-9&.\'-]*(?:\s+(?:of|and|&|[A-Z][A-Za-z0-9&.\'-]*)){0,4}\s+(?:Pvt\.?\s*Ltd\.?|Ltd\.?|LLC|Inc\.?|Corp\.?|Corporation|Logistics|Bank|Traders|Enterprises|Solutions|Industries)\b',
             "PERSON": r'\b(?:Aditya Malhotra|Sneha Kapoor|Rajesh Kumar|Priya Mehta|Amit Sharma|Deepak|Rohit|Mike Johnson|[A-Z][a-z]+ [A-Z][a-z]+)\b'
+        }
+
+        NON_PERSON_KWS = {
+            "case", "report", "reference", "station", "department", "officer",
+            "incident", "summary", "target", "dossier", "account", "investigat",
+            "intelligence", "priority", "status", "delhi", "mumbai", "kolkata",
+            "pvt", "ltd", "corporation", "traders", "logistics", "bank", "vehicle", "phone"
         }
         
         for ent_type, pat in patterns.items():
             for match in re.finditer(pat, text, flags=re.IGNORECASE if ent_type == "VEHICLE" else 0):
                 val = match.group(0).strip()
-                if ent_type == "PERSON" and val in ["Case Report", "Synthetic Case", "Pvt Ltd"]:
-                    continue
+                if ent_type == "PERSON":
+                    val_lower = val.lower()
+                    if any(k in val_lower for k in NON_PERSON_KWS) or len(val) < 3 or len(val) > 40:
+                        continue
                 extracted_entities_data.append({
                     "type": ent_type,
                     "value": val,
@@ -119,12 +128,15 @@ class DocumentExtractionService:
             spacy_doc = nlp(text)
             for ent in spacy_doc.ents:
                 if ent.label_ == "PERSON":
-                    extracted_entities_data.append({
-                        "type": "PERSON",
-                        "value": ent.text.strip(),
-                        "start": ent.start_char,
-                        "end": ent.end_char
-                    })
+                    p_val = ent.text.strip()
+                    p_val_lower = p_val.lower()
+                    if not any(k in p_val_lower for k in NON_PERSON_KWS) and 3 <= len(p_val) <= 40:
+                        extracted_entities_data.append({
+                            "type": "PERSON",
+                            "value": p_val,
+                            "start": ent.start_char,
+                            "end": ent.end_char
+                        })
         except Exception:
             pass # fallback gracefully if spacy not installed
 
@@ -176,6 +188,8 @@ class DocumentExtractionService:
 
         # 4. Extract Relationships Between Co-Occurring Entities
         rel_count = 0
+        entity_link_counts = {e.id: 0 for e in db_entities}
+
         if extract_relationships:
             sentences = [s.strip() for s in re.split(r'[.!?\n]+', text) if s.strip()]
             for sentence in sentences:
@@ -185,33 +199,31 @@ class DocumentExtractionService:
                         e1 = sent_ents[i]
                         e2 = sent_ents[j]
                         
+                        if entity_link_counts[e1.id] >= 3 or entity_link_counts[e2.id] >= 3:
+                            continue
+                            
                         rel_type = None
                         if e1.entity_type == "PERSON" and e2.entity_type == "VEHICLE":
                             rel_type = "DRIVES"
+                        elif e1.entity_type == "PERSON" and e2.entity_type == "ACCOUNT":
+                            rel_type = "OWNS_ACCOUNT" if "own" in sentence.lower() else "TRANSFERRED"
                         elif e1.entity_type == "PERSON" and e2.entity_type == "ORGANIZATION":
-                            rel_type = "EMPLOYED_BY"
-                        elif e1.entity_type == "ORGANIZATION" and e2.entity_type == "ACCOUNT":
-                            rel_type = "HAS_ACCOUNT"
+                            rel_type = "DIRECTOR_OF" if "director" in sentence.lower() else "EMPLOYED_BY"
                         elif e1.entity_type == "PERSON" and e2.entity_type == "PHONE_NUMBER":
-                            rel_type = "CALLED"
-                        elif e1.entity_type == "PERSON" and e2.entity_type == "PERSON":
-                            rel_type = "ASSOCIATED_WITH"
+                            rel_type = "COMMUNICATED_WITH"
                         
                         if not rel_type:
                             if e2.entity_type == "PERSON" and e1.entity_type == "VEHICLE":
                                 rel_type = "DRIVES"
                                 e1, e2 = e2, e1
-                            elif e2.entity_type == "PERSON" and e1.entity_type == "ORGANIZATION":
-                                rel_type = "EMPLOYED_BY"
+                            elif e2.entity_type == "PERSON" and e1.entity_type == "ACCOUNT":
+                                rel_type = "OWNS_ACCOUNT" if "own" in sentence.lower() else "TRANSFERRED"
                                 e1, e2 = e2, e1
-                            elif e2.entity_type == "ORGANIZATION" and e1.entity_type == "ACCOUNT":
-                                rel_type = "HAS_ACCOUNT"
+                            elif e2.entity_type == "PERSON" and e1.entity_type == "ORGANIZATION":
+                                rel_type = "DIRECTOR_OF" if "director" in sentence.lower() else "EMPLOYED_BY"
                                 e1, e2 = e2, e1
                             elif e2.entity_type == "PERSON" and e1.entity_type == "PHONE_NUMBER":
-                                rel_type = "CALLED"
-                                e1, e2 = e2, e1
-                            elif e2.entity_type == "PERSON" and e1.entity_type == "PERSON":
-                                rel_type = "ASSOCIATED_WITH"
+                                rel_type = "COMMUNICATED_WITH"
                                 e1, e2 = e2, e1
                                 
                         if rel_type:
@@ -237,6 +249,8 @@ class DocumentExtractionService:
                                 )
                                 self.db.add(rel)
                                 rel_count += 1
+                                entity_link_counts[e1.id] += 1
+                                entity_link_counts[e2.id] += 1
                                 
         run.relationship_candidate_count = rel_count
         run.status = "COMPLETED"

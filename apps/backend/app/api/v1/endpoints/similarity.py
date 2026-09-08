@@ -19,14 +19,16 @@ def compute_similarity(
     db: Session = Depends(get_db)
 ):
     """Computes similarity for a case and returns top-k similar cases."""
-    case = db.query(Case).filter(Case.id == case_id).first()
+    from apps.backend.app.repositories.case_repo import CaseRepository
+    case = CaseRepository(db).get_by_id(case_id) or CaseRepository(db).get_by_case_number(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
 
+    real_case_id = str(case.id)
     run_id = str(uuid.uuid4())
     
     # 1. Ensure feature vector exists and is up-to-date
-    extract_case_features(db, case_id, run_id)
+    extract_case_features(db, real_case_id, run_id)
     
     # 2. Extract for all other cases that might not have vectors (in a real scenario, this is async)
     all_cases = db.query(Case).all()
@@ -47,12 +49,15 @@ def get_similarity(
     db: Session = Depends(get_db)
 ):
     """Retrieves already computed similarity results."""
-    case = db.query(Case).filter(Case.id == case_id).first()
+    from apps.backend.app.repositories.case_repo import CaseRepository
+    case = CaseRepository(db).get_by_id(case_id) or CaseRepository(db).get_by_case_number(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
+        
+    real_case_id = str(case.id)
 
     results = db.query(SimilarityResult).filter(
-        SimilarityResult.current_case_id == case_id
+        SimilarityResult.current_case_id == real_case_id
     ).order_by(SimilarityResult.similarity_score.desc()).limit(limit).all()
     
     # Mapping to schema
@@ -79,13 +84,17 @@ def get_feature_vector(
     db: Session = Depends(get_db)
 ):
     """Retrieves the latest feature vector for a case, extracting on demand if needed."""
-    vec = db.query(CaseFeatureVector).filter(CaseFeatureVector.case_id == case_id).order_by(CaseFeatureVector.created_at.desc()).first()
+    from apps.backend.app.repositories.case_repo import CaseRepository
+    case = CaseRepository(db).get_by_id(case_id) or CaseRepository(db).get_by_case_number(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+        
+    real_case_id = str(case.id)
+
+    vec = db.query(CaseFeatureVector).filter(CaseFeatureVector.case_id == real_case_id).order_by(CaseFeatureVector.created_at.desc()).first()
     if not vec:
-        case = db.query(Case).filter(Case.id == case_id).first()
-        if not case:
-            raise HTTPException(status_code=404, detail="Case not found")
         run_id = str(uuid.uuid4())
-        vec = extract_case_features(db, case_id, run_id)
+        vec = extract_case_features(db, real_case_id, run_id)
     if not vec:
         raise HTTPException(status_code=404, detail="Feature vector not found")
         

@@ -4,6 +4,7 @@ interface FilterState {
   search: string;
   verifiedOnly: boolean;
   minConfidence: number;
+  egoMode: boolean;
 }
 
 interface GraphFiltersProps {
@@ -35,10 +36,23 @@ export function GraphFilters({ filters, setFilters, onReset }: GraphFiltersProps
               type="checkbox" 
               checked={filters.verifiedOnly}
               onChange={(e) => setFilters(f => ({ ...f, verifiedOnly: e.target.checked }))}
-              className="rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-blue-500/20"
+              className="rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-emerald-500/20"
             />
             <span className="text-sm text-slate-300">Verified Relationships Only</span>
           </label>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={filters.egoMode}
+              onChange={(e) => setFilters(f => ({ ...f, egoMode: e.target.checked }))}
+              className="rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-blue-500/20"
+            />
+            <span className="text-sm text-slate-300">Ego Network / Focal Mode</span>
+          </label>
+          <p className="text-xs text-slate-500 mt-1 pl-6">Highlight 2-hop neighbors when selected</p>
         </div>
 
         <div>

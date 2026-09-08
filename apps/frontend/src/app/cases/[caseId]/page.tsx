@@ -30,8 +30,8 @@ export default function CaseOverviewPage() {
     return <div className="min-h-screen bg-[#0b0d13] flex items-center justify-center text-white">Loading Intelligence Dossier...</div>;
   }
 
-  // Ensure an empty state is shown if there's no topology preview yet (0 nodes)
-  if (summaryData?.topology_preview?.node_count === 0) {
+  // Ensure an empty state is shown if there's no topology preview yet (0 nodes), or no primary subject
+  if (!summaryData || !summaryData?.topology_preview || summaryData?.topology_preview?.node_count === 0 || !summaryData?.primary_subject) {
     return (
       <div className="min-h-screen bg-[#0b0d13] p-4 lg:p-8 flex items-center justify-center font-sans">
         <div className="max-w-md w-full bg-[#141721] border border-[#212638] rounded-2xl p-8 text-center shadow-2xl">
@@ -40,7 +40,7 @@ export default function CaseOverviewPage() {
           </div>
           <h2 className="text-xl font-bold text-white mb-2">No Evidence Ingested Yet</h2>
           <p className="text-sm text-slate-400 mb-8 leading-relaxed">
-            Case <span className="text-slate-300 font-mono">{caseId}</span> has no extracted topological entities. Please ingest raw FIR documents or digital dossiers to extract the criminal network.
+            Case <span className="text-slate-300 font-mono">{summaryData?.case_number || caseId}</span> has no extracted topological entities. Please ingest raw FIR documents or digital dossiers to extract the criminal network.
           </p>
           <button
             onClick={() => router.push(`/cases/${caseId}/evidence`)}

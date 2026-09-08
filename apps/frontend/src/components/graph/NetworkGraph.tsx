@@ -7,17 +7,17 @@ import { EntityPanel } from './EntityPanel';
 import { RelationshipPanel } from './RelationshipPanel';
 import { GraphFilters } from './GraphFilters';
 
-// Stable Colors as requested
+// Neon Threat-Intel Colors
 const NODE_COLORS: Record<string, string> = {
-  PERSON: '#3b82f6', // blue
-  PHONE: '#a855f7', // purple
-  VEHICLE: '#f97316', // orange
-  LOCATION: '#22c55e', // green
-  ORGANIZATION: '#eab308', // yellow
-  BANK_ACCOUNT: '#ef4444', // red
-  CASE: '#64748b', // slate
-  DOCUMENT: '#06b6d4', // cyan
-  EVENT: '#ec4899', // pink
+  PERSON: '#3b82f6', // Neon Blue
+  PHONE: '#a855f7', // Neon Purple
+  VEHICLE: '#f97316', // Neon Orange
+  LOCATION: '#10b981', // Emerald Green
+  ORGANIZATION: '#eab308', // Cyber Yellow
+  BANK_ACCOUNT: '#ff3b57', // Crimson Red
+  CASE: '#cbd5e1', // Bright Slate
+  DOCUMENT: '#06b6d4', // Cyber Cyan
+  EVENT: '#ec4899', // Hot Pink
 };
 
 interface NetworkGraphProps {
@@ -32,12 +32,13 @@ export function NetworkGraph({ data }: NetworkGraphProps) {
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null);
   const [filters, setFilters] = useState({
     search: '',
-    verifiedOnly: false,
+    verifiedOnly: true,
     minConfidence: 0.0,
+    egoMode: false,
   });
 
   const resetFilters = () => {
-    setFilters({ search: '', verifiedOnly: false, minConfidence: 0.0 });
+    setFilters({ search: '', verifiedOnly: true, minConfidence: 0.0, egoMode: false });
   };
 
   const elements = useMemo(() => {
@@ -63,6 +64,7 @@ export function NetworkGraph({ data }: NetworkGraphProps) {
           target: e.target_id,
           label: e.relationship_type,
           verified: e.verified,
+          status: e.verification_status || (e.verified ? 'ACCEPTED' : 'UNREVIEWED'),
           confidence: e.confidence ?? 1.0,
           original: e
         }
@@ -76,14 +78,14 @@ export function NetworkGraph({ data }: NetworkGraphProps) {
     if (!cyRef.current) return;
     const cy = cyRef.current;
 
-    cy.elements().removeClass('hidden');
+    cy.elements().removeClass('hidden faded');
 
     // Filter edges
     if (filters.verifiedOnly || filters.minConfidence > 0) {
       cy.edges().forEach(edge => {
         const data = edge.data();
         let hide = false;
-        if (filters.verifiedOnly && !data.verified) hide = true;
+        if (filters.verifiedOnly && data.status !== 'ACCEPTED' && data.status !== 'CORRECTED') hide = true;
         if (filters.minConfidence > 0 && data.confidence < filters.minConfidence) hide = true;
         if (hide) edge.addClass('hidden');
       });
@@ -100,7 +102,20 @@ export function NetworkGraph({ data }: NetworkGraphProps) {
       });
     }
 
-  }, [filters]);
+    // Apply Ego Mode (2-hop)
+    if (filters.egoMode && selectedNode) {
+      const rootNode = cy.getElementById(selectedNode.id);
+      if (rootNode.length > 0) {
+        // 1-hop and 2-hop neighborhood
+        const hop1 = rootNode.neighborhood().union(rootNode);
+        const hop2 = hop1.neighborhood().union(hop1);
+        
+        // Everything not in 2-hop gets faded
+        cy.elements().difference(hop2).addClass('faded');
+      }
+    }
+
+  }, [filters, selectedNode]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -112,60 +127,77 @@ export function NetworkGraph({ data }: NetworkGraphProps) {
         {
           selector: 'node',
           style: {
-            'background-color': 'data(color)',
             'label': 'data(label)',
+            'width': 36,
+            'height': 36,
+            'font-size': '10px',
+            'font-weight': 'bold',
+            'color': '#f8fafc',
             'text-valign': 'bottom',
-            'text-halign': 'center',
             'text-margin-y': 6,
-            'font-size': '11px',
-            'color': '#cbd5e1',
-            'text-background-opacity': 0.7,
-            'text-background-color': '#0f172a',
-            'text-background-padding': '2px',
+            'text-background-opacity': 0.85,
+            'text-background-color': '#0b0d13',
+            'text-background-padding': '3px',
             'text-background-shape': 'roundrectangle',
-            'width': 32,
-            'height': 32,
             'border-width': 2,
-            'border-color': '#1e293b'
+            'border-color': '#334155',
+            'background-color': '#94a3b8' // Fallback
           }
+        },
+        {
+          selector: 'node[entity_type = "PERSON"]',
+          style: { 'background-color': '#3b82f6', 'border-color': '#60a5fa' } // Blue
+        },
+        {
+          selector: 'node[entity_type = "ORGANIZATION"]',
+          style: { 'background-color': '#a855f7', 'border-color': '#c084fc' } // Purple
+        },
+        {
+          selector: 'node[entity_type = "ACCOUNT"], node[entity_type = "BANK_ACCOUNT"]',
+          style: { 'background-color': '#10b981', 'border-color': '#34d399' } // Emerald
+        },
+        {
+          selector: 'node[entity_type = "VEHICLE"]',
+          style: { 'background-color': '#f97316', 'border-color': '#fb923c' } // Orange
+        },
+        {
+          selector: 'node[entity_type = "PHONE"], node[entity_type = "PHONE_NUMBER"]',
+          style: { 'background-color': '#ec4899', 'border-color': '#f472b6' } // Pink
         },
         {
           selector: 'edge',
           style: {
-            'width': 2,
-            'line-color': '#475569',
-            'target-arrow-color': '#475569',
-            'target-arrow-shape': 'triangle',
-            'label': 'data(label)',
+            'width': 1.5,
+            'line-color': '#334155',
             'curve-style': 'bezier',
-            'font-size': '9px',
+            'target-arrow-shape': 'triangle',
+            'target-arrow-color': '#334155',
+            'arrow-scale': 0.8,
+            'opacity': 0.6,
+          }
+        },
+        {
+          selector: 'edge[status = "ACCEPTED"], edge[status = "CORRECTED"]',
+          style: {
+            'width': 2.5,
+            'line-color': '#10b981', // Clean Emerald for verified facts
+            'target-arrow-color': '#10b981',
+            'opacity': 1.0,
+            'label': 'data(label)',
+            'font-size': '8px',
             'color': '#94a3b8',
             'text-rotation': 'autorotate',
-            'text-background-opacity': 0.8,
-            'text-background-color': '#0f172a',
-            'text-background-padding': '1px'
-          }
-        },
-        // Edge statuses
-        {
-          selector: 'edge[?verified]',
-          style: {
-            'line-color': '#10b981', // emerald
-            'target-arrow-color': '#10b981',
+            'text-background-opacity': 0.9,
+            'text-background-color': '#0b0d13',
+            'text-background-padding': '2px',
           }
         },
         {
-          selector: 'edge[!verified]',
+          selector: 'edge[status = "UNREVIEWED"], edge[!verified]',
           style: {
             'line-style': 'dashed',
-            'line-color': '#f59e0b', // amber
-            'target-arrow-color': '#f59e0b',
-          }
-        },
-        {
-          selector: 'edge[confidence < 0.5]',
-          style: {
-            'opacity': 0.4
+            'line-color': '#475569',
+            'opacity': 0.35, // De-emphasize unreviewed candidate edges
           }
         },
         // Selections
@@ -173,33 +205,42 @@ export function NetworkGraph({ data }: NetworkGraphProps) {
           selector: 'node:selected',
           style: {
             'border-width': 4,
-            'border-color': '#cbd5e1'
+            'border-color': '#ffffff',
           }
         },
         {
           selector: 'edge:selected',
           style: {
-            'width': 4,
-            'line-color': '#cbd5e1',
-            'target-arrow-color': '#cbd5e1'
+            'width': 3,
+            'line-color': '#ffffff',
+            'target-arrow-color': '#ffffff',
           }
         },
-        // Hidden
+        // Hidden & Faded
         {
           selector: '.hidden',
           style: {
             'display': 'none'
+          }
+        },
+        {
+          selector: '.faded',
+          style: {
+            'opacity': 0.15
           }
         }
       ],
       layout: {
         name: 'cose',
         animate: false,
-        randomize: false,
         nodeDimensionsIncludeLabels: true,
-        idealEdgeLength: () => 120,
-        nodeRepulsion: () => 8000,
-        padding: 40,
+        idealEdgeLength: () => 140,            // Spread nodes apart
+        nodeRepulsion: () => 15000,            // Strong repulsion prevents overlapping
+        edgeElasticity: () => 0.1,
+        nestingFactor: 0.1,
+        gravity: 0.25,                   // Prevents disconnected nodes from flying away
+        padding: 50,
+        randomize: false,
       }
     });
 
@@ -231,7 +272,15 @@ export function NetworkGraph({ data }: NetworkGraphProps) {
   }, [elements]);
 
   return (
-    <div className="relative w-full h-[600px] bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-inner">
+    <div className="relative w-full h-[600px] bg-[#050914] border border-slate-800 rounded-xl overflow-hidden shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]"
+         style={{
+           backgroundImage: `
+             linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+             linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px)
+           `,
+           backgroundSize: '30px 30px'
+         }}
+    >
       <GraphFilters filters={filters} setFilters={setFilters} onReset={resetFilters} />
       
       {data.truncated && (

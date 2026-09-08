@@ -43,6 +43,20 @@ class DocumentCreate(BaseModel):
     )
 
 
+class ReportTextCreate(BaseModel):
+    """Schema for ingesting a directly written investigation report."""
+
+    title: str = Field(
+        ..., min_length=1, max_length=255, description="Report title or document name"
+    )
+    content: str = Field(
+        ..., min_length=1, description="Raw text content of the report"
+    )
+    file_type: DocumentType = Field(
+        default=DocumentType.TEXT_REPORT, description="Type of evidence report"
+    )
+
+
 # --- Response Schemas ---
 
 

@@ -191,9 +191,51 @@ function DocumentUploadZone({ caseId, onUploadComplete }: { caseId: string, onUp
   const rawCaseId = (params?.caseId as string) || caseId;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [activeTab, setActiveTab] = useState<'upload' | 'write'>('upload');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [candidateCount, setCandidateCount] = useState<number>(0);
+
+  // Write Report State
+  const [reportTitle, setReportTitle] = useState('');
+  const [reportContent, setReportContent] = useState('');
+  const [reportType, setReportType] = useState('TEXT_REPORT');
+
+  const pollExtraction = (documentId: string) => {
+    setUploadStatus('Extracting Entities & Relations via NLP...');
+    let attempts = 0;
+    const pollInterval = setInterval(async () => {
+      attempts++;
+      try {
+        const statusRes = await api.getExtractionStatus(documentId);
+        const status = (statusRes.status || '').toUpperCase();
+        const count = statusRes.entity_count || 0;
+        setCandidateCount(count);
+
+        if (status === 'PROCESSED' || status === 'COMPLETED' || status === 'SUCCESS') {
+          clearInterval(pollInterval);
+          setIsUploading(false);
+          setUploadStatus('Complete');
+          toast.success(`Extraction complete! Found ${count} entities.`);
+          if (onUploadComplete) onUploadComplete(documentId);
+        } else if (status === 'FAILED' || status === 'ERROR') {
+          clearInterval(pollInterval);
+          setIsUploading(false);
+          toast.error(statusRes.error_message || 'NLP extraction pipeline failed.');
+        } else if (attempts >= 20) {
+          clearInterval(pollInterval);
+          setIsUploading(false);
+          toast.success('Extraction processed. Refreshing candidates.');
+          if (onUploadComplete) onUploadComplete(documentId);
+        }
+      } catch {
+        if (attempts >= 10) {
+          clearInterval(pollInterval);
+          setIsUploading(false);
+        }
+      }
+    }, 1500);
+  };
 
   const handleFile = async (file: File) => {
     if (!file) return;
@@ -210,124 +252,312 @@ function DocumentUploadZone({ caseId, onUploadComplete }: { caseId: string, onUp
     setCandidateCount(0);
 
     try {
-      // 1. Send Upload Request to Backend
       const uploadRes = await api.uploadDocument(rawCaseId, file);
-
       const documentId = uploadRes?.id || uploadRes?.document_id;
       if (!documentId) {
         throw new Error('No document ID returned from server.');
       }
 
-      setUploadStatus('Extracting Entities & Relations via NLP...');
-
-      // 2. Poll extraction status with a 30-second safety window
-      let attempts = 0;
-      const pollInterval = setInterval(async () => {
-        attempts++;
-        try {
-          const statusRes = await api.getExtractionStatus(documentId);
-          const status = (statusRes.status || '').toUpperCase();
-          const count = statusRes.entity_count || 0;
-          setCandidateCount(count);
-
-          if (status === 'PROCESSED' || status === 'COMPLETED' || status === 'SUCCESS') {
-            clearInterval(pollInterval);
-            setIsUploading(false);
-            setUploadStatus('Complete');
-            toast.success(`Extraction complete! Found ${count} entities.`);
-            if (onUploadComplete) onUploadComplete(documentId);
-          } else if (status === 'FAILED' || status === 'ERROR') {
-            clearInterval(pollInterval);
-            setIsUploading(false);
-            toast.error(statusRes.error_message || 'NLP extraction pipeline failed.');
-          } else if (attempts >= 20) {
-            // Safety timeout: stop spinner and refresh list
-            clearInterval(pollInterval);
-            setIsUploading(false);
-            toast.success('Extraction processed. Refreshing candidates.');
-            if (onUploadComplete) onUploadComplete(documentId);
-          }
-        } catch (pollErr) {
-          if (attempts >= 10) {
-            clearInterval(pollInterval);
-            setIsUploading(false);
-          }
-        }
-      }, 1500);
-
-    } catch (err: any) {
+      pollExtraction(documentId);
+    } catch (err: unknown) {
       console.error('File upload failed:', err);
       setIsUploading(false);
-      const errorDetail = err?.details?.detail || err?.message || 'Upload failed.';
+      const errorDetail = (err as { details?: { detail?: string }; message?: string })?.details?.detail || (err as Error)?.message || 'Upload failed.';
       toast.error(`Upload error: ${errorDetail}`);
     } finally {
-      // Reset input value so selecting the exact same file fires onChange again
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleWriteReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-  };
+    if (!reportTitle.trim()) {
+      toast.error('Please enter a report title or reference.');
+      return;
+    }
+    if (!reportContent.trim()) {
+      toast.error('Please enter report narrative content.');
+      return;
+    }
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFile(e.dataTransfer.files[0]);
+    setIsUploading(true);
+    setUploadStatus('Ingesting written report...');
+    setCandidateCount(0);
+
+    try {
+      const res = await api.ingestReportText(rawCaseId, {
+        title: reportTitle.trim(),
+        content: reportContent.trim(),
+        file_type: reportType,
+      });
+
+      const documentId = res?.id || res?.document_id;
+      if (!documentId) {
+        throw new Error('No document ID returned from server.');
+      }
+
+      pollExtraction(documentId);
+    } catch (err: unknown) {
+      console.error('Report submission failed:', err);
+      setIsUploading(false);
+      const errorDetail = (err as { details?: { detail?: string }; message?: string })?.details?.detail || (err as Error)?.message || 'Submission failed.';
+      toast.error(`Ingest error: ${errorDetail}`);
     }
   };
 
+  const loadSyntheticFir = () => {
+    setReportTitle('FIR-2024-SYN-088: Saket Syndicate Observation');
+    setReportType('TEXT_REPORT');
+    setReportContent(
+`FIRST INFORMATION REPORT (SYNTHETIC RECORD - INVESTIGATION BENCHMARK)
+Reference: FIR-2024-SYN-088
+Date of Incident: 14 January 2024, 18:30 IST
+Jurisdiction: Saket District, New Delhi
+
+Investigative Narrative:
+On 14-01-2024, primary subject Aditya Malhotra was observed attending an unlogged meeting with Sneha Kapoor at Saket District Center. Aditya Malhotra arrived in a black Hyundai Creta bearing registration HR-26-XY-9999. Surveillance intercepts identified communication with cellular contact +91-98111-22222 registered under Apex Traders Pvt Ltd.
+
+Financial audit logs from City Bank reflect an anomalous fund transfer of INR 18,00,000 via IMPS originating from account ACCT-1234567890 to associate account ACCT-9876543210 linked to Sneha Kapoor.
+
+Investigative Priority: Requires verification of cellular cell tower co-location, toll plaza passage, and account beneficial ownership.`
+    );
+  };
+
+  const loadSyntheticInterrogation = () => {
+    setReportTitle('Interrogation Transcript - Sneha Kapoor');
+    setReportType('TEXT_REPORT');
+    setReportContent(
+`RECORD OF INTERROGATION (SYNTHETIC BENCHMARK RECORD)
+Subject: Sneha Kapoor
+Date: 18 January 2024
+Interrogating Officer: Inspector R. Kumar
+
+Interview Summary:
+Subject stated that she communicated with Aditya Malhotra regarding business logistics for Apex Traders Pvt Ltd. Subject confirmed usage of cellular number +91-98111-33444 for business messages. When questioned regarding the IMPS transfer of INR 18,00,000 into ACCT-9876543210, subject stated the funds were intended for material transport coordinated by Deepak driving vehicle HR-26-XY-9999.
+
+Investigator Assessment: Lead requires cross-referencing with call detail records and bank statements.`
+    );
+  };
+
+  const wordCount = reportContent.trim() ? reportContent.trim().split(/\s+/).length : 0;
+  const charCount = reportContent.length;
+
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8">
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        accept=".pdf,.docx,.doc,.txt,.json"
-        onChange={(e) => {
-          if (e.target.files && e.target.files.length > 0) {
-            handleFile(e.target.files[0]);
-          }
-        }}
-      />
-      <div
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        className="w-full border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-lg p-10 flex flex-col items-center justify-center transition-colors min-h-[160px]"
-      >
-        {isUploading ? (
-          <div className="w-full max-w-md flex flex-col items-center">
-            <div className="flex justify-between w-full text-sm font-medium text-slate-300 mb-2">
-              <span className="text-emerald-400 animate-pulse">{uploadStatus}</span>
-              <span>{candidateCount} candidates found</span>
-            </div>
-            <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
-              <div className="bg-emerald-500 h-2.5 rounded-full animate-[progress_2s_ease-in-out_infinite]" style={{ width: '100%', transformOrigin: 'left' }}></div>
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8 shadow-lg">
+      {/* Mode Selector Tabs */}
+      <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('upload')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              activeTab === 'upload'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-900/30'
+                : 'bg-slate-800/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            Upload File
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('write')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              activeTab === 'write'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-900/30'
+                : 'bg-slate-800/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Write Report
+          </button>
+        </div>
+
+        <span className="text-xs text-slate-500 font-mono hidden sm:inline-block">
+          Case Ingestion Pipeline • SHA-256 Provenance
+        </span>
+      </div>
+
+      {/* Progress / Extraction Indicator */}
+      {isUploading && (
+        <div className="w-full bg-slate-950/80 border border-blue-500/30 rounded-lg p-5 mb-6">
+          <div className="flex justify-between items-center text-sm font-medium text-slate-300 mb-2">
+            <span className="text-emerald-400 flex items-center gap-2 animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              {uploadStatus}
+            </span>
+            <span className="text-xs font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+              {candidateCount} candidates detected
+            </span>
+          </div>
+          <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-blue-500 via-emerald-400 to-blue-500 h-2 rounded-full animate-[progress_2s_ease-in-out_infinite]"
+              style={{ width: '100%', transformOrigin: 'left' }}
+            ></div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 1: Upload File Option */}
+      {activeTab === 'upload' && !isUploading && (
+        <div>
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".pdf,.docx,.doc,.txt,.json"
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+              }
+            }}
+          />
+          <div
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+              }
+            }}
+            className="w-full border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-lg p-10 flex flex-col items-center justify-center transition-colors min-h-[180px] bg-slate-950/40"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-3">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+              </div>
+              <p className="text-slate-200 text-base font-medium mb-1">
+                Drag and drop synthetic evidence files here
+              </p>
+              <p className="text-slate-500 text-xs mb-4">
+                Supports .pdf, .docx, .txt, .json (Multi-modal FIRs, CDRs, Forensics)
+              </p>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm transition-all shadow-md active:scale-95 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Browse Files
+              </button>
             </div>
           </div>
-        ) : (
-          <div className="flex flex-col items-center text-center">
-            <svg className="w-12 h-12 mx-auto text-slate-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-            <p className="text-slate-300 text-base font-medium mb-1">
-              Drag and drop evidence files here
-            </p>
-            <p className="text-slate-500 text-xs mb-4">
-              Supports .pdf, .docx, .txt, .json
-            </p>
+        </div>
+      )}
+
+      {/* Tab 2: Write Report Option */}
+      {activeTab === 'write' && !isUploading && (
+        <form onSubmit={handleWriteReportSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                Report Title / Case Document Reference
+              </label>
+              <input
+                type="text"
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
+                placeholder="e.g. FIR-2024-SYN-042 - Initial Investigation Report"
+                value={reportTitle}
+                onChange={(e) => setReportTitle(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                Evidence Document Type
+              </label>
+              <select
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500 transition"
+                value={reportType}
+                onChange={(e) => setReportType(e.target.value)}
+              >
+                <option value="TEXT_REPORT">Text Report / Narrative</option>
+                <option value="CDR">Call Detail Record (CDR)</option>
+                <option value="BANK_STATEMENT">Bank Statement Summary</option>
+                <option value="LOCATION_LOG">Location / Tower Log</option>
+                <option value="VEHICLE_LOG">Vehicle Surveillance Log</option>
+                <option value="OTHER">Other Evidence Document</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Quick Synthetic Templates */}
+          <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
+            <span className="text-xs text-slate-400 font-medium">Synthetic Presets:</span>
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="px-5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-medium text-sm border border-slate-600 transition-all shadow-md active:scale-95"
+              onClick={loadSyntheticFir}
+              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-blue-400 px-2.5 py-1 rounded border border-slate-700 transition flex items-center gap-1"
             >
-              Browse Files
+              <span>⚡</span> Load Synthetic FIR
+            </button>
+            <button
+              type="button"
+              onClick={loadSyntheticInterrogation}
+              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 px-2.5 py-1 rounded border border-slate-700 transition flex items-center gap-1"
+            >
+              <span>⚡</span> Load Interrogation Note
+            </button>
+            {(reportTitle || reportContent) && (
+              <button
+                type="button"
+                onClick={() => { setReportTitle(''); setReportContent(''); }}
+                className="text-xs text-slate-500 hover:text-red-400 px-2 py-1 transition ml-auto"
+              >
+                Clear Form
+              </button>
+            )}
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-1.5">
+              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Report Text & Findings
+              </label>
+              <div className="text-[11px] font-mono text-slate-500">
+                {wordCount} words • {charCount} characters
+              </div>
+            </div>
+            <textarea
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 transition font-mono leading-relaxed h-56"
+              placeholder="Write or paste synthetic FIR narrative, officer statement, interrogation notes, or surveillance summary here..."
+              value={reportContent}
+              onChange={(e) => setReportContent(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <p className="text-[11px] text-slate-500">
+              Submitted report is hashed (SHA-256) and immediately queued for NLP entity & relation extraction.
+            </p>
+            <button
+              type="submit"
+              disabled={!reportTitle.trim() || !reportContent.trim()}
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-lg text-sm font-semibold transition-all shadow-md active:scale-95 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Ingest & Analyze Report
             </button>
           </div>
-        )}
-      </div>
+        </form>
+      )}
     </div>
   );
 }

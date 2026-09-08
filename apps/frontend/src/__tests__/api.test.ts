@@ -109,4 +109,41 @@ describe('API Client', () => {
       await expect(api.exportCaseReport('C001')).rejects.toThrow("You do not have permission to export this case report.");
     });
   });
+
+  describe('ingestReportText', () => {
+    it('sends report payload with title, content, and file_type', async () => {
+      const mockResult = {
+        id: 'doc-written-123',
+        file_name: 'Synthetic_Report.txt',
+        status: 'PROCESSING'
+      };
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: async () => mockResult
+      } as Response);
+
+      const result = await api.ingestReportText('case-101', {
+        title: 'Synthetic Report',
+        content: 'Subject was seen meeting associate in Saket.',
+        file_type: 'TEXT_REPORT'
+      });
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/cases/case-101/documents/text'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.any(Headers),
+          body: JSON.stringify({
+            title: 'Synthetic Report',
+            content: 'Subject was seen meeting associate in Saket.',
+            file_type: 'TEXT_REPORT'
+          })
+        })
+      );
+      expect(result.id).toBe('doc-written-123');
+      expect(result.status).toBe('PROCESSING');
+    });
+  });
 });

@@ -146,21 +146,31 @@ def require_case_access(required_level: CaseAccessLevel) -> Callable[[str, User,
         current_user: Annotated[User, Depends(get_current_active_user)],
         db: Annotated[Session, Depends(get_db)],
     ) -> CaseAccess:
+        # Resolve case_id which might be a case_number
+        import uuid
+        try:
+            val = uuid.UUID(case_id)
+            case = db.query(Case).filter(Case.id == str(val)).first()
+        except ValueError:
+            case = db.query(Case).filter(Case.case_number == case_id).first()
+        
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found")
+            
+        resolved_case_id = str(case.id)
+
         # Administrator has implicit MANAGE access to all cases
         if current_user.role == Role.ADMINISTRATOR.value:
-            case = db.query(Case).filter(Case.id == case_id).first()
-            if not case:
-                raise HTTPException(status_code=404, detail="Case not found")
             return CaseAccess(
                 user_id=current_user.id,
-                case_id=case_id,
+                case_id=resolved_case_id,
                 access_level=CaseAccessLevel.MANAGE.value,
                 is_active=True
             )
 
         # For normal users, check case_access assignment
         assignment = db.query(CaseAccess).filter(
-            CaseAccess.case_id == case_id,
+            CaseAccess.case_id == resolved_case_id,
             CaseAccess.user_id == current_user.id,
             CaseAccess.is_active == True
         ).first()

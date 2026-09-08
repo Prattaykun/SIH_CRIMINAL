@@ -53,7 +53,7 @@ class MockExtractor(ExtractorProvider):
         person_matches = re.finditer(r"\b[A-Z][a-z]+ [A-Z][a-z]+\b", document_text)
         for i, match in enumerate(person_matches):
             val = match.group(0)
-            if val in ["Case Report", "Synthetic Case"]:
+            if val in ["Case Report", "Synthetic Case"] or any(k in val.lower() for k in ["case", "report", "reference", "station", "officer", "incident", "summary", "priority"]):
                 continue
             entities.append(ExtractedEntityCandidate(
                 candidate_id=f"ent_person_{i}",

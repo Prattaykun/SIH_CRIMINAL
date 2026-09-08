@@ -63,45 +63,47 @@ export default function ThreatIntelDashboard({ caseData, caseId }: any) {
                   <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                 </div>
               </div>
-              <div className="pt-1">
+              <div className="pt-1 min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="w-2 h-2 rounded-full bg-[#10b981]"></span>
                   <span className="text-[#10b981] text-[10px] font-bold uppercase tracking-widest">Active Target</span>
                 </div>
-                <h3 className="text-white text-2xl font-bold tracking-wide">{primarySubject}</h3>
-                <div className="text-slate-400 text-xs mt-1 mb-2 font-medium">{caseData?.primary_subject?.role || "Managing Director"}</div>
+                <h3 className="text-white text-2xl font-bold tracking-wide truncate max-w-sm" title={primarySubject}>{primarySubject}</h3>
+                <div className="text-slate-400 text-xs mt-1 mb-2 font-medium truncate" title={caseData?.primary_subject?.role || "Subject of Interest - Network Key Node"}>
+                  {caseData?.primary_subject?.role || "Subject of Interest - Network Key Node"}
+                </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-500 text-xs">Target ID</span>
-                  <span className="text-white font-mono text-sm font-semibold">{caseData?.case_id || caseId}</span>
+                  <span className="text-slate-500 text-xs shrink-0">Target ID</span>
+                  <span className="text-white font-mono text-sm font-semibold truncate">{caseData?.case_id || caseId}</span>
                 </div>
               </div>
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-y-5 gap-x-4 mt-8">
-            <div className="flex items-center justify-between border-b border-[#212638] pb-2">
-              <span className="text-slate-500 text-xs tracking-wider">Syndicate / Entity</span>
-              <span className="text-white text-sm font-medium">{primaryOrg}</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 mt-8">
+            <div className="flex items-center justify-between border-b border-[#212638] pb-2 min-w-0 gap-3">
+              <span className="text-slate-500 text-xs tracking-wider shrink-0">Syndicate / Entity</span>
+              <span className="text-white text-sm font-medium truncate text-right" title={primaryOrg}>{primaryOrg}</span>
             </div>
-            <div className="flex items-center justify-between border-b border-[#212638] pb-2">
-              <span className="text-slate-500 text-xs tracking-wider">Jurisdiction</span>
-              <span className="text-white text-sm font-medium">{caseData?.primary_subject?.jurisdiction || "Unknown"}</span>
+            <div className="flex items-center justify-between border-b border-[#212638] pb-2 min-w-0 gap-3">
+              <span className="text-slate-500 text-xs tracking-wider shrink-0">Jurisdiction</span>
+              <span className="text-white text-sm font-medium truncate text-right" title={caseData?.primary_subject?.jurisdiction || "Unknown"}>{caseData?.primary_subject?.jurisdiction || "Unknown"}</span>
             </div>
-            <div className="flex items-center justify-between border-b border-[#212638] pb-2">
-              <span className="text-slate-500 text-xs tracking-wider">Primary Vehicle</span>
-              <span className="text-white text-sm font-medium">{primaryVehicle}</span>
+            <div className="flex items-center justify-between border-b border-[#212638] pb-2 min-w-0 gap-3">
+              <span className="text-slate-500 text-xs tracking-wider shrink-0">Primary Vehicle</span>
+              <span className="text-white text-sm font-medium truncate text-right" title={primaryVehicle}>{primaryVehicle}</span>
             </div>
-            <div className="flex items-center justify-between border-b border-[#212638] pb-2">
-              <span className="text-slate-500 text-xs tracking-wider">Primary Contact</span>
-              <span className="text-white text-sm font-medium font-mono">{primaryPhone}</span>
+            <div className="flex items-center justify-between border-b border-[#212638] pb-2 min-w-0 gap-3">
+              <span className="text-slate-500 text-xs tracking-wider shrink-0">Primary Contact</span>
+              <span className="text-white text-sm font-medium font-mono truncate text-right" title={primaryPhone}>{primaryPhone}</span>
             </div>
-            <div className="flex items-center justify-between border-b border-[#212638] pb-2">
-              <span className="text-slate-500 text-xs tracking-wider">Case Status</span>
-              <span className="text-white text-sm font-medium">ACTIVE INVESTIGATION</span>
+            <div className="flex items-center justify-between border-b border-[#212638] pb-2 min-w-0 gap-3">
+              <span className="text-slate-500 text-xs tracking-wider shrink-0">Case Status</span>
+              <span className="text-white text-sm font-medium shrink-0 text-right">ACTIVE INVESTIGATION</span>
             </div>
-            <div className="flex items-center justify-between border-b border-[#212638] pb-2">
-              <span className="text-slate-500 text-xs tracking-wider">Investigative Priority</span>
-              <div className="text-[#ff3b57] text-xs font-bold flex items-center gap-1.5 uppercase tracking-wider">
+            <div className="flex items-center justify-between border-b border-[#212638] pb-2 min-w-0 gap-3">
+              <span className="text-slate-500 text-xs tracking-wider shrink-0">Investigative Priority</span>
+              <div className="text-[#ff3b57] text-xs font-bold flex items-center gap-1.5 uppercase tracking-wider shrink-0 text-right">
                 <span className="w-2 h-2 rounded-full bg-[#ff3b57] animate-pulse"></span>
                 {caseData?.primary_subject?.priority || "HIGH / ELEVATED"}
               </div>
@@ -148,19 +150,23 @@ export default function ThreatIntelDashboard({ caseData, caseId }: any) {
         <div className="bg-[#141721] border border-[#212638] rounded-2xl p-6 shadow-2xl">
           <h2 className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-6">INVESTIGATIVE TIMELINE &amp; SURVEILLANCE LOGS</h2>
           <div className="relative border-l border-slate-700 ml-3 space-y-7">
-            {(caseData?.timeline_events || []).map((event: any, idx: number) => (
-              <div key={idx} className="relative pl-6">
-                <div className={`absolute -left-1.5 top-1.5 w-3 h-3 rounded-full bg-[#141721] border-2 ${event.type === 'flagged' ? 'border-[#ff3b57]' : event.type === 'verified' ? 'border-[#10b981]' : 'border-[#3b82f6]'}`}></div>
-                <div className="flex justify-between items-start mb-0.5">
-                  <div className="flex items-center gap-1.5">
-                    {event.type === 'flagged' && <svg className="w-4 h-4 text-[#ff3b57]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>}
-                    <span className="text-sm text-white font-medium">{event.title}</span>
+            {(caseData?.timeline_events || []).length === 0 ? (
+              <p className="text-xs text-slate-500 italic pl-6 py-4">No timeline events extracted for this case yet.</p>
+            ) : (
+              (caseData?.timeline_events || []).map((event: any, idx: number) => (
+                <div key={idx} className="relative pl-6">
+                  <div className={`absolute -left-1.5 top-1.5 w-3 h-3 rounded-full bg-[#141721] border-2 ${event.type === 'flagged' ? 'border-[#ff3b57]' : event.type === 'verified' ? 'border-[#10b981]' : 'border-[#3b82f6]'}`}></div>
+                  <div className="flex justify-between items-start mb-0.5">
+                    <div className="flex items-center gap-1.5">
+                      {event.type === 'flagged' && <svg className="w-4 h-4 text-[#ff3b57]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>}
+                      <span className="text-sm text-white font-medium break-words">{event.title}</span>
+                    </div>
                   </div>
+                  <p className="text-sm text-slate-300 mb-1 break-words">{event.desc}</p>
+                  <p className="text-xs text-slate-500 font-mono">{event.date}</p>
                 </div>
-                <p className="text-sm text-slate-300 mb-1">{event.desc}</p>
-                <p className="text-xs text-slate-500 font-mono">{event.date}</p>
-              </div>
-            ))}
+              ))
+            )}
           </div>
           <button onClick={handleGoToAudit} className="w-full mt-8 py-2.5 bg-slate-800/50 hover:bg-slate-800 text-slate-300 text-sm font-semibold rounded-lg border border-slate-700 transition-colors">
             View Full Audit Trail
@@ -171,17 +177,21 @@ export default function ThreatIntelDashboard({ caseData, caseId }: any) {
         <div className="bg-[#141721] border border-[#212638] rounded-2xl p-6 shadow-2xl">
           <h2 className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-6">LINKED HIGH-RISK ASSETS</h2>
           <div className="space-y-4">
-            {(caseData?.linked_assets || []).map((asset: any, idx: number) => (
-              <div key={idx} className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl flex items-center justify-between hover:bg-slate-800 transition-colors cursor-pointer group">
-                <div>
-                  <div className="text-xs text-slate-500 font-bold tracking-wider mb-1 uppercase">{asset.type}</div>
-                  <div className="text-sm text-white font-medium group-hover:text-blue-400 transition-colors">{asset.name}</div>
+            {(caseData?.linked_assets || []).length === 0 ? (
+              <p className="text-xs text-slate-500 italic py-4 text-center">No linked assets identified for this case yet.</p>
+            ) : (
+              (caseData?.linked_assets || []).map((asset: any, idx: number) => (
+                <div key={idx} className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl flex items-center justify-between gap-3 hover:bg-slate-800 transition-colors cursor-pointer group min-w-0">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs text-slate-500 font-bold tracking-wider mb-1 uppercase">{asset.type}</div>
+                    <div className="text-sm text-white font-medium group-hover:text-blue-400 transition-colors truncate" title={asset.name}>{asset.name}</div>
+                  </div>
+                  <div className={`px-2.5 py-1 rounded text-[10px] font-bold tracking-wider uppercase border shrink-0 ${asset.badge === 'FLAGGED HUB' ? 'bg-[#ff3b57]/10 text-[#ff3b57] border-[#ff3b57]/30' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+                    {asset.badge}
+                  </div>
                 </div>
-                <div className={`px-2.5 py-1 rounded text-[10px] font-bold tracking-wider uppercase border ${asset.badge === 'FLAGGED HUB' ? 'bg-[#ff3b57]/10 text-[#ff3b57] border-[#ff3b57]/30' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
-                  {asset.badge}
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
           <button onClick={handleGoToEvidence} className="w-full mt-6 py-2.5 bg-slate-800/50 hover:bg-slate-800 text-slate-300 text-sm font-semibold rounded-lg border border-slate-700 transition-colors">
             Review Extracted Leads
