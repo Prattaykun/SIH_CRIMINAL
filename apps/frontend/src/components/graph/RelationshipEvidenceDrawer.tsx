@@ -107,14 +107,31 @@ export function RelationshipEvidenceDrawer({
         </div>
       </div>
 
-      {/* Source Evidence Text Snippet */}
+      {/* Source Evidence Text Snippet(s) */}
       <div className="mt-4">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300 mb-2">
-          <FileText className="w-3.5 h-3.5 text-blue-400" />
-          <span>Source Document Snippet</span>
+        <div className="flex items-center justify-between text-xs font-bold text-slate-300 mb-2">
+          <div className="flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5 text-blue-400" />
+            <span>Source Evidence Snippets</span>
+          </div>
+          {relationship.evidenceSnippets && relationship.evidenceSnippets.length > 1 && (
+            <span className="text-[10px] font-mono text-blue-400 font-bold bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+              {relationship.evidenceSnippets.length} documents
+            </span>
+          )}
         </div>
-        <div className="p-3 rounded-xl bg-[#090b10] border border-white/10 text-xs text-slate-300 font-serif leading-relaxed italic border-l-4 border-l-blue-500">
-          "{relationship.evidenceSnippet || 'Direct transactional link extracted from case filings and surveillance logs.'}"
+        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+          {(relationship.evidenceSnippets && relationship.evidenceSnippets.length > 0
+            ? relationship.evidenceSnippets
+            : [relationship.evidenceSnippet || 'Direct transactional link extracted from case filings and surveillance logs.']
+          ).map((snip: string, sIdx: number) => (
+            <div
+              key={sIdx}
+              className="p-3 rounded-xl bg-[#090b10] border border-white/10 text-xs text-slate-300 font-serif leading-relaxed italic border-l-4 border-l-blue-500"
+            >
+              "{snip}"
+            </div>
+          ))}
         </div>
       </div>
 

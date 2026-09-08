@@ -64,7 +64,7 @@ export function NetworkGraph({ data }: NetworkGraphProps) {
           target: e.target_id,
           label: e.relationship_type,
           verified: e.verified,
-          status: e.verification_status || (e.verified ? 'ACCEPTED' : 'UNREVIEWED'),
+          status: (e as any).verification_status || (e.verified ? 'ACCEPTED' : 'UNREVIEWED'),
           confidence: e.confidence ?? 1.0,
           original: e
         }

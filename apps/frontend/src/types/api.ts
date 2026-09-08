@@ -162,6 +162,9 @@ export interface DocumentResponse {
   file_name: string;
   file_type: string;
   file_hash: string | null;
+  file_path?: string | null;
+  mime_type?: string | null;
+  raw_content?: string | null;
   status: string;
   uploaded_by: string | null;
   created_at: string;
@@ -236,21 +239,6 @@ export interface ExtractionModelMetrics {
   status: string;
   training_metrics: Record<string, any>;
   test_metrics: Record<string, any>;
-}
-
-export interface DocumentResponse {
-  id: string;
-  case_id: string;
-  file_name: string;
-  file_type: string;
-  file_hash?: string | null;
-  file_path?: string | null;
-  mime_type?: string | null;
-  raw_content?: string | null;
-  status: string;
-  uploaded_by?: string | null;
-  created_at: string;
-  updated_at?: string | null;
 }
 
 export interface DocumentListResponse {

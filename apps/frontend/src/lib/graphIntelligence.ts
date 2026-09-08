@@ -31,10 +31,13 @@ export interface NormalizedRelationship {
   status: 'ACCEPTED' | 'CORRECTED' | 'UNREVIEWED' | 'REJECTED';
   weight: 'strong' | 'medium' | 'inferred';
   evidenceSnippet?: string;
+  evidenceSnippets?: string[];
+  evidenceCount?: number;
   modelProvenance?: string;
   timestamp?: string;
   isFaded?: boolean;
   raw: any;
+  rawRelIds?: string[];
 }
 
 export interface ClusterGroup {
@@ -140,8 +143,17 @@ export const CLUSTER_CONFIG: Record<string, { label: string; description: string
   },
 };
 
+function jsonParseSafe(str: any): any {
+  if (typeof str !== 'string') return str;
+  try {
+    return JSON.parse(str);
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Normalizes raw entities and relationships from API
+ * Normalizes raw entities and relationships from API with canonical entity resolution & edge deduplication
  */
 export function normalizeGraphData(
   rawEntities: any[],
@@ -152,31 +164,156 @@ export function normalizeGraphData(
   clusters: ClusterGroup[];
   entityMap: Map<string, NormalizedEntity>;
 } {
-  const entityDegree: Record<string, number> = {};
-  const entityEvidenceCount: Record<string, number> = {};
+  const statusPriority: Record<NormalizedEntity['status'], number> = {
+    ACCEPTED: 4,
+    CORRECTED: 3,
+    UNREVIEWED: 2,
+    REJECTED: 1,
+  };
 
-  // Compute connectivity degree
-  rawRelationships.forEach((r) => {
-    const src = String(r.source_id || r.source_entity_id || '');
-    const tgt = String(r.target_id || r.target_entity_id || '');
-    if (src) entityDegree[src] = (entityDegree[src] || 0) + 1;
-    if (tgt) entityDegree[tgt] = (entityDegree[tgt] || 0) + 1;
+  // 1. Resolve and Group Entities into Canonical Representations
+  const rawIdToCanonicalId: Record<string, string> = {};
+  const canonicalEntityGroups: Record<string, {
+    primaryId: string;
+    type: string;
+    label: string;
+    rawEntities: any[];
+    highestConfidence: number;
+    highestStatus: NormalizedEntity['status'];
+    mentions: string[];
+  }> = {};
 
-    if (r.source_text || r.source_text_snippet) {
-      if (src) entityEvidenceCount[src] = (entityEvidenceCount[src] || 0) + 1;
-      if (tgt) entityEvidenceCount[tgt] = (entityEvidenceCount[tgt] || 0) + 1;
+  const getEntityGroupKey = (e: any): string => {
+    let resId: string | null = null;
+    if (e.attributes) {
+      try {
+        const attrs = typeof e.attributes === 'string' ? jsonParseSafe(e.attributes) : e.attributes;
+        if (attrs?.resolution?.has_match && attrs?.resolution?.existing_entity_id) {
+          resId = String(attrs.resolution.existing_entity_id);
+        }
+      } catch {}
+    }
+    const type = String(e.entity_type || 'PERSON').toUpperCase();
+    const name = String(e.canonical_name || e.normalized_value || e.entity_value || e.original_value || e.label || '').trim().toLowerCase();
+    
+    if (resId) return `RES:${resId}`;
+    return `${type}:${name}`;
+  };
+
+  rawEntities.forEach((rawE) => {
+    const rawId = String(rawE.id);
+    const key = getEntityGroupKey(rawE);
+    const rawType = String(rawE.entity_type || 'PERSON').toUpperCase();
+    const rawLabel = String(rawE.canonical_name || rawE.entity_value || rawE.normalized_value || rawE.original_value || rawE.label || 'Unknown Subject').trim();
+    const status = (rawE.verification_status || rawE.status || 'UNREVIEWED') as NormalizedEntity['status'];
+    const conf = typeof rawE.confidence_score === 'number' ? rawE.confidence_score : (typeof rawE.confidence === 'number' ? rawE.confidence : 0.85);
+
+    if (!canonicalEntityGroups[key]) {
+      canonicalEntityGroups[key] = {
+        primaryId: rawId,
+        type: rawType,
+        label: rawLabel,
+        rawEntities: [rawE],
+        highestConfidence: conf,
+        highestStatus: status,
+        mentions: [rawId],
+      };
+      rawIdToCanonicalId[rawId] = rawId;
+    } else {
+      const group = canonicalEntityGroups[key];
+      group.rawEntities.push(rawE);
+      group.mentions.push(rawId);
+      rawIdToCanonicalId[rawId] = group.primaryId;
+      if (conf > group.highestConfidence) {
+        group.highestConfidence = conf;
+      }
+      if ((statusPriority[status] || 0) > (statusPriority[group.highestStatus] || 0)) {
+        group.highestStatus = status;
+      }
     }
   });
 
-  // Normalize entities
-  const entities: NormalizedEntity[] = rawEntities.map((e) => {
-    const id = String(e.id);
-    const type = String(e.entity_type || 'PERSON').toUpperCase();
-    const label = String(e.entity_value || e.normalized_value || e.original_value || e.label || 'Unknown Subject');
-    const status = (e.verification_status || e.status || 'UNREVIEWED') as NormalizedEntity['status'];
-    const confidence = typeof e.confidence === 'number' ? e.confidence : 0.85;
+  // 2. Consolidate and Rewire Relationships to Canonical Entities
+  const consolidatedRels: Record<string, {
+    id: string;
+    source: string;
+    target: string;
+    types: string[];
+    highestConfidence: number;
+    highestStatus: NormalizedRelationship['status'];
+    snippets: string[];
+    rawRels: any[];
+    rawRelIds: string[];
+  }> = {};
+
+  rawRelationships.forEach((r) => {
+    const rawSrc = String(r.source_id || r.source_entity_id || '');
+    const rawTgt = String(r.target_id || r.target_entity_id || '');
+    const cSrc = rawIdToCanonicalId[rawSrc] || rawSrc;
+    const cTgt = rawIdToCanonicalId[rawTgt] || rawTgt;
+
+    if (!cSrc || !cTgt || cSrc === cTgt) return;
+
+    const relKey = `${cSrc}->${cTgt}`;
+    const rType = String(r.relationship_type || r.relation_type || 'CONNECTED').toUpperCase();
+    const status = (r.verification_status || r.status || 'UNREVIEWED') as NormalizedRelationship['status'];
+    const conf = typeof r.confidence_score === 'number' ? r.confidence_score : (typeof r.confidence === 'number' ? r.confidence : 0.8);
+    const snippet = r.source_text || r.source_text_snippet || r.source_snippet || '';
+    const rId = String(r.id);
+
+    if (!consolidatedRels[relKey]) {
+      consolidatedRels[relKey] = {
+        id: rId,
+        source: cSrc,
+        target: cTgt,
+        types: [rType],
+        highestConfidence: conf,
+        highestStatus: status,
+        snippets: snippet ? [snippet] : [],
+        rawRels: [r],
+        rawRelIds: [rId],
+      };
+    } else {
+      const relEntry = consolidatedRels[relKey];
+      if (!relEntry.types.includes(rType)) {
+        relEntry.types.push(rType);
+      }
+      if (conf > relEntry.highestConfidence) {
+        relEntry.highestConfidence = conf;
+      }
+      if ((statusPriority[status] || 0) > (statusPriority[relEntry.highestStatus] || 0)) {
+        relEntry.highestStatus = status;
+      }
+      if (snippet && !relEntry.snippets.includes(snippet)) {
+        relEntry.snippets.push(snippet);
+      }
+      relEntry.rawRels.push(r);
+      relEntry.rawRelIds.push(rId);
+    }
+  });
+
+  // 3. Compute connectivity degree & evidence counts
+  const entityDegree: Record<string, number> = {};
+  const entityEvidenceCount: Record<string, number> = {};
+
+  Object.values(consolidatedRels).forEach((rel) => {
+    entityDegree[rel.source] = (entityDegree[rel.source] || 0) + 1;
+    entityDegree[rel.target] = (entityDegree[rel.target] || 0) + 1;
+
+    const count = Math.max(1, rel.snippets.length);
+    entityEvidenceCount[rel.source] = (entityEvidenceCount[rel.source] || 0) + count;
+    entityEvidenceCount[rel.target] = (entityEvidenceCount[rel.target] || 0) + count;
+  });
+
+  // 4. Normalize Entities
+  const entities: NormalizedEntity[] = Object.values(canonicalEntityGroups).map((group) => {
+    const id = group.primaryId;
+    const type = group.type;
+    const label = group.label;
+    const status = group.highestStatus;
+    const confidence = group.highestConfidence;
     const connectionsCount = entityDegree[id] || 0;
-    const evidenceCount = entityEvidenceCount[id] || (e.source_text ? 1 : 0);
+    const evidenceCount = Math.max(group.mentions.length, entityEvidenceCount[id] || 0);
 
     // Importance scoring: weighted by type, connectivity, and status
     let typeWeight = 1.0;
@@ -186,7 +323,7 @@ export function normalizeGraphData(
 
     const statusWeight = status === 'ACCEPTED' || status === 'CORRECTED' ? 1.4 : 1.0;
     const centrality = Math.min(connectionsCount / 5, 2.0);
-    const importance = Math.round((typeWeight * statusWeight * (confidence + centrality) * 20));
+    const importance = Math.round(typeWeight * statusWeight * (confidence + centrality) * 20);
 
     // Role subtitle estimation
     let subTitle = type;
@@ -215,51 +352,45 @@ export function normalizeGraphData(
       connectionsCount,
       evidenceCount,
       cluster: type,
-      raw: e,
+      raw: group.rawEntities[0],
+      mentionIds: group.mentions,
     };
   });
 
-  const entityIdSet = new Set(entities.map((e) => e.id));
   const entityMap = new Map(entities.map((e) => [e.id, e]));
 
-  // Normalize relationships
-  const relationships: NormalizedRelationship[] = rawRelationships
-    .filter((r) => {
-      const src = String(r.source_id || r.source_entity_id || '');
-      const tgt = String(r.target_id || r.target_entity_id || '');
-      return entityIdSet.has(src) && entityIdSet.has(tgt);
-    })
-    .map((r) => {
-      const id = String(r.id);
-      const source = String(r.source_id || r.source_entity_id);
-      const target = String(r.target_id || r.target_entity_id);
-      const type = String(r.relationship_type || r.relation_type || 'CONNECTED');
-      const status = (r.verification_status || r.status || 'UNREVIEWED') as NormalizedRelationship['status'];
-      const confidence = typeof r.confidence === 'number' ? r.confidence : 0.8;
-      const snippet = r.source_text || r.source_text_snippet || r.source_snippet || '';
-      
-      let weight: NormalizedRelationship['weight'] = 'inferred';
-      if (status === 'ACCEPTED' || status === 'CORRECTED') {
-        weight = 'strong';
-      } else if (confidence >= 0.75 || snippet.length > 0) {
-        weight = 'medium';
-      }
+  // 5. Build Final Consolidated Relationships
+  const relationships: NormalizedRelationship[] = Object.values(consolidatedRels).map((r) => {
+    const typeLabel = r.types.join(' · ');
+    const isVerified = r.highestStatus === 'ACCEPTED' || r.highestStatus === 'CORRECTED';
+    let weight: NormalizedRelationship['weight'] = 'inferred';
+    if (isVerified) {
+      weight = 'strong';
+    } else if (r.highestConfidence >= 0.75 || r.snippets.length > 0) {
+      weight = 'medium';
+    }
 
-      return {
-        id,
-        source,
-        target,
-        type,
-        confidence,
-        status,
-        weight,
-        evidenceSnippet: snippet,
-        modelProvenance: r.extraction_provider ? `${r.extraction_provider} v${r.extraction_version || '1.0'}` : 'NLP Hybrid Engine v2.1',
-        raw: r,
-      };
-    });
+    const firstRaw = r.rawRels[0] || {};
+    return {
+      id: r.id,
+      source: r.source,
+      target: r.target,
+      type: typeLabel,
+      confidence: r.highestConfidence,
+      status: r.highestStatus,
+      weight,
+      evidenceSnippet: r.snippets[0] || firstRaw.source_text || firstRaw.source_text_snippet || '',
+      evidenceSnippets: r.snippets,
+      evidenceCount: r.snippets.length || r.rawRels.length,
+      modelProvenance: firstRaw.extraction_provider
+        ? `${firstRaw.extraction_provider} v${firstRaw.extraction_version || '1.0'}`
+        : 'NLP Hybrid Engine v2.1',
+      raw: firstRaw,
+      rawRelIds: r.rawRelIds,
+    };
+  });
 
-  // Group into semantic clusters
+  // 6. Group into semantic clusters
   const clusterMap: Record<string, string[]> = {};
   entities.forEach((e) => {
     const key = e.type === 'BANK_ACCOUNT' ? 'ACCOUNT' : (e.type === 'PHONE' ? 'PHONE_NUMBER' : e.type);

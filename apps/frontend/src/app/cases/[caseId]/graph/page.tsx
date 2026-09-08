@@ -20,6 +20,7 @@ import { api } from '@/lib/api';
 import { EntityNode } from '@/components/graph/EntityNode';
 import { ClusterGroupNode } from '@/components/graph/ClusterGroupNode';
 import { CaseHubNode } from '@/components/graph/CaseHubNode';
+import { IntelligenceEdge } from '@/components/graph/IntelligenceEdge';
 import { RelationshipEvidenceDrawer } from '@/components/graph/RelationshipEvidenceDrawer';
 import {
   normalizeGraphData,
@@ -59,21 +60,25 @@ const nodeTypes = {
   caseHub: CaseHubNode,
 };
 
+const edgeTypes = {
+  intelligence: IntelligenceEdge,
+};
+
 type ViewMode = 'OVERVIEW' | 'NETWORK' | 'TIMELINE' | 'EVIDENCE';
 
-// Dagre Layout computation supporting different rankdirs and cluster groupings
+// Dagre Layout computation with ample node separation and accurate dimensions
 const layoutElements = (nodes: Node[], edges: Edge[], direction: 'LR' | 'TB' = 'LR') => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   dagreGraph.setGraph({
     rankdir: direction,
-    ranksep: direction === 'TB' ? 90 : 130,
-    nodesep: direction === 'TB' ? 40 : 50,
+    ranksep: direction === 'TB' ? 140 : 180,
+    nodesep: direction === 'TB' ? 60 : 75,
   });
 
   nodes.forEach((node) => {
-    const width = node.type === 'caseHub' ? 320 : node.type === 'clusterGroup' ? 260 : 260;
-    const height = node.type === 'caseHub' ? 140 : node.type === 'clusterGroup' ? 100 : 100;
+    const width = node.type === 'caseHub' ? 340 : node.type === 'clusterGroup' ? 280 : 270;
+    const height = node.type === 'caseHub' ? 150 : node.type === 'clusterGroup' ? 120 : 145;
     dagreGraph.setNode(node.id, { width, height });
   });
 
@@ -91,8 +96,8 @@ const layoutElements = (nodes: Node[], edges: Edge[], direction: 'LR' | 'TB' = '
     const layoutedNodes = nodes.map((node, i) => ({
       ...node,
       position: {
-        x: (i % cols) * 280 + 40,
-        y: Math.floor(i / cols) * 130 + 40,
+        x: (i % cols) * 300 + 40,
+        y: Math.floor(i / cols) * 160 + 40,
       },
     }));
     return { nodes: layoutedNodes, edges };
@@ -100,8 +105,8 @@ const layoutElements = (nodes: Node[], edges: Edge[], direction: 'LR' | 'TB' = '
 
   const layoutedNodes = nodes.map((node) => {
     const nodeWithPosition = dagreGraph.node(node.id);
-    const width = node.type === 'caseHub' ? 320 : node.type === 'clusterGroup' ? 260 : 260;
-    const height = node.type === 'caseHub' ? 140 : node.type === 'clusterGroup' ? 100 : 100;
+    const width = node.type === 'caseHub' ? 340 : node.type === 'clusterGroup' ? 280 : 270;
+    const height = node.type === 'caseHub' ? 150 : node.type === 'clusterGroup' ? 120 : 145;
     return {
       ...node,
       position: {
@@ -345,20 +350,33 @@ export default function CaseGraphPage() {
         };
       });
 
-      // Map to React Flow edges with visual hierarchy
+      // Group edges by target node to stagger labels and prevent any label collisions
+      const targetEdgeCounts: Record<string, number> = {};
+      const targetEdgeIndex: Record<string, number> = {};
+      filteredRelationships.forEach((r) => {
+        targetEdgeCounts[r.target] = (targetEdgeCounts[r.target] || 0) + 1;
+      });
+
+      // Map to React Flow edges with visual hierarchy and staggered HTML pill badges
       const flowEdges: Edge[] = filteredRelationships.map((r) => {
+        const count = targetEdgeCounts[r.target] || 1;
+        const idx = targetEdgeIndex[r.target] || 0;
+        targetEdgeIndex[r.target] = idx + 1;
+        // Stagger ratio between 0.35 and 0.65 to ensure labels on parallel lines never collide
+        const labelRatio = count === 1 ? 0.5 : 0.35 + (idx / Math.max(1, count - 1)) * 0.3;
+
         const isFaded = focusRootId ? !visibleEdgeIds.has(r.id) : false;
         const isStrong = r.weight === 'strong';
         const isMedium = r.weight === 'medium';
 
         let strokeColor = '#475569';
-        let strokeWidth = 1.5;
+        let strokeWidth = 1.6;
         let isAnimated = false;
         let dashPattern: string | undefined = '4,4';
 
         if (isStrong) {
           strokeColor = '#10b981'; // Emerald
-          strokeWidth = 2.5;
+          strokeWidth = 2.4;
           isAnimated = true;
           dashPattern = undefined;
         } else if (isMedium) {
@@ -371,8 +389,7 @@ export default function CaseGraphPage() {
           id: r.id,
           source: r.source,
           target: r.target,
-          label: r.type,
-          type: 'smoothstep',
+          type: 'intelligence',
           animated: isAnimated,
           style: {
             stroke: strokeColor,
@@ -380,17 +397,15 @@ export default function CaseGraphPage() {
             strokeDasharray: dashPattern,
             opacity: isFaded ? 0.12 : 0.9,
           },
-          labelStyle: {
-            fill: isStrong ? '#34d399' : '#94a3b8',
-            fontSize: 9,
-            fontWeight: 700,
-          },
-          labelBgStyle: { fill: '#0b0d13', fillOpacity: 0.85 },
           markerEnd: {
             type: MarkerType.ArrowClosed,
             color: strokeColor,
           },
-          data: r,
+          data: {
+            ...r,
+            labelRatio,
+            onSelect: (rel: any) => setSelectedRelationship(rel),
+          },
         };
       });
 
@@ -557,6 +572,7 @@ export default function CaseGraphPage() {
               onNodeClick={onNodeClick}
               onEdgeClick={onEdgeClick}
               nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
               fitView
               fitViewOptions={{ padding: 0.2 }}
               minZoom={0.15}
