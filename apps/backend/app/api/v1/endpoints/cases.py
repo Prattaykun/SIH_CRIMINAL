@@ -15,9 +15,9 @@ from apps.backend.app.schemas.case import (
     CaseStatus,
     CaseUpdate,
 )
-from apps.backend.app.api.deps import get_current_active_user, require_role, require_case_access
+from apps.backend.app.api.deps import get_current_active_user, require_role, require_case_permission, Permission
 from apps.backend.app.models.user import User, Role
-from apps.backend.app.models.case_access import CaseAccess, CaseAccessLevel
+from apps.backend.app.models.case_membership import CaseMembership, CaseMembership
 from apps.backend.app.models.entity import ExtractedEntity
 from apps.backend.app.models.relationship import ExtractedRelationship
 from apps.backend.app.models.case import Case
@@ -75,7 +75,7 @@ def create_case(
         access = CaseAccess(
             user_id=current_user.id,
             case_id=case.id,
-            access_level=CaseAccessLevel.MANAGE.value,
+            access_level=CaseMembership.MANAGE.value,
             assigned_by_user_id=current_user.id,
             is_active=True
         )
@@ -142,7 +142,7 @@ def list_cases(
 def get_case(
     case_id: str,
     db: Session = Depends(get_db),
-    access: CaseAccess = Depends(require_case_access(CaseAccessLevel.VIEW)),
+    access: CaseMembership = Depends(require_case_permission(Permission.VIEW_CASE)),
 ) -> CaseResponse:
     repo = CaseRepository(db)
     case = repo.get_by_id(case_id)
@@ -161,7 +161,7 @@ def update_case(
     data: CaseUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    access: CaseAccess = Depends(require_case_access(CaseAccessLevel.MANAGE)),
+    access: CaseMembership = Depends(require_case_permission(Permission.VIEW_CASE)),
 ) -> CaseResponse:
     repo = CaseRepository(db)
     case = repo.get_by_id(case_id)
@@ -199,7 +199,7 @@ def delete_case(
     case_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role([Role.INVESTIGATOR, Role.ADMINISTRATOR])),
-    access: CaseAccess = Depends(require_case_access(CaseAccessLevel.MANAGE)),
+    access: CaseMembership = Depends(require_case_permission(Permission.VIEW_CASE)),
 ):
     repo = CaseRepository(db)
     case = repo.get_by_id(case_id) or repo.get_by_case_number(case_id)

@@ -15,9 +15,9 @@ from apps.backend.app.schemas.document import (
     DocumentResponse,
     ReportTextCreate,
 )
-from apps.backend.app.api.deps import get_current_active_user, require_role, require_case_access
+from apps.backend.app.api.deps import get_current_active_user, require_role, require_case_permission, Permission
 from apps.backend.app.models.user import User, Role
-from apps.backend.app.models.case_access import CaseAccess, CaseAccessLevel
+from apps.backend.app.models.case_membership import CaseMembership, CaseMembership
 from apps.backend.app.services.audit import log_action, DOCUMENT_UPLOADED
 
 router = APIRouter()
@@ -34,7 +34,7 @@ def create_document(
     data: DocumentCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role([Role.INVESTIGATOR, Role.ADMINISTRATOR])),
-    access: CaseAccess = Depends(require_case_access(CaseAccessLevel.MANAGE)),
+    access: CaseMembership = Depends(require_case_permission(Permission.VIEW_CASE)),
 ) -> DocumentResponse:
     """Create a new document record for a case."""
     case_repo = CaseRepository(db)
@@ -127,7 +127,7 @@ def upload_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role([Role.INVESTIGATOR, Role.ADMINISTRATOR])),
-    access: CaseAccess = Depends(require_case_access(CaseAccessLevel.MANAGE)),
+    access: CaseMembership = Depends(require_case_permission(Permission.VIEW_CASE)),
 ) -> DocumentResponse:
     """Upload a physical document and dispatch extraction."""
     from apps.backend.app.models.document import Document
@@ -213,7 +213,7 @@ def ingest_written_report(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role([Role.INVESTIGATOR, Role.ADMINISTRATOR])),
-    access: CaseAccess = Depends(require_case_access(CaseAccessLevel.MANAGE)),
+    access: CaseMembership = Depends(require_case_permission(Permission.VIEW_CASE)),
 ) -> DocumentResponse:
     """Ingest directly written report text, compute hash, persist, and trigger NLP extraction."""
     from apps.backend.app.models.document import Document
@@ -292,7 +292,7 @@ def list_documents(
     limit: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    access: CaseAccess = Depends(require_case_access(CaseAccessLevel.VIEW)),
+    access: CaseMembership = Depends(require_case_permission(Permission.VIEW_CASE)),
 ) -> DocumentListResponse:
     """List all documents belonging to a specific case."""
     case_repo = CaseRepository(db)
@@ -317,7 +317,7 @@ def delete_document(
     document_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role([Role.INVESTIGATOR, Role.ADMINISTRATOR])),
-    access: CaseAccess = Depends(require_case_access(CaseAccessLevel.MANAGE)),
+    access: CaseMembership = Depends(require_case_permission(Permission.VIEW_CASE)),
 ):
     """Remove a document, physical storage, and extracted entities from a case."""
     case_repo = CaseRepository(db)

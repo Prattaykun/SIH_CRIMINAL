@@ -158,3 +158,33 @@ body {
     @apply font-sans;
   }
 }
+
+.bg-stripes-green {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #4ade80,
+    #4ade80 5px,
+    #16a34a 5px,
+    #16a34a 10px
+  );
+}
+
+.bg-stripes-blue {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #38bdf8,
+    #38bdf8 5px,
+    #0284c7 5px,
+    #0284c7 10px
+  );
+}
+
+.bg-stripes-pink {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #fb7185,
+    #fb7185 5px,
+    #e11d48 5px,
+    #e11d48 10px
+  );
+}

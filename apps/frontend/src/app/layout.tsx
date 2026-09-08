@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Geist } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 
 import { Providers } from "@/providers/Providers";
@@ -14,6 +13,7 @@ const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
 });
+
 
 export const metadata: Metadata = {
   title: "SIH 26189 - Criminal Network Analysis System",
@@ -28,16 +28,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={cn("h-full", "antialiased", "dark", inter.variable, "font-sans", geist.variable)}>
-      <body className="h-full bg-slate-950 text-slate-100 flex overflow-hidden font-sans">
+      <body className="min-h-full bg-[#090c13] text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-white">
         <Providers>
-          <Sidebar />
-          <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+          <div className="min-h-screen flex flex-col bg-[#090c13]">
             <Header />
-            <main className="flex-1 overflow-y-auto bg-slate-950 p-6 md:p-8">
+            <main className="flex-1 overflow-y-auto bg-[#090c13] p-5 sm:p-6 lg:p-8">
               {children}
             </main>
           </div>
-          <Toaster position="bottom-right" toastOptions={{ style: { background: '#1e293b', color: '#f8fafc', border: '1px solid #334155' } }} />
+          <Toaster position="bottom-right" toastOptions={{ style: { background: '#121622', color: '#f8fafc', border: '1px solid #23293a' } }} />
         </Providers>
       </body>
     </html>

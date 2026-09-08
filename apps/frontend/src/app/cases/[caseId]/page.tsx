@@ -33,7 +33,7 @@ export default function CaseOverviewPage() {
         const res = await api.getCaseSummary(caseId);
         setSummaryData(res);
       } catch (err) {
-        console.error('Failed to load case summary:', err);
+        console.warn('Failed to load case summary:', err);
       } finally {
         setLoading(false);
       }

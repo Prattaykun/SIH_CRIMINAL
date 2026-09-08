@@ -5,9 +5,9 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from apps.backend.app.db.session import get_db
-from apps.backend.app.api.deps import get_current_active_user, require_case_access
+from apps.backend.app.api.deps import get_current_active_user, require_case_permission, Permission
 from apps.backend.app.models.user import User
-from apps.backend.app.models.case_access import CaseAccess, CaseAccessLevel
+from apps.backend.app.models.case_membership import CaseMembership, CaseMembership
 from apps.backend.app.services.report import ReportService
 from apps.backend.app.services.audit import log_action, REPORT_EXPORTED
 
@@ -29,7 +29,7 @@ def export_html_report(
     case_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    access: CaseAccess = Depends(require_case_access(CaseAccessLevel.VIEW)),
+    access: CaseMembership = Depends(require_case_permission(Permission.VIEW_CASE)),
 ):
     """
     Generate and export an evidence-backed HTML report for the case.

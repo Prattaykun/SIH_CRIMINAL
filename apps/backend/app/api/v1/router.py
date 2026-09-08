@@ -1,6 +1,6 @@
-from fastapi import APIRouter
+﻿from fastapi import APIRouter
 
-from apps.backend.app.api.v1.endpoints import cases, documents, health, graph, ingestion, analytics, similarity, ml, extraction, auth
+from apps.backend.app.api.v1.endpoints import cases, team, tasks, documents, health, graph, ingestion, analytics, similarity, ml, extraction, auth
 
 api_v1_router = APIRouter()
 
@@ -46,3 +46,8 @@ api_v1_router.include_router(
 
 api_v1_router.include_router(analytics.router, tags=["Analytics"])
 api_v1_router.include_router(extraction.router, tags=["Extraction"])
+api_v1_router.include_router(team.router, prefix='/cases', tags=['Team'])
+
+api_v1_router.include_router(tasks.router, prefix='/cases', tags=['Tasks'])
+
+

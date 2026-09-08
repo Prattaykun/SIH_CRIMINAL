@@ -1,5 +1,6 @@
 """Analytics API endpoints."""
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -14,9 +15,10 @@ from apps.backend.app.analytics.config import analytics_settings
 from apps.backend.app.models.alert import Alert
 from apps.backend.app.models.analytics import EntityGraphFeature, CaseGraphAnalytics as CaseGraphAnalyticsModel
 from apps.backend.app.models.audit_log import AuditLog
+from apps.backend.app.models.case import Case
 from apps.backend.app.graph.service import GraphService
 
-
+logger = logging.getLogger(__name__)
 router = APIRouter()
 graph_service = GraphService()
 
@@ -43,35 +45,66 @@ def get_analytics_health() -> dict[str, Any]:
 @router.post("/cases/{case_id}/analytics", response_model=AnalyticsRunResponse)
 def run_case_analytics(case_id: str, db: Session = Depends(get_db)) -> AnalyticsRunResponse:
     """Execute graph analytics and pattern detection on a case."""
+    logger.info(f"[ANALYTICS-TRACE] Requested case analytics for case_id='{case_id}'")
+    case_obj = db.query(Case).filter((Case.id == case_id) | (Case.case_number == case_id)).first()
+    resolved_uuid = str(case_obj.id) if case_obj else case_id
+    effective_case_id = getattr(case_obj, "case_number", case_id) or case_id
+    logger.info(f"[ANALYTICS-TRACE] Resolved case: ID='{resolved_uuid}', Number='{effective_case_id}'")
     
     # Fetch graph
+    graph_response = None
     try:
-        graph_response = graph_service.get_case_subgraph(
-            case_id, limit=analytics_settings.ANALYTICS_MAX_NODES
+        subgraph = graph_service.get_case_subgraph(
+            resolved_uuid, limit=analytics_settings.ANALYTICS_MAX_NODES
         )
-    except Exception:
-        # Fallback to PostgreSQL relational data if Neo4j is offline
+        if subgraph and subgraph.nodes:
+            graph_response = subgraph
+    except Exception as exc:
+        logger.info(f"[ANALYTICS-TRACE] Neo4j graph fetch unavailable ({exc}), falling back to PostgreSQL relational data")
+
+    if not graph_response:
+        # Fallback to PostgreSQL relational data if Neo4j is offline or empty
         from apps.backend.app.models.entity import ExtractedEntity
         from apps.backend.app.models.relationship import ExtractedRelationship
         from apps.backend.app.graph.schema import GraphResponse, GraphNode, GraphEdge
         
-        entities = db.query(ExtractedEntity).filter(ExtractedEntity.case_id == case_id, ExtractedEntity.verification_status.in_(["ACCEPTED", "CORRECTED"])).all()
-        relationships = db.query(ExtractedRelationship).filter(ExtractedRelationship.case_id == case_id, ExtractedRelationship.verification_status.in_(["ACCEPTED", "CORRECTED"])).all()
+        entities = db.query(ExtractedEntity).filter(
+            ExtractedEntity.case_id == resolved_uuid,
+            ExtractedEntity.verification_status != "REJECTED"
+        ).all()
+        relationships = db.query(ExtractedRelationship).filter(
+            ExtractedRelationship.case_id == resolved_uuid,
+            ExtractedRelationship.verification_status != "REJECTED"
+        ).all()
         
+        logger.info(
+            f"[ANALYTICS-TRACE] PostgreSQL fallback found {len(entities)} entities "
+            f"and {len(relationships)} relationships for case {effective_case_id}"
+        )
+
         nodes = []
         for e in entities:
             nodes.append(GraphNode(
-                id=e.id, label=e.entity_type, entity_type=e.entity_type, properties={"name": e.canonical_name}, case_id=case_id
+                id=str(e.id),
+                label=e.entity_type,
+                entity_type=e.entity_type,
+                properties={"name": e.canonical_name},
+                case_id=effective_case_id
             ))
         edges = []
         for r in relationships:
+            is_verified = r.verification_status in ["ACCEPTED", "CORRECTED"]
             edges.append(GraphEdge(
-                id=r.id, source_id=r.source_entity_id, target_id=r.target_entity_id, relationship_type=r.relation_type, verified=True
+                id=str(r.id),
+                source_id=str(r.source_entity_id),
+                target_id=str(r.target_entity_id),
+                relationship_type=r.relation_type,
+                verified=is_verified
             ))
         
-        graph_response = GraphResponse(case_id=case_id, nodes=nodes, edges=edges, generated_at=datetime.now(timezone.utc))
+        graph_response = GraphResponse(case_id=effective_case_id, nodes=nodes, edges=edges, generated_at=datetime.now(timezone.utc))
         
-    service = AnalyticsService(case_id)
+    service = AnalyticsService(effective_case_id)
     response, features, alerts = service.run_analysis(graph_response)
     
     # Persist Results idempotently

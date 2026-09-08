@@ -43,6 +43,13 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
     headers.set('Authorization', `Bearer ${token}`);
   }
 
+  if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+    console.log(`[API-TRACE] ${options.method || 'GET'} ${url}`, {
+      hasToken: Boolean(token),
+      tokenSnippet: token ? `${token.slice(0, 15)}...` : 'NONE',
+    });
+  }
+
   try {
     const response = await fetch(url, {
       ...options,
@@ -111,12 +118,78 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return await response.json() as T;
 }
 
+export interface DashboardOverviewStats {
+  total_cases: number;
+  active_investigations: number;
+  pending_verifications: number;
+  entities_extracted: number;
+  recent_cases: Array<{
+    id: string;
+    case_number: string;
+    title: string;
+    status: string;
+    priority: string;
+    created_at: string | null;
+  }>;
+  active_cases_summary?: {
+    total: number;
+    active: number;
+    high_priority: number;
+  };
+  verification_queue?: {
+    total_pending: number;
+    pending_entities: number;
+    pending_relationships: number;
+    by_entity_type: Record<string, number>;
+    oldest_pending_item: {
+      id: string;
+      name: string;
+      type: string;
+      created_at: string | null;
+    } | null;
+    high_priority_pending_count: number;
+  };
+  verified_entities?: {
+    verified: number;
+    pending: number;
+    rejected: number;
+    total: number;
+  };
+  network_structure?: {
+    high_degree_nodes: number;
+    bridge_nodes: number;
+    financial_nodes: number;
+    communication_nodes: number;
+    peripheral_nodes: number;
+    node_count: number;
+    edge_count: number;
+    selected_case: string;
+    time_range: string;
+  };
+  explainable_pattern_signals?: {
+    cluster_cohesion_index: number;
+    baseline_delta: string;
+    bridge_nodes_pending: number;
+    calculation_source: string;
+    evidence_references: string[];
+    disclaimer: string;
+  };
+  cases_table?: Array<{
+    id: string;
+    case_number: string;
+    title: string;
+    status: string;
+    priority: string;
+    created_at: string | null;
+    last_activity: string | null;
+    evidence_count: number;
+    pending_verifications: number;
+  }>;
+}
+
 export const api = {
-  async get<T = any>(endpoint: string): Promise<{ data: T }> {
-    const cleanUrl = endpoint.startsWith('http') 
-      ? endpoint 
-      : `${API_BASE_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
-    const response = await fetchWithTimeout(cleanUrl);
+  get: async <T = any>(endpoint: string): Promise<{ data: T }> => {
+    const response = await fetchWithTimeout(`${API_BASE_URL}${endpoint}`);
     const data = await handleResponse<T>(response);
     return { data };
   },
@@ -124,6 +197,15 @@ export const api = {
   async getCaseSummary(caseId: string): Promise<any> {
     const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/summary`);
     return handleResponse<any>(response);
+  },
+
+  async getDashboardStats(caseId?: string, timeRange?: string): Promise<DashboardOverviewStats> {
+    const params = new URLSearchParams();
+    if (caseId && caseId !== 'all') params.append('case_id', caseId);
+    if (timeRange) params.append('time_range', timeRange);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/overview/stats${qs}`);
+    return handleResponse<DashboardOverviewStats>(response);
   },
 
   isMockEnabled: () => MOCK_GRAPH_ENABLED,

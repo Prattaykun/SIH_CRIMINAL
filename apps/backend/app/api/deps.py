@@ -11,7 +11,7 @@ from apps.backend.app.core.config import settings
 from apps.backend.app.core.security import ALGORITHM
 from apps.backend.app.db.session import get_db
 from apps.backend.app.models.user import User, Role
-from apps.backend.app.models.case_access import CaseAccess, CaseAccessLevel
+from apps.backend.app.models.case_membership import CaseMembership, CaseRole, MembershipStatus
 from apps.backend.app.models.case import Case
 from apps.backend.app.services.audit import log_action
 
@@ -139,14 +139,61 @@ def require_administrator(
     return current_user
 
 
-def require_case_access(required_level: CaseAccessLevel) -> Callable[[str, User, Session], CaseAccess]:
-    """Dependency to check if the user has sufficient access level for a case."""
-    def access_checker(
+from enum import StrEnum
+
+class Permission(StrEnum):
+    VIEW_CASE = "view_case"
+    UPLOAD_EVIDENCE = "upload_evidence"
+    CREATE_NOTES = "create_notes"
+    CREATE_COMMENTS = "create_comments"
+    CREATE_TASKS = "create_tasks"
+    ASSIGN_TASKS = "assign_tasks"
+    UPDATE_OWN_TASKS = "update_own_tasks"
+    UPDATE_ANY_TASKS = "update_any_tasks"
+    REVIEW_ASSIGNED_CANDIDATES = "review_assigned_candidates"
+    REVIEW_CANDIDATES = "review_candidates"
+    PROPOSE_GRAPH_LINKS = "propose_graph_links"
+    MANAGE_TEAM = "manage_team"
+    TRANSFER_CASE_LEAD = "transfer_case_lead"
+    VIEW_CASE_AUDIT = "view_case_audit"
+    EXPORT_CASE = "export_case"
+    APPROVE_GRAPH_SYNC = "approve_graph_sync"
+
+CASE_ROLE_PERMISSIONS = {
+    CaseRole.CASE_LEAD: {
+        Permission.VIEW_CASE, Permission.UPLOAD_EVIDENCE, Permission.CREATE_NOTES, 
+        Permission.CREATE_COMMENTS, Permission.CREATE_TASKS, Permission.ASSIGN_TASKS, 
+        Permission.UPDATE_OWN_TASKS, Permission.UPDATE_ANY_TASKS, Permission.REVIEW_ASSIGNED_CANDIDATES, 
+        Permission.REVIEW_CANDIDATES, Permission.PROPOSE_GRAPH_LINKS, Permission.MANAGE_TEAM, 
+        Permission.TRANSFER_CASE_LEAD, Permission.VIEW_CASE_AUDIT, Permission.EXPORT_CASE, 
+        Permission.APPROVE_GRAPH_SYNC,
+    },
+    CaseRole.INVESTIGATOR: {
+        Permission.VIEW_CASE, Permission.UPLOAD_EVIDENCE, Permission.CREATE_NOTES, 
+        Permission.CREATE_COMMENTS, Permission.CREATE_TASKS, Permission.UPDATE_OWN_TASKS, 
+        Permission.REVIEW_ASSIGNED_CANDIDATES, Permission.PROPOSE_GRAPH_LINKS, Permission.VIEW_CASE_AUDIT,
+    },
+    CaseRole.ANALYST: {
+        Permission.VIEW_CASE, Permission.CREATE_NOTES, Permission.CREATE_COMMENTS, 
+        Permission.CREATE_TASKS, Permission.UPDATE_OWN_TASKS, Permission.PROPOSE_GRAPH_LINKS, 
+        Permission.VIEW_CASE_AUDIT,
+    },
+    CaseRole.REVIEWER: {
+        Permission.VIEW_CASE, Permission.CREATE_NOTES, Permission.CREATE_COMMENTS, 
+        Permission.UPDATE_OWN_TASKS, Permission.REVIEW_CANDIDATES, Permission.VIEW_CASE_AUDIT,
+    },
+    CaseRole.OBSERVER: {
+        Permission.VIEW_CASE,
+    },
+}
+
+def require_case_permission(permission: Permission) -> Callable[[str, User, Session], CaseMembership]:
+    """Dependency to check if the user has specific permission in a case."""
+    def permission_checker(
         case_id: str,
         current_user: Annotated[User, Depends(get_current_active_user)],
         db: Annotated[Session, Depends(get_db)],
-    ) -> CaseAccess:
-        # Resolve case_id which might be a case_number
+    ) -> CaseMembership:
         import uuid
         try:
             val = uuid.UUID(case_id)
@@ -159,20 +206,27 @@ def require_case_access(required_level: CaseAccessLevel) -> Callable[[str, User,
             
         resolved_case_id = str(case.id)
 
-        # Administrator has implicit MANAGE access to all cases
+        # Administrator has implicit all-access
         if current_user.role == Role.ADMINISTRATOR.value:
-            return CaseAccess(
+            log_action(
+                db=db,
+                action="ADMIN_OVERRIDE",
+                user_id=current_user.id,
+                target_type="CASE",
+                target_id=resolved_case_id,
+                new_state={"permission": permission.value}
+            )
+            return CaseMembership(
                 user_id=current_user.id,
                 case_id=resolved_case_id,
-                access_level=CaseAccessLevel.MANAGE.value,
-                is_active=True
+                case_role=CaseRole.CASE_LEAD.value,
+                status=MembershipStatus.ACTIVE.value
             )
 
-        # For normal users, check case_access assignment
-        assignment = db.query(CaseAccess).filter(
-            CaseAccess.case_id == resolved_case_id,
-            CaseAccess.user_id == current_user.id,
-            CaseAccess.is_active == True
+        assignment = db.query(CaseMembership).filter(
+            CaseMembership.case_id == resolved_case_id,
+            CaseMembership.user_id == current_user.id,
+            CaseMembership.status == MembershipStatus.ACTIVE.value
         ).first()
 
         if not assignment:
@@ -187,18 +241,21 @@ def require_case_access(required_level: CaseAccessLevel) -> Callable[[str, User,
             db.commit()
             raise HTTPException(status_code=403, detail="Not assigned to this case")
 
-        assigned_level = CaseAccessLevel(assignment.access_level)
-        if not assigned_level.includes(required_level):
+        assigned_role = CaseRole(assignment.case_role)
+        allowed_permissions = CASE_ROLE_PERMISSIONS.get(assigned_role, set())
+        
+        if permission not in allowed_permissions:
             log_action(
                 db=db,
                 action="AUTHORIZATION_DENIED",
                 user_id=current_user.id,
                 target_type="CASE",
                 target_id=case_id,
-                new_state={"reason": f"Requires {required_level.value} access, had {assigned_level.value}"}
+                new_state={"reason": f"Requires {permission.value} permission, role {assigned_role.value} does not have it."}
             )
             db.commit()
-            raise HTTPException(status_code=403, detail=f"Requires {required_level.value} access to this case")
+            raise HTTPException(status_code=403, detail=f"Requires {permission.value} permission.")
 
         return assignment
-    return access_checker
+    return permission_checker
+

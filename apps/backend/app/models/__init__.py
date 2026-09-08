@@ -35,4 +35,8 @@ __all__ = [
     "ExtractionModel",
     "CaseAccess",
     "CaseAccessLevel",
+    "CaseMembership",
+    "CaseTask",
 ]
+from apps.backend.app.models.case_membership import CaseMembership
+from apps.backend.app.models.case_task import CaseTask
