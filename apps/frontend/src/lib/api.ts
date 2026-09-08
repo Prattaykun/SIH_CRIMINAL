@@ -176,8 +176,13 @@ export const api = {
   },
 
   async getCaseFeatures(caseId: string): Promise<EntityGraphFeature[]> {
-    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/features`);
-    return handleResponse<EntityGraphFeature[]>(response);
+    try {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/features`);
+      if (response.status === 404) return [];
+      return handleResponse<EntityGraphFeature[]>(response);
+    } catch {
+      return [];
+    }
   },
 
   async reviewAlert(alertId: string, action: string, rationale: string = ""): Promise<unknown> {

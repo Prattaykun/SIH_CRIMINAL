@@ -72,13 +72,20 @@ def get_similarity(
 
     return SimilarityResponse(results=matches)
 
-@router.get("/{case_id}/features", response_model=FeatureVectorResponse)
+@router.get("/{case_id}/feature-vector", response_model=FeatureVectorResponse)
+@router.get("/{case_id}/similarity/features", response_model=FeatureVectorResponse)
 def get_feature_vector(
     case_id: str,
     db: Session = Depends(get_db)
 ):
-    """Retrieves the latest feature vector for a case."""
+    """Retrieves the latest feature vector for a case, extracting on demand if needed."""
     vec = db.query(CaseFeatureVector).filter(CaseFeatureVector.case_id == case_id).order_by(CaseFeatureVector.created_at.desc()).first()
+    if not vec:
+        case = db.query(Case).filter(Case.id == case_id).first()
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found")
+        run_id = str(uuid.uuid4())
+        vec = extract_case_features(db, case_id, run_id)
     if not vec:
         raise HTTPException(status_code=404, detail="Feature vector not found")
         
