@@ -32,6 +32,7 @@ def check_graph_health(service: GraphService = Depends(get_graph_service)) -> Gr
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from apps.backend.app.db.session import get_db
+from apps.backend.app.models.case import Case
 from apps.backend.app.models.entity import ExtractedEntity
 from apps.backend.app.models.relationship import ExtractedRelationship
 from apps.backend.app.graph.schema import GraphNode, GraphEdge
@@ -47,37 +48,84 @@ def get_case_graph(
     service: GraphService = Depends(get_graph_service),
     db: Session = Depends(get_db),
 ) -> GraphResponse:
-    """Retrieve the full graph (nodes and relationships) associated with a case. Development only."""
+    """Retrieve the full graph (nodes and relationships) associated with a case."""
+    # Resolve case_id to UUID and human-readable case_number
+    case = db.query(Case).filter((Case.id == case_id) | (Case.case_number == case_id)).first()
+    resolved_id = str(case.id) if case else case_id
+    effective_case_id = getattr(case, "case_number", case_id) or case_id
+
+    # Try Neo4j first if available and populated
     try:
-        return service.get_case_subgraph(case_id, limit=limit)
-    except GraphServiceUnavailableError as exc:
-        # Fallback to PostgreSQL relational data if Neo4j is offline
-        entities = db.query(ExtractedEntity).filter(
-            ExtractedEntity.case_id == case_id, 
-            ExtractedEntity.verification_status.in_(["ACCEPTED", "CORRECTED"])
-        ).all()
-        relationships = db.query(ExtractedRelationship).filter(
-            ExtractedRelationship.case_id == case_id, 
-            ExtractedRelationship.verification_status.in_(["ACCEPTED", "CORRECTED"])
-        ).all()
-        
-        nodes = []
-        for e in entities:
-            nodes.append(GraphNode(
-                id=e.id, label=e.entity_type, entity_type=e.entity_type, properties={"name": e.canonical_name}, case_id=case_id
-            ))
-        edges = []
-        for r in relationships:
+        subgraph = service.get_case_subgraph(resolved_id, limit=limit)
+        if subgraph and subgraph.nodes:
+            return subgraph
+    except (GraphServiceUnavailableError, Exception):
+        pass
+
+    # Fallback to PostgreSQL relational data (either Neo4j is offline or has no data synced yet)
+    entities = db.query(ExtractedEntity).filter(
+        ExtractedEntity.case_id == resolved_id, 
+        ExtractedEntity.verification_status != "REJECTED"
+    ).all()
+    relationships = db.query(ExtractedRelationship).filter(
+        ExtractedRelationship.case_id == resolved_id, 
+        ExtractedRelationship.verification_status != "REJECTED"
+    ).all()
+    
+    # Normalize entity types for frontend graph schema and colors
+    # (e.g. PHONE_NUMBER -> PHONE, ACCOUNT -> BANK_ACCOUNT)
+    type_norm = {
+        "PHONE_NUMBER": "PHONE",
+        "ACCOUNT": "BANK_ACCOUNT",
+        "BANK": "BANK_ACCOUNT",
+    }
+
+    nodes = []
+    entity_id_set = set()
+    for e in entities:
+        norm_type = type_norm.get(e.entity_type.upper(), e.entity_type.upper())
+        nodes.append(GraphNode(
+            id=str(e.id),
+            label=norm_type.title(),
+            entity_type=norm_type,
+            properties={
+                "name": e.canonical_name,
+                "canonical_name": e.canonical_name,
+                "original_value": e.original_value or e.canonical_name,
+                "status": e.verification_status,
+                "confidence": float(e.confidence_score) if e.confidence_score is not None else 0.95,
+            },
+            case_id=effective_case_id,
+            source_document_ids=[str(e.document_id)] if e.document_id else [],
+        ))
+        entity_id_set.add(str(e.id))
+
+    edges = []
+    for r in relationships:
+        src = str(r.source_entity_id)
+        tgt = str(r.target_entity_id)
+        if src in entity_id_set and tgt in entity_id_set:
+            is_verified = r.verification_status in ["ACCEPTED", "CORRECTED"]
             edges.append(GraphEdge(
-                id=r.id, source_id=r.source_entity_id, target_id=r.target_entity_id, relationship_type=r.relation_type, verified=True
+                id=str(r.id),
+                source_id=src,
+                target_id=tgt,
+                relationship_type=r.relation_type,
+                properties={
+                    "status": r.verification_status,
+                    "confidence": float(r.confidence_score) if r.confidence_score is not None else 0.9,
+                },
+                confidence=float(r.confidence_score) if r.confidence_score is not None else 0.9,
+                verified=is_verified,
+                source_document_id=str(r.document_id) if r.document_id else None,
             ))
-        
-        return GraphResponse(case_id=case_id, nodes=nodes, edges=edges, generated_at=datetime.now(timezone.utc))
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while retrieving the graph."
-        )
+    
+    return GraphResponse(
+        case_id=effective_case_id,
+        nodes=nodes,
+        edges=edges,
+        generated_at=datetime.now(timezone.utc)
+    )
 
 
 @router.get(

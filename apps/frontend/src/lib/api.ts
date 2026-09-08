@@ -104,6 +104,11 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export const api = {
+  async getCaseSummary(caseId: string): Promise<any> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/summary`);
+    return handleResponse<any>(response);
+  },
+
   isMockEnabled: () => MOCK_GRAPH_ENABLED,
 
   async listCases(skip = 0, limit = 50, status?: string): Promise<CaseListResponse> {

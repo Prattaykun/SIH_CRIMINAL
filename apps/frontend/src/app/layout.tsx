@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Geist } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 
 import { Providers } from "@/providers/Providers";
 import { Toaster } from "react-hot-toast";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased dark`}>
+    <html lang="en" className={cn("h-full", "antialiased", "dark", inter.variable, "font-sans", geist.variable)}>
       <body className="h-full bg-slate-950 text-slate-100 flex overflow-hidden font-sans">
         <Providers>
           <Sidebar />

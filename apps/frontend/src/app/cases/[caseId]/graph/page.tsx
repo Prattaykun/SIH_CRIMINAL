@@ -109,7 +109,7 @@ export default function GraphPage() {
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${health?.neo4j_available ? 'bg-emerald-500' : isSnapshotMode ? 'bg-blue-500' : api.isMockEnabled() ? 'bg-purple-500' : 'bg-amber-500'}`}></span>
               <span className="text-slate-300">
-                {health?.neo4j_available ? 'Neo4j Online' : isSnapshotMode ? 'Seeded Snapshot' : api.isMockEnabled() ? 'Mock Graph' : 'Neo4j Offline'}
+                {health?.neo4j_available ? 'Neo4j Online' : isSnapshotMode ? 'Seeded Snapshot' : api.isMockEnabled() ? 'Mock Graph' : graphData.nodes.length > 0 ? 'Relational Graph (Offline)' : 'Neo4j Offline'}
               </span>
             </div>
             <div className="w-px h-4 bg-slate-700"></div>
@@ -170,7 +170,21 @@ export default function GraphPage() {
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
           </div>
           <h3 className="text-lg font-semibold text-slate-200 mb-2">No Graph Data Available</h3>
-          <p className="text-slate-400 max-w-md">No graph relationships are currently available for this case. Check ingestion and synchronization status on the case overview page.</p>
+          <p className="text-slate-400 max-w-md mb-6">No graph relationships are currently available for this case. Check ingestion and synchronization status on the case overview page.</p>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={handleLoadSnapshot}
+              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg transition shadow-md shadow-indigo-900/20"
+            >
+              Load Seeded Snapshot (Read-Only)
+            </button>
+            <Link 
+              href={`/cases/${caseId}/evidence`}
+              className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-sm rounded-lg transition border border-slate-700"
+            >
+              Ingest New Evidence
+            </Link>
+          </div>
         </div>
       ) : graphData ? (
         <div className="flex-1 min-h-0 relative">
