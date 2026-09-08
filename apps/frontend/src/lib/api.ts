@@ -30,13 +30,14 @@ class ApiClientError extends Error {
   }
 }
 
-import { getMemoryToken } from '@/context/AuthContext';
+import { getMemoryToken, setMemoryToken } from '@/context/AuthContext';
+import { getStoredToken, setStoredToken, setStoredUser, clearAuth } from './auth';
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 15000): Promise<Response> {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
 
-  const token = getMemoryToken();
+  const token = getStoredToken() || getMemoryToken();
   const headers = new Headers(options.headers || {});
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
@@ -88,8 +89,13 @@ async function handleResponse<T>(response: Response): Promise<T> {
     }
     
     if (response.status === 401) {
+      clearAuth();
+      setMemoryToken(null);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('unauthorized'));
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.href = '/login';
+        }
       }
     }
 
@@ -261,7 +267,15 @@ export const api = {
       },
       body: params
     });
-    return handleResponse<{ access_token: string, user: any }>(response);
+    const data = await handleResponse<{ access_token: string, user: any }>(response);
+    if (data?.access_token) {
+      setStoredToken(data.access_token);
+      setMemoryToken(data.access_token);
+      if (data.user) {
+        setStoredUser(data.user);
+      }
+    }
+    return data;
   },
 
   async getExtractionCandidates(caseOrDocId: string, type: "document" | "case" = "document"): Promise<any> {

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import { ShieldAlert, LogIn, Lock } from 'lucide-react';
@@ -10,11 +11,19 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, user, token } = useAuth();
+  const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Auto-redirect if already authenticated
+  useEffect(() => {
+    if (user && token) {
+      router.replace('/cases');
+    }
+  }, [user, token, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,6 +33,7 @@ export default function LoginPage() {
     try {
       const response = await api.login(username, password);
       login(response.access_token, response.user);
+      router.push('/cases');
     } catch (err: any) {
       setError(err.message || 'Failed to login. Please check credentials.');
     } finally {
@@ -61,7 +71,7 @@ export default function LoginPage() {
                 className="w-full bg-slate-950 border-slate-800 text-slate-200"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. test_investigator"
+                placeholder="e.g. demo_investigator"
               />
             </div>
 
@@ -101,10 +111,17 @@ export default function LoginPage() {
         </CardContent>
         
         <CardFooter className="flex flex-col border-t border-slate-800 mt-2 pt-6">
-          <div className="text-xs text-slate-500 text-center">
-            Prototype Mode: Use test credentials <br/>
-            (test_admin, test_investigator, test_analyst, test_reviewer)<br/>
-            Password: testpassword
+          <div className="text-xs text-slate-400 text-center space-y-1.5 w-full">
+            <span className="font-semibold text-slate-300">Synchronized Evaluator / Demo Accounts:</span>
+            <div className="flex flex-wrap gap-1 justify-center py-1">
+              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-blue-300 font-mono text-[11px]">demo_investigator</span>
+              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-blue-300 font-mono text-[11px]">demo_admin</span>
+              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-blue-300 font-mono text-[11px]">demo_analyst</span>
+              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-blue-300 font-mono text-[11px]">demo_reviewer</span>
+            </div>
+            <div className="text-slate-400">
+              Fixed Password: <code className="text-emerald-400 font-semibold px-1.5 py-0.5 rounded bg-slate-800/80 font-mono">DemoPassword123!</code>
+            </div>
           </div>
         </CardFooter>
       </Card>

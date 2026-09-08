@@ -199,4 +199,83 @@ describe('API Client', () => {
       expect(result.status).toBe('success');
     });
   });
+
+  describe('Authentication & Storage Persistence', () => {
+    const TOKEN_KEY = 'sih_auth_token';
+    const USER_KEY = 'sih_auth_user';
+
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it('attaches Authorization header from localStorage token', async () => {
+      localStorage.setItem(TOKEN_KEY, 'sample-persisted-jwt-token');
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 'C001', case_number: 'CASE-001' })
+      } as Response);
+
+      await api.getCase('C001');
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/cases/C001'),
+        expect.objectContaining({
+          headers: expect.any(Headers)
+        })
+      );
+
+      const calledHeaders = vi.mocked(fetch).mock.calls[0][1]?.headers as Headers;
+      expect(calledHeaders.get('Authorization')).toBe('Bearer sample-persisted-jwt-token');
+    });
+
+    it('stores token and user in localStorage on successful login', async () => {
+      const mockLoginResponse = {
+        access_token: 'new-jwt-access-token-12345',
+        token_type: 'bearer',
+        expires_in: 604800,
+        user: {
+          id: 'user-001',
+          username: 'demo_investigator',
+          email: 'investigator@sih.internal',
+          role: 'INVESTIGATOR'
+        }
+      };
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockLoginResponse
+      } as Response);
+
+      const result = await api.login('demo_investigator', 'DemoPassword123!');
+
+      expect(result.access_token).toBe('new-jwt-access-token-12345');
+      expect(localStorage.getItem(TOKEN_KEY)).toBe('new-jwt-access-token-12345');
+      expect(JSON.parse(localStorage.getItem(USER_KEY) || '{}')).toEqual(mockLoginResponse.user);
+    });
+
+    it('clears localStorage and dispatches unauthorized event on 401', async () => {
+      localStorage.setItem(TOKEN_KEY, 'expired-token');
+      localStorage.setItem(USER_KEY, JSON.stringify({ username: 'demo_investigator' }));
+
+      const unauthorizedSpy = vi.fn();
+      window.addEventListener('unauthorized', unauthorizedSpy);
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Token expired' })
+      } as Response);
+
+      await expect(api.getCase('C001')).rejects.toThrow();
+
+      expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+      expect(localStorage.getItem(USER_KEY)).toBeNull();
+      expect(unauthorizedSpy).toHaveBeenCalled();
+
+      window.removeEventListener('unauthorized', unauthorizedSpy);
+    });
+  });
 });

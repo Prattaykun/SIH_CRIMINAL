@@ -28,16 +28,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS Configuration
-origins = [
-    settings.FRONTEND_URL,
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-
+# CORS Configuration allowing local network IP access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

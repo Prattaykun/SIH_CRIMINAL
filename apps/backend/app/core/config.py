@@ -15,19 +15,38 @@ class Settings(BaseSettings):
     )
 
     # General App Settings
+    PROJECT_NAME: str = "SIH-26189 Criminal Network Analysis"
+    API_V1_STR: str = "/api/v1"
     APP_NAME: str = "SIH 26189 Criminal Network Analysis System"
     APP_ENV: str = Field(default="development", description="Application environment")
     API_PREFIX: str = Field(default="/api/v1", description="Global API version prefix")
     API_HOST: str = Field(default="0.0.0.0", description="Host to bind the API server")
     API_PORT: int = Field(default=8000, description="Port to bind the API server")
+
+    # Static JWT Secret Key (Prevents session invalidation on restart)
     SECRET_KEY: str = Field(
-        default="dev_secret_key_change_in_production_min32chars!",
+        default="sih-26189-permanent-deterministic-secret-key-2026",
         description="Application secret key",
     )
+    ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
-        default=60,
+        default=60 * 24 * 7,  # 7-day token persistence for multi-device login
         description="Access token expiration in minutes",
     )
+
+    # Deterministic Seed Password for demo/evaluator accounts
+    DEFAULT_DEMO_PASSWORD: str = Field(
+        default="DemoPassword123!",
+        description="Deterministic seed password for demo/evaluator accounts",
+    )
+
+    # Cross-Origin Configuration allowing local network IP access
+    BACKEND_CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+    ]
 
     # Password Policy
     BCRYPT_ROUNDS: int = 12

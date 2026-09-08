@@ -8,7 +8,7 @@ from jose import jwt
 
 from apps.backend.app.core.config import settings
 
-ALGORITHM = "HS256"
+ALGORITHM = getattr(settings, "ALGORITHM", "HS256")
 
 
 def validate_password_policy(password: str) -> None:

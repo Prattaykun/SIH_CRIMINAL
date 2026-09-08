@@ -1,6 +1,13 @@
 import os
 import sys
 import logging
+from pathlib import Path
+
+# Ensure project root is on sys.path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from sqlalchemy.orm import Session
 import uuid
 
@@ -18,8 +25,62 @@ from apps.backend.app.core.security import get_password_hash
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+import bcrypt
+if not hasattr(bcrypt, '__about__'):
+    class About:
+        __version__ = getattr(bcrypt, '__version__', '4.0.1')
+    bcrypt.__about__ = About()
+
+try:
+    import passlib.handlers.bcrypt
+    passlib.handlers.bcrypt._BcryptBackend._finalize_backend_mixin = lambda *args, **kwargs: True
+    from passlib.context import CryptContext
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+except Exception:
+    from apps.backend.app.core.security import get_password_hash
+    class DirectBcryptContext:
+        def hash(self, secret: str) -> str:
+            return get_password_hash(secret)
+    pwd_context = DirectBcryptContext()
+
+from apps.backend.app.core.config import settings
+
+def seed_users(db: Session):
+    fixed_password = settings.DEFAULT_DEMO_PASSWORD  # "DemoPassword123!"
+    hashed = pwd_context.hash(fixed_password)
+    
+    roles = [
+        ("demo_investigator", "INVESTIGATOR", "investigator@sih.internal"),
+        ("demo_admin", "ADMINISTRATOR", "admin@sih.internal"),
+        ("demo_analyst", "ANALYST", "analyst@sih.internal"),
+        ("demo_reviewer", "REVIEWER", "reviewer@sih.internal"),
+    ]
+    
+    user_map = {}
+    for username, role, email in roles:
+        user = db.query(User).filter(User.username == username).first()
+        if user:
+            user.hashed_password = hashed
+            user.role = role
+            user.email = email
+            user.is_active = True
+        else:
+            user = User(
+                username=username,
+                hashed_password=hashed,
+                role=role,
+                email=email,
+                is_active=True
+            )
+            db.add(user)
+        db.flush()
+        user_map[role] = user
+    db.commit()
+    print(f"[AUTH] All user accounts synchronized with fixed password: {fixed_password}")
+    return user_map
+
 def seed_demo_data():
-    app_env = os.environ.get("APP_ENV", "production").lower()
+    app_env = os.environ.get("APP_ENV", "development").lower()
     if app_env not in ["development", "demo"]:
         logger.error(f"Cannot seed demo data. APP_ENV is '{app_env}'. Must be 'development' or 'demo'.")
         sys.exit(1)
@@ -29,44 +90,9 @@ def seed_demo_data():
     from apps.backend.app.db.session import engine
     from apps.backend.app.db.base import Base
     Base.metadata.create_all(bind=engine)
-    
-    demo_password = os.environ.get("DEMO_PASSWORD")
-    if not demo_password:
-        # Request from CLI if not present in env
-        logger.info("DEMO_PASSWORD environment variable not set. Please provide a password for the demo users.")
-        try:
-            demo_password = input("Demo Password: ")
-        except EOFError:
-            demo_password = "demopassword"
-            logger.info("Using fallback demo password (non-interactive).")
-
-    hashed_password = get_password_hash(demo_password)
 
     with SessionLocal() as db:
-        # Users
-        users = [
-            {"username": "demo_admin", "email": "admin@demo.local", "role": Role.ADMINISTRATOR.value},
-            {"username": "demo_investigator", "email": "investigator@demo.local", "role": Role.INVESTIGATOR.value},
-            {"username": "demo_analyst", "email": "analyst@demo.local", "role": Role.ANALYST.value},
-            {"username": "demo_reviewer", "email": "reviewer@demo.local", "role": Role.REVIEWER.value},
-        ]
-        
-        user_map = {}
-        for u in users:
-            db_user = db.query(User).filter(User.username == u["username"]).first()
-            if not db_user:
-                db_user = User(
-                    username=u["username"],
-                    email=u["email"],
-                    password_hash=hashed_password,
-                    role=u["role"],
-                    is_active=True
-                )
-                db.add(db_user)
-                db.flush()
-            user_map[u["role"]] = db_user
-
-        logger.info("Seeded 4 demo users.")
+        user_map = seed_users(db)
 
         # Case
         canonical_case_id = "16d5cee3-d1c4-4ff8-b9a2-bfd31932453f"

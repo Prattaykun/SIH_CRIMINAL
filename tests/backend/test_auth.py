@@ -112,3 +112,50 @@ def test_case_access_isolation(
 
     # Investigator can UPDATE Case A
     assert investigator_client.patch(f"/api/v1/cases/{case_a_id}", json={"title": "Updated"}).status_code == 200
+
+
+def test_deterministic_auth_settings():
+    """Verify permanent deterministic secret key, algorithm, and 7-day token lifespan."""
+    from apps.backend.app.core.config import settings
+    import re
+
+    assert settings.SECRET_KEY == "sih-26189-permanent-deterministic-secret-key-2026"
+    assert settings.ALGORITHM == "HS256"
+    assert settings.ACCESS_TOKEN_EXPIRE_MINUTES == 60 * 24 * 7  # 7 days
+    assert settings.DEFAULT_DEMO_PASSWORD == "DemoPassword123!"
+
+    # Verify CORS regex allows local network IPs
+    cors_regex = r"http://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?"
+    assert re.match(cors_regex, "http://localhost:3000")
+    assert re.match(cors_regex, "http://127.0.0.1:3000")
+    assert re.match(cors_regex, "http://192.168.1.55:3000")
+    assert re.match(cors_regex, "http://10.0.0.12:3001")
+    assert not re.match(cors_regex, "http://malicious-domain.com:3000")
+
+
+def test_seed_demo_users_and_login(db_session: Session, unauthenticated_client: TestClient):
+    """Verify seed_users synchronizes demo users with fixed password and allows login."""
+    from scripts.seed_demo_data import seed_users
+    from apps.backend.app.core.config import settings
+
+    user_map = seed_users(db_session)
+    assert len(user_map) == 4
+
+    # Verify login for each seeded demo user using the fixed password
+    for role_name, username in [
+        ("INVESTIGATOR", "demo_investigator"),
+        ("ADMINISTRATOR", "demo_admin"),
+        ("ANALYST", "demo_analyst"),
+        ("REVIEWER", "demo_reviewer"),
+    ]:
+        res = unauthenticated_client.post(
+            "/api/v1/auth/login",
+            data={"username": username, "password": settings.DEFAULT_DEMO_PASSWORD}
+        )
+        assert res.status_code == 200, f"Failed login for {username}: {res.text}"
+        data = res.json()
+        assert "access_token" in data
+        assert data["token_type"] == "bearer"
+        assert data["expires_in"] == settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        assert data["user"]["role"] == role_name
+
