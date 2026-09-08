@@ -183,33 +183,43 @@ export function normalizeGraphData(
     mentions: string[];
   }> = {};
 
-  const getEntityGroupKey = (e: any): string => {
+  const nameKeyToPrimaryId: Record<string, string> = {};
+  const resIdToPrimaryId: Record<string, string> = {};
+
+  rawEntities.forEach((rawE) => {
+    const rawId = String(rawE.id);
+    const rawType = String(rawE.entity_type || 'PERSON').toUpperCase();
+    const rawLabel = String(rawE.canonical_name || rawE.entity_value || rawE.normalized_value || rawE.original_value || rawE.label || 'Unknown Subject').trim();
+    const nameKey = `${rawType}:${rawLabel.toLowerCase()}`;
+    const status = (rawE.verification_status || rawE.status || 'UNREVIEWED') as NormalizedEntity['status'];
+    const conf = typeof rawE.confidence_score === 'number' ? rawE.confidence_score : (typeof rawE.confidence === 'number' ? rawE.confidence : 0.85);
+
     let resId: string | null = null;
-    if (e.attributes) {
+    if (rawE.attributes) {
       try {
-        const attrs = typeof e.attributes === 'string' ? jsonParseSafe(e.attributes) : e.attributes;
+        const attrs = typeof rawE.attributes === 'string' ? jsonParseSafe(rawE.attributes) : rawE.attributes;
         if (attrs?.resolution?.has_match && attrs?.resolution?.existing_entity_id) {
           resId = String(attrs.resolution.existing_entity_id);
         }
       } catch {}
     }
-    const type = String(e.entity_type || 'PERSON').toUpperCase();
-    const name = String(e.canonical_name || e.normalized_value || e.entity_value || e.original_value || e.label || '').trim().toLowerCase();
-    
-    if (resId) return `RES:${resId}`;
-    return `${type}:${name}`;
-  };
 
-  rawEntities.forEach((rawE) => {
-    const rawId = String(rawE.id);
-    const key = getEntityGroupKey(rawE);
-    const rawType = String(rawE.entity_type || 'PERSON').toUpperCase();
-    const rawLabel = String(rawE.canonical_name || rawE.entity_value || rawE.normalized_value || rawE.original_value || rawE.label || 'Unknown Subject').trim();
-    const status = (rawE.verification_status || rawE.status || 'UNREVIEWED') as NormalizedEntity['status'];
-    const conf = typeof rawE.confidence_score === 'number' ? rawE.confidence_score : (typeof rawE.confidence === 'number' ? rawE.confidence : 0.85);
+    // Determine target primary canonical ID
+    let targetPrimaryId = nameKeyToPrimaryId[nameKey];
+    if (!targetPrimaryId && resId && resIdToPrimaryId[resId]) {
+      targetPrimaryId = resIdToPrimaryId[resId];
+    }
+    if (!targetPrimaryId && resId && rawIdToCanonicalId[resId]) {
+      targetPrimaryId = rawIdToCanonicalId[resId];
+    }
 
-    if (!canonicalEntityGroups[key]) {
-      canonicalEntityGroups[key] = {
+    if (!targetPrimaryId) {
+      targetPrimaryId = rawId;
+      nameKeyToPrimaryId[nameKey] = rawId;
+      if (resId) resIdToPrimaryId[resId] = rawId;
+      resIdToPrimaryId[rawId] = rawId;
+
+      canonicalEntityGroups[targetPrimaryId] = {
         primaryId: rawId,
         type: rawType,
         label: rawLabel,
@@ -220,10 +230,13 @@ export function normalizeGraphData(
       };
       rawIdToCanonicalId[rawId] = rawId;
     } else {
-      const group = canonicalEntityGroups[key];
+      const group = canonicalEntityGroups[targetPrimaryId];
       group.rawEntities.push(rawE);
       group.mentions.push(rawId);
-      rawIdToCanonicalId[rawId] = group.primaryId;
+      rawIdToCanonicalId[rawId] = targetPrimaryId;
+      if (resId) resIdToPrimaryId[resId] = targetPrimaryId;
+      resIdToPrimaryId[rawId] = targetPrimaryId;
+
       if (conf > group.highestConfidence) {
         group.highestConfidence = conf;
       }

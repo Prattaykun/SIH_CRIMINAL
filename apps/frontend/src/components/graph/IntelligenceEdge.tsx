@@ -37,7 +37,7 @@ export const IntelligenceEdge = memo(({
   const labelRatio = edgeData.labelRatio ?? 0.5;
 
   // Use smooth bezier curves for natural line separation without orthogonal line-snapping
-  const [edgePath] = getBezierPath({
+  const [edgePath, defaultLabelX, defaultLabelY] = getBezierPath({
     sourceX,
     sourceY,
     sourcePosition,
@@ -47,9 +47,10 @@ export const IntelligenceEdge = memo(({
     curvature: 0.35,
   });
 
-  // Calculate staggered label position along the path based on labelRatio
-  const labelX = sourceX + (targetX - sourceX) * labelRatio;
-  const labelY = sourceY + (targetY - sourceY) * labelRatio;
+  // Calculate staggered label position along the bezier curve
+  const offsetMultiplier = (labelRatio - 0.5) * 0.8;
+  const labelX = defaultLabelX + (targetX - sourceX) * offsetMultiplier;
+  const labelY = defaultLabelY + (targetY - sourceY) * offsetMultiplier;
 
   const labelText = edgeData.type || 'CONNECTED';
   const isStrong = edgeData.weight === 'strong';
