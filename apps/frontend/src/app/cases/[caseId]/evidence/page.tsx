@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { toast } from 'react-hot-toast';
-import { CaseResponse, RelationshipEvidenceResponse } from '@/types/api';
+import { CaseResponse, RelationshipEvidenceResponse, DocumentResponse } from '@/types/api';
 import { CaseTimeline, TimelineEvent } from '@/components/cases/CaseTimeline';
 import ExtractionReviewPanel from '@/components/extraction/ExtractionReviewPanel';
 
@@ -19,6 +19,48 @@ function EvidenceContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeDocumentId, setActiveDocumentId] = useState<string | undefined>(undefined);
+
+  // Ingested Documents state
+  const [documents, setDocuments] = useState<DocumentResponse[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState<boolean>(true);
+  const [selectedDocForPreview, setSelectedDocForPreview] = useState<DocumentResponse | null>(null);
+  const [docToDelete, setDocToDelete] = useState<DocumentResponse | null>(null);
+  const [isDeletingDoc, setIsDeletingDoc] = useState<boolean>(false);
+
+  const fetchDocuments = async () => {
+    try {
+      setLoadingDocs(true);
+      const res = await api.listDocuments(caseId);
+      setDocuments(res.documents || []);
+    } catch (err) {
+      console.error('Failed to load documents:', err);
+    } finally {
+      setLoadingDocs(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [caseId]);
+
+  const handleDeleteDocConfirm = async () => {
+    if (!docToDelete) return;
+    setIsDeletingDoc(true);
+    try {
+      await api.deleteDocument(caseId, docToDelete.id);
+      toast.success(`Removed '${docToDelete.file_name}' from case.`);
+      setDocToDelete(null);
+      await fetchDocuments();
+      if (activeDocumentId === docToDelete.id) {
+        setActiveDocumentId(undefined);
+      }
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || 'Failed to remove document.';
+      toast.error(msg);
+    } finally {
+      setIsDeletingDoc(false);
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -94,8 +136,279 @@ function EvidenceContent() {
 
       <div id="upload" className="mb-8">
         <h3 className="text-lg font-semibold text-slate-200 mb-4 border-b border-slate-800 pb-2">Ingest New Evidence</h3>
-        <DocumentUploadZone caseId={caseId} onUploadComplete={(docId) => setActiveDocumentId(docId)} />
+        <DocumentUploadZone
+          caseId={caseId}
+          onUploadComplete={(docId) => {
+            setActiveDocumentId(docId);
+            fetchDocuments();
+          }}
+        />
       </div>
+
+      {/* Ingested Evidence & Reports Section */}
+      <div id="ingested-documents" className="mb-8 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white tracking-wide flex items-center gap-2.5">
+                Ingested Evidence &amp; Reports
+                <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 text-xs font-mono font-medium border border-slate-700">
+                  {documents.length}
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Forensic records, FIR statements, and written interrogation notes active in this investigation.
+              </p>
+            </div>
+          </div>
+          
+          <button
+            onClick={fetchDocuments}
+            disabled={loadingDocs}
+            className="self-start sm:self-auto px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition-colors border border-slate-700 flex items-center gap-1.5"
+          >
+            <svg className={`w-3.5 h-3.5 ${loadingDocs ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh Records
+          </button>
+        </div>
+
+        {loadingDocs ? (
+          <div className="py-10 text-center">
+            <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+            <p className="text-xs text-slate-400 font-mono">Loading ingested evidence records...</p>
+          </div>
+        ) : documents.length === 0 ? (
+          <div className="py-10 text-center border-2 border-dashed border-slate-800 rounded-lg bg-slate-950/30">
+            <div className="w-12 h-12 rounded-full bg-slate-800/50 flex items-center justify-center mx-auto mb-3 text-slate-500">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-slate-300 mb-1">No Evidence Records Ingested Yet</p>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4">
+              Upload files or write investigative reports above to extract topological entities and relationships.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-800 text-[11px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-950/40">
+                  <th className="py-3 px-4">Evidence / Report</th>
+                  <th className="py-3 px-4">Ingestion Type</th>
+                  <th className="py-3 px-4">Extraction Status</th>
+                  <th className="py-3 px-4">Provenance (SHA-256)</th>
+                  <th className="py-3 px-4">Ingested At</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-sans">
+                {documents.map((doc) => {
+                  const isTextReport = doc.file_type === 'TEXT_REPORT' || doc.file_name.endsWith('.txt');
+                  const isProcessing = doc.status === 'PROCESSING' || doc.status === 'UPLOADED';
+                  const isFailed = doc.status === 'FAILED' || doc.status === 'ERROR';
+
+                  return (
+                    <tr key={doc.id} className="hover:bg-slate-800/30 transition-colors group">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3 min-w-[200px]">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isTextReport ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                            {isTextReport ? (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-white truncate max-w-xs" title={doc.file_name}>
+                              {doc.file_name}
+                            </div>
+                            <div className="text-[11px] text-slate-500 font-mono">
+                              {doc.raw_content ? `${doc.raw_content.length} chars` : (doc.mime_type || 'Evidence File')}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className={`px-2.5 py-1 rounded text-[10px] font-bold tracking-wider uppercase border ${isTextReport ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'}`}>
+                          {isTextReport ? 'Written Report' : 'Uploaded File'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className={`px-2.5 py-1 rounded text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5 w-max border ${
+                          isProcessing ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse' :
+                          isFailed ? 'bg-red-500/10 text-red-400 border-red-500/30' :
+                          'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isProcessing ? 'bg-amber-400' : isFailed ? 'bg-red-400' : 'bg-emerald-400'}`}></span>
+                          {doc.status || 'PROCESSED'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap font-mono text-xs text-slate-400">
+                        {doc.file_hash ? (
+                          <span
+                            className="bg-slate-950 px-2 py-1 rounded border border-slate-800 text-slate-400 hover:text-white cursor-pointer transition-colors"
+                            title={`Full SHA-256: ${doc.file_hash}`}
+                            onClick={() => {
+                              navigator.clipboard.writeText(doc.file_hash || '');
+                              toast.success('Provenance hash copied to clipboard!');
+                            }}
+                          >
+                            {doc.file_hash.substring(0, 8)}...{doc.file_hash.substring(doc.file_hash.length - 6)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-600">Pending</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap text-xs text-slate-400">
+                        {doc.created_at ? new Date(doc.created_at).toLocaleString() : 'Recent'}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {doc.raw_content && (
+                            <button
+                              onClick={() => setSelectedDocForPreview(doc)}
+                              className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-medium transition-colors border border-slate-700 flex items-center gap-1"
+                              title="Preview Raw Content"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                              View
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => {
+                              setActiveDocumentId(doc.id);
+                              document.getElementById('extraction-review')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors border flex items-center gap-1 ${activeDocumentId === doc.id ? 'bg-blue-600 text-white border-blue-500 shadow-sm shadow-blue-900/30' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-blue-400 border-slate-700'}`}
+                            title="Inspect Extracted Entities"
+                          >
+                            <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                            Leads
+                          </button>
+
+                          <button
+                            onClick={() => setDocToDelete(doc)}
+                            className="p-1.5 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg text-xs font-medium transition-colors border border-slate-700 hover:border-red-500/30 ml-1"
+                            title="Remove Document from Ingestion"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Content Preview Modal */}
+      {selectedDocForPreview && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#141721] border border-[#212638] rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-150">
+            <div className="p-5 border-b border-[#212638] flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span>📄</span> {selectedDocForPreview.file_name}
+                </h3>
+                <div className="text-xs text-slate-400 font-mono mt-1">
+                  SHA-256: {selectedDocForPreview.file_hash || 'Uncomputed'} &bull; Ingested {new Date(selectedDocForPreview.created_at).toLocaleString()}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedDocForPreview(null)}
+                className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-950/70">
+              <pre className="font-mono text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
+                {selectedDocForPreview.raw_content || 'No raw text content available for this binary file.'}
+              </pre>
+            </div>
+
+            <div className="p-4 border-t border-[#212638] flex justify-between items-center bg-[#141721]">
+              <span className="text-xs text-slate-500 font-mono">
+                {selectedDocForPreview.raw_content ? `${selectedDocForPreview.raw_content.length} characters` : ''}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setActiveDocumentId(selectedDocForPreview.id);
+                    setSelectedDocForPreview(null);
+                    document.getElementById('extraction-review')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-colors"
+                >
+                  Inspect Extracted Leads
+                </button>
+                <button
+                  onClick={() => setSelectedDocForPreview(null)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Document Confirmation Modal */}
+      {docToDelete && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#141721] border border-red-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-150">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">Remove Ingested Document</h3>
+            <p className="text-sm text-slate-300 mb-4 leading-relaxed">
+              Are you sure you want to remove <span className="font-semibold text-white font-mono">{docToDelete.file_name}</span> from this case?
+            </p>
+            <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-xs text-red-300 mb-6">
+              This action permanently deletes the stored document file and removes any unverified extracted leads derived from it.
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                disabled={isDeletingDoc}
+                onClick={() => setDocToDelete(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingDoc}
+                onClick={handleDeleteDocConfirm}
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-2 shadow-lg shadow-red-900/30"
+              >
+                {isDeletingDoc ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Removing...
+                  </>
+                ) : (
+                  'Confirm Removal'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {relId && evidence ? (
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
@@ -178,7 +491,7 @@ function EvidenceContent() {
         <CaseTimeline events={timelineEvents} />
       </div>
 
-      <div className="mt-12">
+      <div id="extraction-review" className="mt-12">
         <ExtractionReviewPanel documentId={activeDocumentId} caseId={caseId} />
       </div>
 

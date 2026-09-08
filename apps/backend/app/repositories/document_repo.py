@@ -66,3 +66,54 @@ class DocumentRepository:
             .all()
         )
         return docs, total
+
+    def delete(self, document_id: str, deleted_by: str | None = None) -> bool:
+        """Delete a document, its physical file, and associated extracted entities."""
+        doc = self.get_by_id(document_id)
+        if doc is None:
+            return False
+
+        doc_id = doc.id
+        case_id = doc.case_id
+        file_name = doc.file_name
+
+        # 1. Unlink file on disk
+        if doc.file_path:
+            try:
+                from pathlib import Path
+                p = Path(doc.file_path)
+                if p.exists():
+                    p.unlink()
+            except Exception:
+                pass
+
+        # 2. Delete extraction runs and entities for this document
+        from apps.backend.app.models.extraction_run import ExtractionRun
+        from apps.backend.app.models.entity import ExtractedEntity
+        from apps.backend.app.models.relationship import ExtractedRelationship
+
+        entities = self.db.query(ExtractedEntity).filter(ExtractedEntity.document_id == doc_id).all()
+        ent_ids = [e.id for e in entities]
+        if ent_ids:
+            self.db.query(ExtractedRelationship).filter(
+                (ExtractedRelationship.source_entity_id.in_(ent_ids)) |
+                (ExtractedRelationship.target_entity_id.in_(ent_ids))
+            ).delete(synchronize_session=False)
+
+        self.db.query(ExtractedEntity).filter(ExtractedEntity.document_id == doc_id).delete(synchronize_session=False)
+        self.db.query(ExtractionRun).filter(ExtractionRun.document_id == doc_id).delete(synchronize_session=False)
+
+        # 3. Audit log
+        audit = AuditLog(
+            action="DELETE_DOCUMENT",
+            target_type="DOCUMENT",
+            target_id=doc_id,
+            user_id=deleted_by,
+            previous_state=f'{{"file_name": "{file_name}", "case_id": "{case_id}"}}',
+        )
+        self.db.add(audit)
+
+        # 4. Delete document record
+        self.db.delete(doc)
+        self.db.commit()
+        return True

@@ -9,6 +9,8 @@ import {
   AnalyticsRunResponse,
   PatternAlert,
   EntityGraphFeature,
+  DocumentResponse,
+  DocumentListResponse,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -354,6 +356,29 @@ export const api = {
 
     const response = await fetchWithTimeout(url, { method: "POST" });
     return handleResponse<any>(response);
+  },
+
+  async deleteCase(caseId: string): Promise<{ status: string; message: string }> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<{ status: string; message: string }>(response);
+  },
+
+  async listDocuments(caseId: string, skip = 0, limit = 50): Promise<DocumentListResponse> {
+    const params = new URLSearchParams({
+      skip: skip.toString(),
+      limit: limit.toString(),
+    });
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/documents?${params.toString()}`);
+    return handleResponse<DocumentListResponse>(response);
+  },
+
+  async deleteDocument(caseId: string, documentId: string): Promise<{ status: string; message: string }> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/documents/${documentId}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<{ status: string; message: string }>(response);
   },
 
   // Export

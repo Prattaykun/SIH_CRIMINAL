@@ -146,4 +146,57 @@ describe('API Client', () => {
       expect(result.status).toBe('PROCESSING');
     });
   });
+
+  describe('listDocuments and deletion operations', () => {
+    it('calls GET /cases/{id}/documents with pagination parameters', async () => {
+      const mockDocs = {
+        total: 1,
+        documents: [{ id: 'doc-1', file_name: 'test.txt', file_type: 'TEXT_REPORT', status: 'PROCESSED' }]
+      };
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockDocs
+      } as Response);
+
+      const result = await api.listDocuments('case-101', 0, 20);
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/cases/case-101/documents?skip=0&limit=20'),
+        expect.anything()
+      );
+      expect(result.total).toBe(1);
+      expect(result.documents[0].id).toBe('doc-1');
+    });
+
+    it('calls DELETE /cases/{id}/documents/{doc_id}', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: 'success', message: 'Document removed successfully.' })
+      } as Response);
+
+      const result = await api.deleteDocument('case-101', 'doc-1');
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/cases/case-101/documents/doc-1'),
+        expect.objectContaining({ method: 'DELETE' })
+      );
+      expect(result.status).toBe('success');
+    });
+
+    it('calls DELETE /cases/{id} to delete full case', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: 'success', message: 'Case deleted successfully.' })
+      } as Response);
+
+      const result = await api.deleteCase('case-101');
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/cases/case-101'),
+        expect.objectContaining({ method: 'DELETE' })
+      );
+      expect(result.status).toBe('success');
+    });
+  });
 });

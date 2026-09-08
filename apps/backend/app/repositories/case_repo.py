@@ -101,3 +101,74 @@ class CaseRepository:
         self.db.commit()
         self.db.refresh(case)
         return case
+
+    def delete(self, case_id: str, deleted_by: str | None = None) -> bool:
+        """Delete a case and all associated cascade records across SQL and graph."""
+        case = self.get_by_id(case_id) or self.get_by_case_number(case_id)
+        if case is None:
+            return False
+
+        cid = str(case.id)
+        case_num = case.case_number
+        title = case.title
+
+        # 1. Clean up physical files on disk from documents
+        from apps.backend.app.models.document import Document
+        from pathlib import Path
+        docs = self.db.query(Document).filter(Document.case_id == cid).all()
+        for doc in docs:
+            if doc.file_path:
+                try:
+                    p = Path(doc.file_path)
+                    if p.exists():
+                        p.unlink()
+                except Exception:
+                    pass
+
+        # 2. Delete dependent tables
+        from apps.backend.app.models.case_access import CaseAccess
+        from apps.backend.app.models.ml import CaseFeatureVector, ModelPrediction, SimilarityResult
+        from apps.backend.app.models.analytics import EntityGraphFeature
+        from apps.backend.app.models.alert import Alert
+        from apps.backend.app.models.processing_job import ProcessingJob
+        from apps.backend.app.models.extraction_run import ExtractionRun
+        from apps.backend.app.models.relationship import ExtractedRelationship
+        from apps.backend.app.models.entity import ExtractedEntity
+
+        self.db.query(CaseAccess).filter(CaseAccess.case_id == cid).delete(synchronize_session=False)
+        self.db.query(SimilarityResult).filter(
+            (SimilarityResult.current_case_id == cid) | (SimilarityResult.similar_case_id == cid)
+        ).delete(synchronize_session=False)
+        self.db.query(CaseFeatureVector).filter(CaseFeatureVector.case_id == cid).delete(synchronize_session=False)
+        self.db.query(ModelPrediction).filter(ModelPrediction.case_id == cid).delete(synchronize_session=False)
+        self.db.query(EntityGraphFeature).filter(EntityGraphFeature.case_id == cid).delete(synchronize_session=False)
+        self.db.query(Alert).filter(Alert.case_id == cid).delete(synchronize_session=False)
+        self.db.query(ProcessingJob).filter(ProcessingJob.case_id == cid).delete(synchronize_session=False)
+        self.db.query(ExtractedRelationship).filter(ExtractedRelationship.case_id == cid).delete(synchronize_session=False)
+        self.db.query(ExtractedEntity).filter(ExtractedEntity.case_id == cid).delete(synchronize_session=False)
+        self.db.query(ExtractionRun).filter(ExtractionRun.case_id == cid).delete(synchronize_session=False)
+        self.db.query(Document).filter(Document.case_id == cid).delete(synchronize_session=False)
+
+        # 3. Clean up Neo4j graph nodes if available
+        try:
+            from apps.backend.app.db.neo4j import get_neo4j_session
+            with get_neo4j_session() as session:
+                session.run("MATCH (n {case_id: $case_id}) DETACH DELETE n", case_id=cid)
+                session.run("MATCH (c:Case {id: $case_id}) DETACH DELETE c", case_id=cid)
+        except Exception:
+            pass
+
+        # 4. Audit log
+        audit = AuditLog(
+            action="DELETE_CASE",
+            target_type="CASE",
+            target_id=cid,
+            user_id=deleted_by,
+            previous_state=f'{{"case_number": "{case_num}", "title": "{title}"}}',
+        )
+        self.db.add(audit)
+
+        # 5. Delete case row
+        self.db.delete(case)
+        self.db.commit()
+        return True

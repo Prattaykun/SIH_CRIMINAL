@@ -4,15 +4,33 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { CaseResponse } from '@/types/api';
+import { toast } from 'react-hot-toast';
 
 export default function CasesPage() {
   const [cases, setCases] = useState<CaseResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [caseToDelete, setCaseToDelete] = useState<CaseResponse | null>(null);
+  const [isDeletingCase, setIsDeletingCase] = useState(false);
   
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
+
+  const handleDeleteCaseConfirm = async () => {
+    if (!caseToDelete) return;
+    setIsDeletingCase(true);
+    try {
+      await api.deleteCase(caseToDelete.id);
+      toast.success(`Case ${caseToDelete.case_number} deleted successfully.`);
+      setCases(prev => prev.filter(c => c.id !== caseToDelete.id));
+      setCaseToDelete(null);
+    } catch (err: unknown) {
+      toast.error((err as Error)?.message || 'Failed to delete case.');
+    } finally {
+      setIsDeletingCase(false);
+    }
+  };
 
   useEffect(() => {
     async function loadCases() {
@@ -128,13 +146,72 @@ export default function CasesPage() {
                 </p>
                 <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center text-xs text-slate-500">
                   <span>Created {new Date(c.created_at).toLocaleDateString()}</span>
-                  <span className="flex items-center gap-1 group-hover:text-blue-400 transition">
-                    View Details <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setCaseToDelete(c);
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition"
+                      title={`Delete case ${c.case_number}`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                    <span className="flex items-center gap-1 group-hover:text-blue-400 transition">
+                      View Details <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                    </span>
+                  </div>
                 </div>
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* Case Deletion Confirmation Modal */}
+      {caseToDelete && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#141721] border border-red-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-150">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">Delete Investigation Case</h3>
+            <p className="text-sm text-slate-300 mb-4 leading-relaxed">
+              Are you sure you want to permanently delete <span className="font-semibold text-white font-mono">{caseToDelete.case_number}</span> ({caseToDelete.title})?
+            </p>
+            <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-xs text-red-300 mb-6">
+              This action permanently erases the case, all associated evidence documents, extracted graph nodes, relationships, and audit history. This action cannot be undone.
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                disabled={isDeletingCase}
+                onClick={() => setCaseToDelete(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingCase}
+                onClick={handleDeleteCaseConfirm}
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-2 shadow-lg shadow-red-900/30"
+              >
+                {isDeletingCase ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  'Permanently Delete Case'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -296,13 +296,43 @@ def list_documents(
 ) -> DocumentListResponse:
     """List all documents belonging to a specific case."""
     case_repo = CaseRepository(db)
-    case = case_repo.get_by_id(case_id)
+    case = case_repo.get_by_id(case_id) or case_repo.get_by_case_number(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail="Case not found.")
 
     doc_repo = DocumentRepository(db)
-    docs, total = doc_repo.list_by_case(case_id=case_id, skip=skip, limit=limit)
+    docs, total = doc_repo.list_by_case(case_id=str(case.id), skip=skip, limit=limit)
     return DocumentListResponse(
         total=total,
         documents=[DocumentResponse.model_validate(d) for d in docs],
     )
+
+
+@router.delete(
+    "/{document_id}",
+    summary="Remove an ingested document/report from a case",
+)
+def delete_document(
+    case_id: str,
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([Role.INVESTIGATOR, Role.ADMINISTRATOR])),
+    access: CaseAccess = Depends(require_case_access(CaseAccessLevel.MANAGE)),
+):
+    """Remove a document, physical storage, and extracted entities from a case."""
+    case_repo = CaseRepository(db)
+    case = case_repo.get_by_id(case_id) or case_repo.get_by_case_number(case_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail="Case not found.")
+
+    doc_repo = DocumentRepository(db)
+    doc = doc_repo.get_by_id(document_id)
+    if doc is None or str(doc.case_id) != str(case.id):
+        raise HTTPException(status_code=404, detail="Document not found for this case.")
+
+    file_name = doc.file_name
+    success = doc_repo.delete(document_id, deleted_by=current_user.id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete document.")
+
+    return {"status": "success", "message": f"Document '{file_name}' removed successfully."}

@@ -191,6 +191,29 @@ def update_case(
     return CaseResponse.model_validate(case)
 
 
+@router.delete(
+    "/{case_id}",
+    summary="Delete a case and all associated evidence/graph data",
+)
+def delete_case(
+    case_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([Role.INVESTIGATOR, Role.ADMINISTRATOR])),
+    access: CaseAccess = Depends(require_case_access(CaseAccessLevel.MANAGE)),
+):
+    repo = CaseRepository(db)
+    case = repo.get_by_id(case_id) or repo.get_by_case_number(case_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail="Case not found.")
+
+    case_number = case.case_number
+    success = repo.delete(str(case.id), deleted_by=current_user.id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete case.")
+
+    return {"status": "success", "message": f"Case {case_number} deleted successfully."}
+
+
 @router.get(
     "/{case_id}/summary",
     summary="Get dynamic case intelligence summary",
