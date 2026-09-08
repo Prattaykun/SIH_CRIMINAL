@@ -2,11 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { CaseResponse } from '@/types/api';
 import { toast } from 'react-hot-toast';
 
 export default function CasesPage() {
+  const router = useRouter();
   const [cases, setCases] = useState<CaseResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -146,7 +148,21 @@ export default function CasesPage() {
                 </p>
                 <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center text-xs text-slate-500">
                   <span>Created {new Date(c.created_at).toLocaleDateString()}</span>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        router.push(`/cases/${c.case_number || c.id}/collaboration`);
+                      }}
+                      className="px-2.5 py-1 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
+                      title="View Team & Tasks Collaboration"
+                    >
+                      <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                      Team &amp; Tasks
+                    </span>
                     <button
                       type="button"
                       onClick={(e) => {

@@ -505,5 +505,71 @@ export const api = {
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
+  },
+
+  // Collaboration - Team
+  async getCaseTeam(caseId: string): Promise<any[]> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/team`);
+    return handleResponse<any[]>(response);
+  },
+  async addTeamMember(caseId: string, data: { user_id: string; case_role: string; reason?: string }): Promise<any> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/team`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(response);
+  },
+  async removeTeamMember(caseId: string, userId: string, reason: string): Promise<any> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/team/${userId}?reason=${encodeURIComponent(reason)}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<any>(response);
+  },
+  async transferCaseLead(caseId: string, data: { new_lead_user_id: string; reason: string }): Promise<any> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/team/transfer-lead`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(response);
+  },
+
+  // Collaboration - Tasks
+  async getCaseTasks(caseId: string): Promise<any[]> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/tasks`);
+    return handleResponse<any[]>(response);
+  },
+  async createCaseTask(caseId: string, data: any): Promise<any> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(response);
+  },
+  async updateCaseTask(caseId: string, taskId: string, data: any): Promise<any> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/tasks/${taskId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(response);
+  },
+  async completeCaseTask(caseId: string, taskId: string, data: { expected_version: number; reason?: string }): Promise<any> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/tasks/${taskId}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(response);
+  },
+  async reopenCaseTask(caseId: string, taskId: string, data: { expected_version: number; reason: string }): Promise<any> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/tasks/${taskId}/reopen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(response);
   }
 };
