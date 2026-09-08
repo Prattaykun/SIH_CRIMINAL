@@ -13,11 +13,15 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserMenu, setShowUserMenu] = useState(false);
 
+  const pathParts = pathname ? pathname.split('/') : [];
+  const currentCaseId = (pathParts[1] === 'cases' && pathParts[2] && pathParts[2] !== 'new') ? pathParts[2] : null;
+
   const navLinks = [
     { name: "Home", href: "/" },
     { name: "Cases", href: "/cases" },
-    { name: "Graph", href: "/graph" },
-    { name: "Evidence", href: "/evidence" },
+    ...(currentCaseId ? [{ name: "Team & Tasks", href: `/cases/${currentCaseId}/collaboration` }] : []),
+    { name: "Graph", href: currentCaseId ? `/cases/${currentCaseId}/graph` : "/graph" },
+    { name: "Evidence", href: currentCaseId ? `/cases/${currentCaseId}/evidence` : "/evidence" },
     { name: "Verification", href: "/audit" },
     { name: "Settings", href: "/settings" },
   ];
