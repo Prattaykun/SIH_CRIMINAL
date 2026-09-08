@@ -17,7 +17,7 @@ from apps.backend.app.schemas.case import (
 )
 from apps.backend.app.api.deps import get_current_active_user, require_role, require_case_permission, Permission
 from apps.backend.app.models.user import User, Role
-from apps.backend.app.models.case_membership import CaseMembership, CaseMembership
+from apps.backend.app.models.case_membership import CaseMembership, CaseRole, MembershipStatus
 from apps.backend.app.models.entity import ExtractedEntity
 from apps.backend.app.models.relationship import ExtractedRelationship
 from apps.backend.app.models.case import Case
@@ -70,16 +70,15 @@ def create_case(
         db.add(case)
         db.flush()  # to get case.id
 
-        # Grant MANAGE access to the creator automatically if not an administrator
-        # (Though we can just grant it to everyone who creates it to be safe)
-        access = CaseAccess(
+        # Grant CASE_LEAD membership to creator
+        membership = CaseMembership(
             user_id=current_user.id,
             case_id=case.id,
-            access_level=CaseMembership.MANAGE.value,
-            assigned_by_user_id=current_user.id,
-            is_active=True
+            case_role=CaseRole.CASE_LEAD.value,
+            status=MembershipStatus.ACTIVE.value,
+            assigned_by=current_user.id,
         )
-        db.add(access)
+        db.add(membership)
 
         log_action(
             db=db,
@@ -120,9 +119,9 @@ def list_cases(
         query = query.filter(Case.status == status_value)
 
     if current_user.role != Role.ADMINISTRATOR.value:
-        query = query.join(CaseAccess).filter(
-            CaseAccess.user_id == current_user.id,
-            CaseAccess.is_active == True
+        query = query.join(CaseMembership, CaseMembership.case_id == Case.id).filter(
+            CaseMembership.user_id == current_user.id,
+            CaseMembership.status == MembershipStatus.ACTIVE.value
         )
 
     total = query.count()

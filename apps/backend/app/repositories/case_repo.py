@@ -125,8 +125,9 @@ class CaseRepository:
                 except Exception:
                     pass
 
-        # 2. Delete dependent tables
         from apps.backend.app.models.case_access import CaseAccess
+        from apps.backend.app.models.case_membership import CaseMembership
+        from apps.backend.app.models.case_task import CaseTask
         from apps.backend.app.models.ml import CaseFeatureVector, ModelPrediction, SimilarityResult
         from apps.backend.app.models.analytics import EntityGraphFeature
         from apps.backend.app.models.alert import Alert
@@ -135,6 +136,8 @@ class CaseRepository:
         from apps.backend.app.models.relationship import ExtractedRelationship
         from apps.backend.app.models.entity import ExtractedEntity
 
+        self.db.query(CaseMembership).filter(CaseMembership.case_id == cid).delete(synchronize_session=False)
+        self.db.query(CaseTask).filter(CaseTask.case_id == cid).delete(synchronize_session=False)
         self.db.query(CaseAccess).filter(CaseAccess.case_id == cid).delete(synchronize_session=False)
         self.db.query(SimilarityResult).filter(
             (SimilarityResult.current_case_id == cid) | (SimilarityResult.similar_case_id == cid)
