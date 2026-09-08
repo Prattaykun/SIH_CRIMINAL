@@ -1,6 +1,7 @@
 """Service orchestrating extraction, human review, and Neo4j sync."""
 import uuid
 import json
+import re
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Tuple
 from sqlalchemy.orm import Session
@@ -16,6 +17,63 @@ from apps.backend.app.graph.service import GraphService, GraphServiceUnavailable
 
 from apps.backend.app.core.config import settings
 from apps.backend.app.extraction.local_ner_provider import SpacyNERProvider
+
+def compute_entity_confidence(entity_type: str, value: str, context: str) -> float:
+    """Calculates realistic dynamic confidence scores based on pattern precision and contextual evidence."""
+    val = value.strip()
+    ctx = (context or "").lower()
+    
+    # 1. High-Precision Structured Identifiers (94% - 98%)
+    if entity_type == "VEHICLE":
+        # Full registration plate
+        if re.match(r'^[A-Z]{2}[-\s]?\d{2}[-\s]?[A-Z]{1,2}[-\s]?\d{4}$', val, re.IGNORECASE):
+            return 0.97
+        # Known models
+        if "creta" in val.lower() or "swift" in val.lower() or "activa" in val.lower():
+            return 0.91
+        return 0.85
+        
+    if entity_type == "MONEY":
+        if "₹" in val or "rs" in val.lower() or "inr" in val.lower():
+            return 0.98
+        return 0.88
+        
+    if entity_type == "PHONE_NUMBER":
+        if re.match(r'^\+?91[-\s]?[6-9]\d{9}$', val):
+            return 0.95
+        return 0.89
+        
+    # 2. Context-Dependent Identifiers (85% - 96%)
+    if entity_type == "ACCOUNT":
+        if "acct" in val.lower() or "account" in ctx or "transfer" in ctx or "deposit" in ctx:
+            return 0.96
+        return 0.93
+        
+    if entity_type == "ORGANIZATION":
+        org_lower = val.lower()
+        if "pvt" in org_lower or "ltd" in org_lower or "corporation" in org_lower or "bank" in org_lower:
+            return 0.93
+        if "trader" in org_lower or "logistics" in org_lower or "enterprises" in org_lower:
+            return 0.89
+        return 0.85
+
+    # 3. Fuzzy Matches / Human Names (74% - 92%)
+    if entity_type == "PERSON":
+        if len(val.split()) >= 2 and val.istitle():
+            return 0.90
+        # If the context implies it's a role or fuzzy alias rather than a full name
+        if "alias" in ctx or "known as" in ctx:
+            return 0.82
+        if len(val.split()) == 1:
+            return 0.74
+        return 0.85
+
+    if entity_type == "LOCATION":
+        if any(city in val.lower() for city in ["mumbai", "delhi", "kolkata", "chennai", "bangalore"]):
+            return 0.92
+        return 0.83
+        
+    return 0.80
 
 class DocumentExtractionService:
     def __init__(self, db: Session):
@@ -162,6 +220,12 @@ class DocumentExtractionService:
             if not existing:
                 res = resolve_entity_candidate(self.db, doc.case_id, e["value"], e["type"])
                 
+                # We need context. Grab a small snippet around the entity.
+                start_idx = max(0, e["start"] - 30)
+                end_idx = min(len(text), e["end"] + 30)
+                ctx_snippet = text[start_idx:end_idx]
+                dyn_conf = compute_entity_confidence(e["type"], e["value"], ctx_snippet)
+                
                 db_ent = ExtractedEntity(
                     extraction_run_id=extraction_run_id,
                     case_id=doc.case_id,
@@ -172,7 +236,7 @@ class DocumentExtractionService:
                     source_text=e["value"],
                     start_offset=e["start"],
                     end_offset=e["end"],
-                    confidence_score=0.88,
+                    confidence_score=dyn_conf,
                     verification_status="UNREVIEWED",
                     extraction_provider="hybrid_nlp_engine",
                     extraction_version="1.0",
@@ -235,6 +299,8 @@ class DocumentExtractionService:
                             ).first()
                             
                             if not existing_rel:
+                                rel_conf = round(min(e1.confidence_score, e2.confidence_score) * 0.95, 2)
+                                
                                 rel = ExtractedRelationship(
                                     extraction_run_id=extraction_run_id,
                                     case_id=doc.case_id,
@@ -243,7 +309,7 @@ class DocumentExtractionService:
                                     target_entity_id=e2.id,
                                     relation_type=rel_type,
                                     source_text_snippet=sentence[:500],
-                                    confidence_score=0.80,
+                                    confidence_score=rel_conf,
                                     verification_status="UNREVIEWED",
                                     extraction_provider="hybrid_nlp_engine"
                                 )
