@@ -257,7 +257,7 @@ function EvidenceContent() {
           
           <button
             type="button"
-            onClick={fetchDocuments}
+            onClick={() => fetchDocuments()}
             disabled={loadingDocs}
             className={cn(surfaceBtnSecondary, 'self-start gap-1.5 text-xs sm:self-auto')}
           >
