@@ -42,15 +42,12 @@ import {
   Layers,
   Network,
   Calendar,
-  FileText,
   Eye,
   X,
   ChevronRight,
   Focus,
   Sliders,
   CheckCircle2,
-  Clock,
-  ArrowRight,
   Activity,
 } from 'lucide-react';
 
@@ -64,7 +61,7 @@ const edgeTypes = {
   intelligence: IntelligenceEdge,
 };
 
-type ViewMode = 'OVERVIEW' | 'NETWORK' | 'TIMELINE' | 'EVIDENCE';
+type ViewMode = 'OVERVIEW' | 'NETWORK';
 
 // Dagre Layout computation with ample node separation and accurate dimensions
 const layoutElements = (nodes: Node[], edges: Edge[], direction: 'LR' | 'TB' = 'LR') => {
@@ -531,22 +528,6 @@ export default function CaseGraphPage() {
           >
             <Network className="w-3.5 h-3.5" /> Network
           </button>
-          <button
-            onClick={() => setViewMode('TIMELINE')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'TIMELINE' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5" /> Timeline
-          </button>
-          <button
-            onClick={() => setViewMode('EVIDENCE')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'EVIDENCE' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" /> Evidence
-          </button>
         </div>
 
         {/* Quick Search Input */}
@@ -581,9 +562,8 @@ export default function CaseGraphPage() {
 
       {/* Main Content Area */}
       <div className="flex-1 relative overflow-hidden">
-        {/* Render View Mode: OVERVIEW or NETWORK (React Flow) */}
-        {(viewMode === 'OVERVIEW' || viewMode === 'NETWORK') && (
-          <div className="w-full h-full relative">
+        {/* React Flow Intelligence Canvas */}
+        <div className="w-full h-full relative">
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -746,132 +726,6 @@ export default function CaseGraphPage() {
               onReview={handleReviewRelationship}
             />
           </div>
-        )}
-
-        {/* MODE 3: Timeline Mode (Chronological Events & Intercepts) */}
-        {viewMode === 'TIMELINE' && (
-          <div className="w-full h-full overflow-y-auto p-8 max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <div>
-                <h2 className="text-lg font-black text-white flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-400" /> Chronological Case Timeline
-                </h2>
-                <p className="text-xs text-slate-400 mt-1">
-                  Sequential record of communication intercepts, fund transfers, and suspect sightings
-                </p>
-              </div>
-              <span className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 font-mono text-xs font-bold">
-                {timelineEvents.length} Verified Events
-              </span>
-            </div>
-
-            <div className="relative border-l-2 border-white/10 ml-4 pl-6 space-y-8">
-              {timelineEvents.map((evt) => (
-                <div key={evt.id} className="relative group">
-                  {/* Timeline Dot */}
-                  <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-[#090b10] border-2 border-blue-500 flex items-center justify-center group-hover:scale-125 transition-transform" />
-
-                  <div className="rounded-2xl bg-[#111420] border border-white/10 p-4 shadow-xl hover:border-blue-500/50 transition-all">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase">
-                          {evt.category}
-                        </span>
-                        <span className="text-xs font-mono text-slate-400 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-slate-500" /> {evt.timestamp}
-                        </span>
-                      </div>
-                      <span className="text-xs font-mono text-emerald-400 font-bold">
-                        {Math.round(evt.confidence * 100)}% Conf
-                      </span>
-                    </div>
-
-                    <h3 className="text-sm font-bold text-white mt-2">{evt.title}</h3>
-                    <p className="text-xs text-slate-300 font-serif italic mt-1 bg-black/30 p-2.5 rounded-lg border border-white/5 border-l-2 border-l-blue-500">
-                      "{evt.description}"
-                    </p>
-
-                    {/* Action: Focus Graph Around this Event */}
-                    {evt.primaryEntityId && (
-                      <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-end">
-                        <button
-                          onClick={() => {
-                            setFocusRootId(evt.primaryEntityId!);
-                            setViewMode('NETWORK');
-                          }}
-                          className="py-1 px-3 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 text-xs font-bold flex items-center gap-1.5 transition-colors"
-                        >
-                          <Focus className="w-3.5 h-3.5 text-blue-400" /> Show Graph Around This Event
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* MODE 4: Evidence Mode (Evidence-First Directory & Provenance) */}
-        {viewMode === 'EVIDENCE' && (
-          <div className="w-full h-full overflow-y-auto p-8 max-w-5xl mx-auto space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <div>
-                <h2 className="text-lg font-black text-white flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-emerald-400" /> Case Evidence Dossier
-                </h2>
-                <p className="text-xs text-slate-400 mt-1">
-                  Evidence-first directory linking source documentation to extracted entities & verified relationships
-                </p>
-              </div>
-              <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs font-bold">
-                {evidenceItems.length} Evidence Records
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              {evidenceItems.map((ev) => (
-                <div key={ev.id} className="rounded-2xl bg-[#111420] border border-white/10 p-5 shadow-xl hover:border-emerald-500/40 transition-all">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                        <FileText className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">{ev.sourceDoc}</h4>
-                        <h3 className="text-sm font-black text-white">{ev.title}</h3>
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-300 font-mono text-xs font-bold border border-emerald-500/30">
-                      {Math.round(ev.reliability * 100)}% Reliability
-                    </span>
-                  </div>
-
-                  <div className="mt-3 p-3 rounded-xl bg-black/40 border border-white/5 font-serif text-xs text-slate-300 italic border-l-4 border-l-emerald-500">
-                    "{ev.snippet}"
-                  </div>
-
-                  <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-xs text-slate-400">
-                    <span className="flex items-center gap-1.5 font-mono text-[11px]">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Extracted & Validated via Hybrid NER Pipeline
-                    </span>
-                    <button
-                      onClick={() => {
-                        if (ev.linkedEntityIds[0]) {
-                          setFocusRootId(ev.linkedEntityIds[0]);
-                          setViewMode('NETWORK');
-                        }
-                      }}
-                      className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 transition-colors"
-                    >
-                      View on Graph <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Right-Hand Timeline & Evidence Calendar Popup Drawer */}
