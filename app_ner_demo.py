@@ -25,8 +25,9 @@ from pydantic import BaseModel
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-NER_MODEL_PATH = os.path.join("models", "ner_v4", "model-best")
-RF_MODEL_PATH = os.path.join("models", "random_forest_context_proxy_v1.pkl")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+NER_MODEL_PATH = os.path.join(BASE_DIR, "models", "ner_v4", "model-best")
+RF_MODEL_PATH = os.path.join(BASE_DIR, "models", "random_forest_context_proxy_v1.pkl")
 
 # ---------------------------------------------------------------------------
 # App state — holds the loaded model
@@ -90,11 +91,34 @@ class NERResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+@app.get("/")
+def read_root() -> dict[str, str]:
+    """Root endpoint detailing public routes."""
+    return {
+        "service": "sih-criminal-ner",
+        "health": "/health",
+        "ner": "/ner",
+        "api_version": "v1"
+    }
+
+def get_health_data() -> dict[str, str]:
+    return {
+        "status": "ok",
+        "service": "sih-criminal-ner",
+        "api_version": "v1",
+        "ner_model_version": "ner_v4",
+        "rf_status": "experimental_proxy_not_for_enforcement",
+        "release": "58ff435"
+    }
+
 @app.get("/health")
 def health() -> dict[str, str]:
     """Simple liveness probe."""
-    return {"status": "ok", "ner_model": NER_MODEL_PATH, "rf_model": RF_MODEL_PATH}
+    return get_health_data()
 
+@app.get("/api/v1/health")
+def health_v1() -> dict[str, str]:
+    return get_health_data()
 
 @app.post("/ner", response_model=NERResponse, summary="Extract named entities from text")
 def run_ner(request: NERRequest) -> NERResponse:
@@ -122,3 +146,7 @@ def run_ner(request: NERRequest) -> NERResponse:
     ]
 
     return NERResponse(entities=entities, entity_count=len(entities))
+
+@app.post("/api/v1/ner", response_model=NERResponse, summary="Extract named entities from text")
+def run_ner_v1(request: NERRequest) -> NERResponse:
+    return run_ner(request)
