@@ -160,7 +160,7 @@ export function Sidebar() {
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-slate-100 tracking-wide text-sm font-mono">
-                  SIH 26189
+                  GoyendaBondhu
                 </span>
                 <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30 font-bold">
                   Intel

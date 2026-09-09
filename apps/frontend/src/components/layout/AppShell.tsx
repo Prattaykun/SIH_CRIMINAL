@@ -184,7 +184,7 @@ export function AppShell({ children }: AppShellProps) {
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-white">
-                    SIH 26189
+                    GoyendaBondhu
                   </p>
                   <p className="truncate text-[11px] text-white/40">
                     Criminal Network Analysis

@@ -79,7 +79,7 @@ export default function LoginPage() {
             <ShieldAlert size={28} />
           </div>
           <CardTitle className="text-2xl font-semibold text-white">
-            SIH 26189
+            GoyendaBondhu
           </CardTitle>
           <CardDescription className="mt-1 text-sm text-white/45">
             Criminal Network Analysis System

@@ -14,7 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SIH 26189 - Criminal Network Analysis System",
+  title: "GoyendaBondhu - Criminal Network Analysis System",
   description:
     "AI-powered multi-modal criminal network analysis, link prediction, and evidence traceability platform (Synthetic Data Prototype).",
 };
