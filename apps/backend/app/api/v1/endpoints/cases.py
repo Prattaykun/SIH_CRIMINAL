@@ -363,15 +363,59 @@ def get_case_simple(
     fir_date = getattr(case, "fir_date", None)
     arrest_date = getattr(case, "arrest_date", None)
     
-    timeline = []
+    raw_timeline = []
     if incident_date:
-        timeline.append({"date": str(incident_date), "description": f"Incident reportedly occurred on {incident_date}"})
+        raw_timeline.append({"date_obj": incident_date, "title": "Case Event", "description": f"Incident reportedly occurred on {incident_date}"})
     if fir_date:
-        timeline.append({"date": str(fir_date), "description": f"FIR registered on {fir_date}"})
+        raw_timeline.append({"date_obj": fir_date, "title": "Case Event", "description": f"FIR registered on {fir_date}"})
     if arrest_date:
-        timeline.append({"date": str(arrest_date), "description": f"Accused arrested on {arrest_date}"})
+        raw_timeline.append({"date_obj": arrest_date, "title": "Case Event", "description": f"Accused arrested on {arrest_date}"})
     
-    timeline.sort(key=lambda x: x["date"] or "")
+    # Also fetch real system events from AuditLog
+    from apps.backend.app.models.audit_log import AuditLog
+    audit_logs = db.query(AuditLog).filter(
+        AuditLog.target_type == "CASE",
+        AuditLog.target_id == case.id
+    ).order_by(AuditLog.created_at).all()
+    
+    for al in audit_logs:
+        raw_timeline.append({
+            "date_obj": al.created_at,
+            "title": "System Event",
+            "description": al.action.replace("_", " ").title() if al.action else "Unknown Action"
+        })
+        
+    # Sort by datetime
+    from datetime import datetime, date
+    
+    def get_dt(val):
+        if isinstance(val, datetime):
+            return val
+        elif isinstance(val, date):
+            return datetime.combine(val, datetime.min.time())
+        else:
+            return datetime.min
+
+    raw_timeline.sort(key=lambda x: get_dt(x["date_obj"]))
+    
+    # Deduplicate and format
+    timeline = []
+    seen = set()
+    for ev in raw_timeline:
+        dt = ev["date_obj"]
+        date_str = str(dt.date()) if dt and hasattr(dt, "date") else (str(dt) if dt else "Unknown Date")
+        time_str = dt.strftime("%H:%M") if isinstance(dt, datetime) else None
+        
+        # Deduplication key: normalized title + description + exact date/time
+        key = (ev["title"].lower(), ev["description"].lower(), str(dt))
+        if key not in seen:
+            seen.add(key)
+            timeline.append({
+                "date": date_str,
+                "time": time_str,
+                "title": ev["title"],
+                "description": ev["description"]
+            })
 
     entities = db.query(ExtractedEntity).filter(ExtractedEntity.case_id == case.id).all()
     entity_names = {e.canonical_name for e in entities if e.canonical_name}
@@ -420,13 +464,48 @@ def get_case_simple(
     victim_names = [p["name"] for p in key_people if p["role"] == "Victim"][:2]
     accused_names = [p["name"] for p in key_people if p["role"] == "Accused"][:2]
     
-    victim_str = ", ".join(victim_names) if victim_names else "unidentified victim(s)"
-    accused_str = ", ".join(accused_names) if accused_names else "The suspect(s)"
-    loc_str = top_locations[0] if top_locations else "an unknown location"
-    date_str = str(incident_date) if incident_date else (str(fir_date) if fir_date else "an unknown date")
-    
+    if victim_names:
+        victim_str = f"This case involves {', '.join(victim_names)} as victim(s)."
+    else:
+        victim_str = "The available records do not yet identify a victim."
+        
+    if accused_names:
+        accused_str = f"The suspect(s) identified include {', '.join(accused_names)}."
+    else:
+        accused_str = "No accused person has been identified in the available records."
+        
+    if top_locations:
+        loc_str = f"The incident is associated with {top_locations[0]}."
+    else:
+        loc_str = "The incident location is not recorded in the available case data."
+        
+    if incident_date:
+        date_str = f"The incident reportedly occurred on {incident_date}."
+    elif fir_date:
+        date_str = f"The incident reportedly occurred on or around {fir_date}."
+    else:
+        date_str = "The incident date is not recorded in the available case data."
+        
+    CASE_TYPE_LABELS = {
+        "investigation": "criminal investigation",
+        "cyber": "cybercrime",
+        "cybercrime": "cybercrime",
+        "financial": "financial-crime",
+        "financial crime": "financial-crime",
+        "murder": "murder",
+        "homicide": "homicide",
+        "kidnapping": "kidnapping and abduction",
+        "kidnappingabduction": "kidnapping and abduction",
+        "violent": "violent-crime",
+    }
+    norm_type = CASE_TYPE_LABELS.get(case_type.lower().strip(), "criminal investigation")
+    if norm_type == "criminal investigation":
+        summary_intro = "This case is classified as a criminal investigation."
+    else:
+        summary_intro = f"This is a {norm_type} case."
+        
     # [LLM integration point: replace this rule-based summary with an LLM call using the gathered metadata]
-    summary = f"This is a {case_type} case involving {victim_str}. The incident reportedly occurred on/near {date_str} at {loc_str}. {accused_str} is/are currently being investigated. The case is currently {case_status}."
+    summary = f"{summary_intro} {victim_str} {date_str} {loc_str} {accused_str}"
     
     try:
         if os.path.exists(anomalies_csv):
@@ -447,24 +526,143 @@ def get_case_simple(
                             degree = 0
                             
                         if score > 0.1 and len(ai_insights) < 2:
-                            ai_insights.append(f"{text} shows an unusual pattern of connections compared to other entities in this case.")
+                            ai_insights.append(f"This entity has a connection pattern that differs from many other entities in the available records. This is an analytical observation, not evidence of criminal involvement.")
                         if degree > 10 and len(ai_insights) < 4:
-                            ai_insights.append(f"{text} is connected to many people and events in this case; it may be a key piece of the puzzle.")
+                            ai_insights.append(f"{text} is frequently connected to other recorded entities in this case. This requires investigator review and is not evidence of wrongdoing.")
     except Exception as e:
         print(f"Error reading anomalies CSV: {e}")
         
-    if not ai_insights:
-        ai_insights.append("AI insights are not available for this case yet.")
+    # Enrich key_entities with role tags and types
+    enriched_key_entities = []
+    for p in key_people:
+        enriched_key_entities.append({
+            "name": p["name"],
+            "type": "Person",
+            "role_tag": p["role"]
+        })
+    
+    # Also add top organizations to key_entities (if any)
+    org_count = 0
+    org_entities = [e for e in entities if e.entity_type == "ORGANIZATION"]
+    # Group by name
+    org_names = list(set([e.canonical_name for e in org_entities if e.canonical_name]))
+    for org_name in org_names[:3]:
+        enriched_key_entities.append({
+            "name": org_name,
+            "type": "Organization",
+            "role_tag": "Organization"
+        })
+    
+    # Fetch relationships for stats and graph
+    from apps.backend.app.models.relationship import ExtractedRelationship
+    relationships = db.query(ExtractedRelationship).filter(ExtractedRelationship.case_id == case.id).all()
+    
+    # Fetch documents for stats
+    from apps.backend.app.models.document import Document
+    doc_count = db.query(Document).filter(Document.case_id == case.id).count()
+    
+    # Calculate stats
+    stats = {
+        "documents_processed": doc_count,
+        "entities_identified": len(entities),
+        "relationships_extracted": len(relationships),
+        "key_insights_generated": len(ai_insights)
+    }
+    
+    # Metadata
+    opened_on_dt = getattr(case, "created_at", None)
+    if opened_on_dt:
+        opened_on = opened_on_dt.strftime("%d %b %Y")
+    else:
+        opened_on = "Unknown Date"
         
-    key_people = key_people[:10]
+    category_tag = getattr(case, "case_type", "Investigation").title()
+    tagline = "Data Speaks. Investigation Reveals the Truth."
+    
+    # Simplified Graph (top 6-8 nodes)
+    from collections import defaultdict
+    degree_map = defaultdict(int)
+    edge_list = []
+    
+    # We will build edges based on DB relationships
+    # ExtractedRelationship has source_entity_id, target_entity_id, relation_type
+    for rel in relationships:
+        degree_map[rel.source_entity_id] += 1
+        degree_map[rel.target_entity_id] += 1
+        edge_list.append({
+            "source_id": rel.source_entity_id,
+            "target_id": rel.target_entity_id,
+            "label": getattr(rel, "relation_type", "Linked")
+        })
+    
+    entity_map = {e.id: e for e in entities}
+    
+    if not edge_list and entities:
+        # If no relationships, just pick top entities and no edges
+        top_entity_ids = [e.id for e in entities[:7]]
+    else:
+        # Pick top entities by degree
+        sorted_entities = sorted(degree_map.items(), key=lambda x: x[1], reverse=True)
+        top_entity_ids = [k for k, v in sorted_entities[:7]]
+        
+    graph_nodes = []
+    graph_edges = []
+    
+    primary_set = False
+    for i, eid in enumerate(top_entity_ids):
+        if eid in entity_map:
+            ent = entity_map[eid]
+            etype = "person"
+            if ent.entity_type == "ORGANIZATION":
+                etype = "organization"
+            elif ent.entity_type == "PHONE":
+                etype = "phone"
+            elif ent.entity_type == "GROUP":
+                etype = "group"
+            
+            is_primary = False
+            if not primary_set:
+                is_primary = True
+                primary_set = True
+                
+            graph_nodes.append({
+                "id": str(eid),
+                "label": ent.canonical_name,
+                "type": etype,
+                "is_primary": is_primary
+            })
+            
+    top_entity_set = set(top_entity_ids)
+    for edge in edge_list:
+        if edge["source_id"] in top_entity_set and edge["target_id"] in top_entity_set:
+            graph_edges.append({
+                "source": str(edge["source_id"]),
+                "target": str(edge["target_id"]),
+                "label": edge["label"]
+            })
+            
+    simplified_graph = {
+        "nodes": graph_nodes,
+        "edges": graph_edges[:15] # cap edges to prevent clutter
+    }
 
+    unique_insights = list(set(ai_insights))[:6]
+    if unique_insights:
+        unique_insights.append("AI-generated observations are based on available case records and require investigator verification.")
+        
     return {
         "case_id": str(case.id),
         "title": case_title,
         "case_type": case_type,
         "summary": summary,
         "timeline": timeline,
-        "key_people": key_people,
+        "key_people": key_people, # Keep original for backwards compatibility if needed
         "key_locations": top_locations,
-        "ai_insights": list(set(ai_insights))[:6]
+        "ai_insights": unique_insights,
+        "stats": stats,
+        "opened_on": opened_on,
+        "category_tag": category_tag,
+        "tagline": tagline,
+        "simplified_graph": simplified_graph,
+        "key_entities": enriched_key_entities
     }

@@ -184,8 +184,8 @@ The platform supports optionally fine-tuning a custom spaCy NER model on the syn
 
 The **Simple View** is a non-technical case summary dashboard intended for laymen, managers, and non-technical officers. It displays case proceedings, key events, and key people without complex network graphs or technical ML jargon.
 
-- **Current State (Rule-Based):** The summary and AI insights are currently rule-based and derived statically from structured ML artifacts (entity_context_review_completed_v6.csv, nomaly_scores_cleaned_v6.csv) and database metadata. No external LLM calls are made.
+- **Current State (Rule-Based & Integrated):** The summary and AI insights are derived dynamically from structured database models (`Case`, `AuditLog`, `Document`, `ExtractedEntity`, `ExtractedRelationship`). The backend ensures strict wording limits, deterministic summary generation, and data accuracy (preventing fabricated counts and dates). No external generative LLM is currently called for these descriptions.
 - **Where Logic Lives:**
-  - Backend: pps/backend/app/api/v1/endpoints/cases.py (Endpoint: GET /api/v1/cases/{case_id}/simple)
-  - Frontend: pps/frontend/src/app/cases/[caseId]/simple/page.tsx
-- **Future Enhancements (LLM Integration):** A real LLM can be easily plugged into the backend endpoint to replace the rule-based strings with richer, generative summaries using the gathered case context. Look for the [LLM integration point] comment in cases.py to substitute the rule-based templating with an LLM call.
+  - Backend: `apps/backend/app/api/v1/endpoints/cases.py` (Endpoint: `GET /api/v1/cases/{case_id}/simple`)
+  - Frontend: `apps/frontend/src/app/cases/[caseId]/simple/page.tsx`
+- **Future Enhancements (LLM Integration):** A real LLM can be easily plugged into the backend endpoint to replace the rule-based strings with generative summaries using the gathered case context, provided safety and hallucination limits are enforced. Look for the `[LLM integration point]` comment in `cases.py` to substitute the rule-based templating.
