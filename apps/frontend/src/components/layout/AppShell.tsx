@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import React, { useEffect, useState, type ReactNode } from "react";
+import React, { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Briefcase,
+  Ellipsis,
   FileSearch,
   FolderOpen,
   LayoutDashboard,
@@ -42,6 +43,11 @@ type AppShellProps = {
   children: ReactNode;
 };
 
+function isNavActive(item: NavItem, pathname: string): boolean {
+  if (item.match) return item.match(pathname);
+  return pathname === item.href || pathname.startsWith(item.href + "/");
+}
+
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname() || "/";
   const router = useRouter();
@@ -49,6 +55,8 @@ export function AppShell({ children }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   const pathParts = pathname.split("/");
   const currentCaseId =
@@ -64,6 +72,28 @@ export function AppShell({ children }: AppShellProps) {
     }
   }, []);
 
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!moreRef.current?.contains(event.target as Node)) {
+        setMoreOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoreOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [moreOpen]);
+
   const toggle = () => {
     setCollapsed((prev) => {
       const next = !prev;
@@ -76,61 +106,72 @@ export function AppShell({ children }: AppShellProps) {
     });
   };
 
-  const navItems: NavItem[] = [
-    {
-      name: "Home",
-      href: "/",
-      icon: LayoutDashboard,
-      group: "Main",
-      match: (p) => p === "/",
-    },
-    {
-      name: "Cases",
-      href: "/cases",
-      icon: Briefcase,
-      group: "Main",
-      match: (p) => p === "/cases" || p.startsWith("/cases/"),
-    },
-    {
-      name: "Graph",
-      href: currentCaseId ? `/cases/${currentCaseId}/graph` : "/graph",
-      icon: Network,
-      group: "Investigation",
-      match: (p) => p === "/graph" || p.includes("/graph"),
-    },
-    {
-      name: "Evidence",
-      href: currentCaseId ? `/cases/${currentCaseId}/evidence` : "/evidence",
-      icon: FolderOpen,
-      group: "Investigation",
-      match: (p) => p === "/evidence" || p.includes("/evidence"),
-    },
-    ...(currentCaseId
-      ? [
-          {
-            name: "Team & Tasks",
-            href: `/cases/${currentCaseId}/collaboration`,
-            icon: Users,
-            group: "Investigation",
-            match: (p: string) => p.includes("/collaboration"),
-          },
-        ]
-      : []),
-    {
-      name: "Verification",
-      href: "/audit",
-      icon: Shield,
-      group: "System",
-      match: (p) => p.startsWith("/audit"),
-    },
-    {
-      name: "Settings",
-      href: "/settings",
-      icon: Settings,
-      group: "System",
-      match: (p) => p.startsWith("/settings"),
-    },
-  ];
+  const navItems: NavItem[] = useMemo(
+    () => [
+      {
+        name: "Home",
+        href: "/",
+        icon: LayoutDashboard,
+        group: "Main",
+        match: (p) => p === "/",
+      },
+      {
+        name: "Cases",
+        href: "/cases",
+        icon: Briefcase,
+        group: "Main",
+        match: (p) =>
+          p === "/cases" ||
+          p === "/cases/new" ||
+          /^\/cases\/[^/]+$/.test(p),
+      },
+      {
+        name: "Graph",
+        href: currentCaseId ? `/cases/${currentCaseId}/graph` : "/graph",
+        icon: Network,
+        group: "Investigation",
+        match: (p) => p === "/graph" || p.includes("/graph"),
+      },
+      {
+        name: "Evidence",
+        href: currentCaseId ? `/cases/${currentCaseId}/evidence` : "/evidence",
+        icon: FolderOpen,
+        group: "Investigation",
+        match: (p) => p === "/evidence" || p.includes("/evidence"),
+      },
+      ...(currentCaseId
+        ? [
+            {
+              name: "Team & Tasks",
+              href: `/cases/${currentCaseId}/collaboration`,
+              icon: Users,
+              group: "Investigation",
+              match: (p: string) => p.includes("/collaboration"),
+            },
+          ]
+        : []),
+      {
+        name: "Verification",
+        href: "/audit",
+        icon: Shield,
+        group: "System",
+        match: (p) => p.startsWith("/audit"),
+      },
+      {
+        name: "Settings",
+        href: "/settings",
+        icon: Settings,
+        group: "System",
+        match: (p) => p.startsWith("/settings"),
+      },
+    ],
+    [currentCaseId]
+  );
+
+  // Bottom bar: 4 primary destinations + More drop-up for the rest.
+  const mobilePrimary = navItems.slice(0, 4);
+  const mobileOverflow = navItems.slice(4);
+  const moreActive = mobileOverflow.some((item) => isNavActive(item, pathname));
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,6 +179,7 @@ export function AppShell({ children }: AppShellProps) {
       router.push(`/cases?search=${encodeURIComponent(searchQuery.trim())}`);
       setShowSearchModal(false);
       setSearchQuery("");
+      setMoreOpen(false);
     }
   };
 
@@ -145,9 +187,10 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-black text-white">
+      {/* Desktop / tablet sidebar */}
       <aside
         className={cn(
-          "relative flex shrink-0 flex-col border-r border-white/[0.08] bg-[#030303] transition-[width] duration-300",
+          "relative hidden shrink-0 flex-col border-r border-white/[0.08] bg-[#030303] transition-[width] duration-300 md:flex",
           collapsed ? "w-[68px]" : "w-[248px]"
         )}
       >
@@ -206,9 +249,7 @@ export function AppShell({ children }: AppShellProps) {
             const showGroup =
               !collapsed && item.group && item.group !== lastGroup;
             if (item.group) lastGroup = item.group;
-            const active = item.match
-              ? item.match(pathname)
-              : pathname === item.href || pathname.startsWith(item.href + "/");
+            const active = isNavActive(item, pathname);
             const Icon = item.icon;
             return (
               <div key={`${item.group}-${item.name}`}>
@@ -309,9 +350,158 @@ export function AppShell({ children }: AppShellProps) {
             "sih-no-scrollbar min-h-0 flex-1 overflow-y-auto"
           )}
         >
-          <div className="min-h-full w-full p-5 sm:p-6 lg:p-8">{children}</div>
+          <div className="min-h-full w-full p-5 pb-[calc(5.25rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-6 lg:p-8">
+            {children}
+          </div>
         </main>
       </div>
+
+      {/* Mobile bottom tabs */}
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[#030303]/95 backdrop-blur-md md:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        aria-label="Primary"
+      >
+        <div className="grid h-[4.25rem] grid-cols-5">
+          {mobilePrimary.map((item) => {
+            const active = isNavActive(item, pathname);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "relative flex flex-col items-center justify-center gap-1 px-1 text-[10px] font-medium transition",
+                  active ? "text-blue-300" : "text-white/45 hover:text-white/75"
+                )}
+              >
+                {active && (
+                  <span className="absolute inset-x-4 top-0 h-0.5 rounded-b-full bg-blue-500" />
+                )}
+                <span
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-xl",
+                    active ? "bg-blue-600/25" : "bg-transparent"
+                  )}
+                >
+                  <Icon className="h-[18px] w-[18px]" strokeWidth={1.85} />
+                </span>
+                <span className="truncate">{item.name}</span>
+              </Link>
+            );
+          })}
+
+          <div className="relative" ref={moreRef}>
+            <button
+              type="button"
+              aria-label="More navigation"
+              aria-expanded={moreOpen}
+              aria-haspopup="menu"
+              onClick={() => setMoreOpen((v) => !v)}
+              className={cn(
+                "relative flex h-full w-full flex-col items-center justify-center gap-1 px-1 text-[10px] font-medium transition",
+                moreOpen || moreActive
+                  ? "text-blue-300"
+                  : "text-white/45 hover:text-white/75"
+              )}
+            >
+              {(moreOpen || moreActive) && (
+                <span className="absolute inset-x-4 top-0 h-0.5 rounded-b-full bg-blue-500" />
+              )}
+              <span
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-xl",
+                  moreOpen || moreActive ? "bg-blue-600/25" : "bg-transparent"
+                )}
+              >
+                <Ellipsis className="h-[18px] w-[18px]" strokeWidth={1.85} />
+              </span>
+              <span>More</span>
+            </button>
+
+            {moreOpen && (
+              <div
+                role="menu"
+                className="absolute bottom-[calc(100%+0.5rem)] right-2 z-50 w-[min(18rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0a0a0a] shadow-2xl shadow-black/60"
+              >
+                <div className="border-b border-white/[0.07] px-3.5 py-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">
+                    More
+                  </p>
+                  {user && (
+                    <p className="mt-1 truncate text-xs text-white/70">
+                      {user.username}
+                      <span className="ml-2 font-mono text-[10px] uppercase tracking-wider text-blue-400/80">
+                        {user.role}
+                      </span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="max-h-[min(60vh,22rem)] overflow-y-auto p-1.5">
+                  {mobileOverflow.map((item) => {
+                    const active = isNavActive(item, pathname);
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        role="menuitem"
+                        onClick={() => setMoreOpen(false)}
+                        className={cn(
+                          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
+                          active
+                            ? "bg-blue-600/15 text-blue-200"
+                            : "text-white/75 hover:bg-white/[0.06] hover:text-white"
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0 opacity-80" />
+                        <span className="font-medium">{item.name}</span>
+                      </Link>
+                    );
+                  })}
+
+                  <div className="my-1 border-t border-white/[0.07]" />
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMoreOpen(false);
+                      setShowSearchModal(true);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/75 transition hover:bg-white/[0.06] hover:text-white"
+                  >
+                    <Search className="h-4 w-4 shrink-0 opacity-80" />
+                    <span className="font-medium">Search</span>
+                  </button>
+                  <Link
+                    href="/audit"
+                    role="menuitem"
+                    onClick={() => setMoreOpen(false)}
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/75 transition hover:bg-white/[0.06] hover:text-white"
+                  >
+                    <FileSearch className="h-4 w-4 shrink-0 opacity-80" />
+                    <span className="font-medium">Alerts</span>
+                  </Link>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMoreOpen(false);
+                      logout();
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-300/90 transition hover:bg-red-500/10"
+                  >
+                    <LogOut className="h-4 w-4 shrink-0" />
+                    <span className="font-medium">Sign out</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </nav>
 
       {showSearchModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-4 pt-24 backdrop-blur-sm">
@@ -327,7 +517,10 @@ export function AppShell({ children }: AppShellProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search cases, suspects, phones, accounts..."
-                className={cn(surfaceInput, "border-0 bg-transparent shadow-none focus:ring-0")}
+                className={cn(
+                  surfaceInput,
+                  "border-0 bg-transparent shadow-none focus:ring-0"
+                )}
               />
               <button
                 type="button"

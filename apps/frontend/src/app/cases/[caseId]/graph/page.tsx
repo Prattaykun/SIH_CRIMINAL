@@ -738,6 +738,7 @@ export default function CaseGraphPage() {
         {(viewMode === 'OVERVIEW' || viewMode === 'NETWORK') && (
         <div className="w-full h-full relative">
             <ReactFlow
+              colorMode="dark"
               nodes={nodes}
               edges={edges}
               onNodesChange={onNodesChange}
@@ -751,8 +752,14 @@ export default function CaseGraphPage() {
               minZoom={0.15}
               maxZoom={1.8}
             >
-              <Background color="#1a1a1a" gap={28} size={1} />
-              <Controls className={cn(surfaceCard, 'overflow-hidden p-0 text-white')} />
+              <Background color="#333" gap={28} size={1} />
+              <Controls
+                className={cn(
+                  surfaceCard,
+                  'sih-rf-controls overflow-hidden p-0 text-white',
+                  '!bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:!bottom-4'
+                )}
+              />
 
               {/* Focus Mode Banner (if an entity is selected) */}
               {currentFocusEntity && viewMode === 'NETWORK' && (

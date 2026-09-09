@@ -197,3 +197,26 @@ body {
     #e11d48 10px
   );
 }
+
+/* React Flow controls — dark theme polish */
+.react-flow.dark .sih-rf-controls,
+.sih-rf-controls {
+  --xy-controls-button-background-color: transparent;
+  --xy-controls-button-background-color-hover: rgba(255, 255, 255, 0.08);
+  --xy-controls-button-color: rgba(255, 255, 255, 0.82);
+  --xy-controls-button-color-hover: #ffffff;
+  --xy-controls-button-border-color: rgba(255, 255, 255, 0.1);
+  --xy-controls-box-shadow: none;
+}
+
+.sih-rf-controls .react-flow__controls-button {
+  width: 2rem;
+  height: 2rem;
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.sih-rf-controls .react-flow__controls-button svg {
+  fill: currentColor;
+  max-width: 14px;
+  max-height: 14px;
+}
