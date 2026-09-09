@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import {
   surfaceCard,
+  surfacePanel,
   surfaceBtnSecondary,
   surfaceBtnPrimary,
 } from '@/components/layout/surface';
@@ -162,6 +163,15 @@ export default function SimpleViewPage() {
     roleGroups[roleKey].push(p);
   });
 
+  const effectiveNumber = data?.case_number || caseId;
+  const insightColors = [
+    'bg-blue-500/20 text-blue-300 border border-blue-500/30',
+    'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+    'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+    'bg-violet-500/20 text-violet-300 border border-violet-500/30',
+    'bg-rose-500/20 text-rose-300 border border-rose-500/30',
+  ];
+
   return (
     <div className="-m-5 space-y-0 sm:-m-6 lg:-m-8">
       {/* Top Header Row */}
@@ -175,7 +185,7 @@ export default function SimpleViewPage() {
             </span>
           </div>
         }
-        description={`#${data.case_id.substring(0, 4)} | ${data.title}`}
+        description={`#${(data.case_id || caseId).toString().substring(0, 8)} | ${data.title || effectiveNumber}`}
         actions={
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={handleRegenerate} className={cn(surfaceBtnSecondary)} disabled={generating}>
@@ -206,30 +216,6 @@ export default function SimpleViewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className={cn(surfaceCard, 'p-6')}>
             <h2 className="text-white/45 text-xs font-semibold uppercase tracking-wider mb-6">Key Events</h2>
-            <div className="relative border-l border-white/[0.12] ml-3 space-y-7">
-              {(!data.timeline || data.timeline.length === 0) ? (
-                <p className="text-xs text-white/35 italic pl-6 py-2">No timeline events recorded for this case yet.</p>
-              ) : (
-                data.ai_insights.map((insight: string, idx: number) => (
-                  <div key={idx} className={cn(surfacePanel, "p-4 flex gap-4 items-start shadow-sm border border-white/[0.05]")}>
-                    <div className={cn("w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold", insightColors[idx % insightColors.length])}>
-                      {idx + 1}
-                    </div>
-                    <span className="text-sm text-white/90 leading-relaxed font-medium pt-0.5">{insight}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
-
-          <Card className={cn(surfaceCard, 'p-6 bg-blue-900/10 border-blue-500/20')}>
-            <div className="flex items-center gap-2 mb-6">
-              <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              <h2 className="text-blue-400 text-xs font-bold uppercase tracking-wider">AI-Generated Observations</h2>
-            </div>
-            
             <div className="relative border-l-2 border-white/[0.08] ml-2.5 space-y-7 flex-1 overflow-y-auto pr-2 pb-2">
               {(!data.timeline || data.timeline.length === 0) ? (
                 <p className="text-xs text-white/35 italic pl-6 py-2">No case events have been recorded yet.</p>
@@ -237,7 +223,7 @@ export default function SimpleViewPage() {
                 data.timeline.map((event: any, idx: number) => {
                   const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500'];
                   const color = colors[idx % colors.length];
-                  
+
                   return (
                     <div key={idx} className="relative pl-6">
                       <div className={`absolute -left-[6px] top-1.5 w-[10px] h-[10px] rounded-full ${color} shadow-[0_0_8px_currentColor]`}></div>
@@ -256,6 +242,28 @@ export default function SimpleViewPage() {
             </div>
           </Card>
 
+          <Card className={cn(surfaceCard, 'p-6 bg-blue-900/10 border-blue-500/20')}>
+            <div className="flex items-center gap-2 mb-6">
+              <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <h2 className="text-blue-400 text-xs font-bold uppercase tracking-wider">AI-Generated Observations</h2>
+            </div>
+            <div className="space-y-3">
+              {(!data.ai_insights || data.ai_insights.length === 0) ? (
+                <p className="text-xs text-white/35 italic py-2">No AI insights available.</p>
+              ) : (
+                data.ai_insights.map((insight: string, idx: number) => (
+                  <div key={idx} className={cn(surfacePanel, 'p-4 flex gap-4 items-start shadow-sm border border-white/[0.05]')}>
+                    <div className={cn('w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold', insightColors[idx % insightColors.length])}>
+                      {idx + 1}
+                    </div>
+                    <span className="text-sm text-white/90 leading-relaxed font-medium pt-0.5">{insight}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
