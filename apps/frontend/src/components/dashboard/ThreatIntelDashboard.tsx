@@ -110,44 +110,44 @@ export default function ThreatIntelDashboard({ caseData, caseId }: any) {
                   <span className="w-2 h-2 rounded-full bg-[#10b981]"></span>
                   <span className="text-[#10b981] text-[10px] font-bold uppercase tracking-widest">Active Target</span>
                 </div>
-                <h3 className="text-white text-2xl font-bold tracking-wide truncate max-w-sm" title={primarySubject}>{primarySubject}</h3>
-                <div className="text-white/45 text-xs mt-1 mb-2 font-medium truncate" title={caseData?.primary_subject?.role || "Subject of Interest - Network Key Node"}>
+                <h3 className="text-white text-2xl font-bold tracking-wide break-words" title={primarySubject}>{primarySubject}</h3>
+                <div className="text-white/45 text-xs mt-1 mb-2 font-medium break-words" title={caseData?.primary_subject?.role || "Subject of Interest - Network Key Node"}>
                   {caseData?.primary_subject?.role || "Subject of Interest - Network Key Node"}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-white/35 text-xs shrink-0">Target ID</span>
-                  <span className="text-white font-mono text-sm font-semibold truncate">{caseData?.case_id || caseId}</span>
+                  <span className="text-white font-mono text-xs sm:text-sm font-semibold break-all">{caseData?.case_id || caseId}</span>
                 </div>
               </div>
             </div>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 mt-8">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-2 min-w-0 gap-3">
-              <span className="text-white/35 text-xs tracking-wider shrink-0">Syndicate / Entity</span>
-              <span className="text-white text-sm font-medium truncate text-right" title={primaryOrg}>{primaryOrg}</span>
+            <div className="flex flex-col border-b border-white/[0.08] pb-2.5 min-w-0">
+              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">Syndicate / Entity</span>
+              <span className="text-white text-sm font-medium break-words leading-relaxed" title={primaryOrg}>{primaryOrg}</span>
             </div>
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-2 min-w-0 gap-3">
-              <span className="text-white/35 text-xs tracking-wider shrink-0">Jurisdiction</span>
-              <span className="text-white text-sm font-medium truncate text-right" title={caseData?.primary_subject?.jurisdiction || "Unknown"}>{caseData?.primary_subject?.jurisdiction || "Unknown"}</span>
+            <div className="flex flex-col border-b border-white/[0.08] pb-2.5 min-w-0">
+              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">Jurisdiction</span>
+              <span className="text-white text-sm font-medium break-words leading-relaxed" title={caseData?.primary_subject?.jurisdiction || "Unknown"}>{caseData?.primary_subject?.jurisdiction || "Unknown"}</span>
             </div>
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-2 min-w-0 gap-3">
-              <span className="text-white/35 text-xs tracking-wider shrink-0">Primary Vehicle</span>
-              <span className="text-white text-sm font-medium truncate text-right" title={primaryVehicle}>{primaryVehicle}</span>
+            <div className="flex flex-col border-b border-white/[0.08] pb-2.5 min-w-0">
+              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">Primary Vehicle</span>
+              <span className="text-white text-sm font-medium break-words leading-relaxed" title={primaryVehicle}>{primaryVehicle}</span>
             </div>
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-2 min-w-0 gap-3">
-              <span className="text-white/35 text-xs tracking-wider shrink-0">Primary Contact</span>
-              <span className="text-white text-sm font-medium font-mono truncate text-right" title={primaryPhone}>{primaryPhone}</span>
+            <div className="flex flex-col border-b border-white/[0.08] pb-2.5 min-w-0">
+              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">Primary Contact</span>
+              <span className="text-white text-sm font-medium font-mono break-all leading-relaxed" title={primaryPhone}>{primaryPhone}</span>
             </div>
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-2 min-w-0 gap-3">
-              <span className="text-white/35 text-xs tracking-wider shrink-0">Case Status</span>
-              <span className="text-white text-sm font-medium shrink-0 text-right">ACTIVE INVESTIGATION</span>
+            <div className="flex flex-col border-b border-white/[0.08] pb-2.5 min-w-0">
+              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">Case Status</span>
+              <span className="text-white text-sm font-medium leading-relaxed">ACTIVE INVESTIGATION</span>
             </div>
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-2 min-w-0 gap-3">
-              <span className="text-white/35 text-xs tracking-wider shrink-0">Investigative Priority</span>
-              <div className="text-[#ff3b57] text-xs font-bold flex items-center gap-1.5 uppercase tracking-wider shrink-0 text-right">
-                <span className="w-2 h-2 rounded-full bg-[#ff3b57] animate-pulse"></span>
-                {caseData?.primary_subject?.priority || "HIGH / ELEVATED"}
+            <div className="flex flex-col border-b border-white/[0.08] pb-2.5 min-w-0">
+              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">Investigative Priority</span>
+              <div className="text-[#ff3b57] text-xs font-bold flex items-center gap-1.5 uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-[#ff3b57] animate-pulse shrink-0"></span>
+                <span>{caseData?.primary_subject?.priority || "HIGH / ELEVATED"}</span>
               </div>
             </div>
           </div>
