@@ -141,78 +141,84 @@ export function InvestigationPatternCard({
   caseNumber = 'CASE-2024-SYN-922',
 }: InvestigationPatternCardProps) {
   const checklistItems = [
-    { label: 'Syndicate Involved', value: 'Confirmed (Marcuz Kowalski)', highlight: 'text-emerald-400 font-bold' },
-    { label: 'Confidence Score', value: '94% Match', highlight: 'text-emerald-400 font-bold' },
-    { label: 'Typology Profile', value: 'Hawala / Micro-Routing' },
-    { label: 'Source Dossier', value: 'FIR-SYN-2024-001' },
-    { label: 'Bridge Nodes', value: '4 Pending Verification', highlight: 'text-amber-400 font-bold' },
-    { label: 'Human Sign-off', value: 'Mandatory Prior to Action', highlight: 'text-rose-400 font-bold' },
-    { label: 'Freezing Order', value: 'Dispatched to FIU' },
-    { label: 'Telecom Intercept', value: 'Active CDR Monitoring' },
+    { label: 'Syndicate', value: 'Marcuz Kowalski', highlight: 'text-emerald-400 font-semibold', dotColor: 'bg-emerald-400' },
+    { label: 'Match Confidence', value: '94% (High)', highlight: 'text-emerald-400 font-semibold', dotColor: 'bg-emerald-400' },
+    { label: 'Typology', value: 'Hawala / Micro-Routing', highlight: 'text-blue-400', dotColor: 'bg-blue-400' },
+    { label: 'Evidence Dossier', value: 'FIR-SYN-2024-001', highlight: 'text-slate-200 font-mono text-[9px]', dotColor: 'bg-indigo-400' },
+    { label: 'Bridge Nodes', value: '4 Pending Review', highlight: 'text-amber-400 font-semibold', dotColor: 'bg-amber-400' },
+    { label: 'Sign-off', value: 'Mandatory Prior to Action', highlight: 'text-rose-400 font-semibold', dotColor: 'bg-rose-400' },
+    { label: 'Freezing Order', value: 'Dispatched to FIU', highlight: 'text-cyan-400', dotColor: 'bg-cyan-400' },
+    { label: 'CDR Intercept', value: 'Active Monitoring', highlight: 'text-purple-400', dotColor: 'bg-purple-400' },
   ];
 
   return (
-    <div className="rounded-2xl border border-[#212738] bg-[#111624] p-4 sm:p-5 flex flex-col justify-between shadow-lg text-slate-100 transition-colors">
+    <div className="rounded-2xl border border-[#212738] bg-[#111624] p-4 sm:p-5 flex flex-col justify-between shadow-lg text-slate-100 transition-colors h-full">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-[#1e2436]">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="size-4 text-[#5db329]" />
-          <span className="text-xs font-bold text-slate-200">
-            Explainable Pattern Signals
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-slate-400 text-xs font-mono">
-          <Camera className="size-3.5 cursor-pointer hover:text-white" />
-          <Check className="size-3.5 cursor-pointer hover:text-white" />
-          <Star className="size-3.5 cursor-pointer hover:text-white" />
-          <span className="text-[10px] text-slate-400">Event ID: {caseNumber}</span>
-        </div>
-      </div>
-
-      <div className="text-[10px] text-slate-400 font-mono mt-1">
-        Last update: Live Graph Topology Pipeline
-      </div>
-
-      {/* Title & Emergency Level Bars */}
-      <div className="mt-2.5 flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-extrabold text-white">
-            Syndicate Community Cluster Flagged
-          </span>
-          <span className="text-[#5db329] text-xs font-bold">▲</span>
-        </div>
-
-        {/* Segmented Emergency Level Indicator */}
-        <div className="flex items-center gap-1.5">
-          <div className="flex items-center gap-1">
-            <span className="w-3.5 h-2 rounded-xs bg-[#5db329]" />
-            <span className="w-3.5 h-2 rounded-xs bg-[#5db329]" />
-            <span className="w-3.5 h-2 rounded-xs bg-[#5db329]" />
-            <span className="w-3.5 h-2 rounded-xs bg-[#5db329]" />
-            <span className="w-3.5 h-2 rounded-xs bg-slate-700" />
+      <div>
+        <div className="flex items-center justify-between pb-2 border-b border-[#1e2436]">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="size-4 text-[#5db329]" />
+            <span className="text-xs font-bold text-slate-200">
+              Explainable Pattern Signals
+            </span>
           </div>
-          <span className="text-[10px] font-semibold text-slate-400">
-            Priority: HIGH
-          </span>
+          <div className="flex items-center gap-2 text-slate-400 text-xs font-mono">
+            <Camera className="size-3.5 cursor-pointer hover:text-white" />
+            <Check className="size-3.5 cursor-pointer hover:text-white" />
+            <Star className="size-3.5 cursor-pointer hover:text-white" />
+            <span className="text-[10px] text-slate-400 font-mono">Event ID: {caseNumber}</span>
+          </div>
+        </div>
+
+        <div className="text-[10px] text-slate-400 font-mono mt-1">
+          Last update: Live Graph Topology Pipeline
+        </div>
+
+        {/* Title & Emergency Level Bars */}
+        <div className="mt-2.5 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-extrabold text-white">
+              Syndicate Community Cluster Flagged
+            </span>
+            <span className="text-[#5db329] text-xs font-bold">▲</span>
+          </div>
+
+          {/* Segmented Emergency Level Indicator */}
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
+              <span className="w-3.5 h-2 rounded-xs bg-[#5db329]" />
+              <span className="w-3.5 h-2 rounded-xs bg-[#5db329]" />
+              <span className="w-3.5 h-2 rounded-xs bg-[#5db329]" />
+              <span className="w-3.5 h-2 rounded-xs bg-[#5db329]" />
+              <span className="w-3.5 h-2 rounded-xs bg-slate-700" />
+            </div>
+            <span className="text-[10px] font-semibold text-slate-400 font-mono">
+              Priority: HIGH
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Two-Column Content: Narrative + Checklist */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 pt-3 border-t border-[#1e2436] text-xs leading-relaxed">
-        {/* Narrative Paragraph */}
-        <p className="text-slate-300 text-[11px] leading-relaxed">
-          Cross-border financial routing detected between 3 shell entities and Marcuz Kowalski syndicate. Rapid burst of micro-transactions flagged by FIU pattern analyzer. Neo4j Louvain algorithm isolated dense community cluster with 4 pending bridge nodes. Automated link telemetry dispatched for authorized investigator review.
-        </p>
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 mt-3 pt-3 border-t border-[#1e2436] text-xs leading-relaxed">
+        {/* Narrative Paragraph (7 cols) */}
+        <div className="md:col-span-6 flex flex-col justify-between space-y-2">
+          <p className="text-slate-300 text-[11px] leading-relaxed">
+            Cross-border financial routing detected between 3 shell entities and Marcuz Kowalski syndicate. Rapid burst of micro-transactions flagged by FIU pattern analyzer. Neo4j Louvain algorithm isolated dense community cluster with 4 pending bridge nodes. Automated link telemetry dispatched for authorized investigator review.
+          </p>
+          <div className="pt-2 border-t border-[#1e2436]/60 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span>Algorithm: Louvain Community</span>
+            <span className="text-emerald-400 font-medium">94% Confidence</span>
+          </div>
+        </div>
 
-        {/* Structured Key/Value Checklist with Bullet Dots */}
-        <div className="space-y-1 text-[10px] font-sans">
+        {/* Structured Key/Value Checklist (6 cols) */}
+        <div className="md:col-span-6 space-y-1 text-[10px] font-sans md:border-l md:border-[#1e2436] md:pl-3 pt-2 md:pt-0">
           {checklistItems.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between gap-1">
-              <span className="text-slate-400 flex items-center gap-1">
-                <span className="size-1 rounded-full bg-slate-500" />
-                {item.label}:
-              </span>
-              <span className={`font-medium ${item.highlight || 'text-slate-200'}`}>
+            <div key={idx} className="flex items-baseline gap-1.5 leading-snug">
+              <span className={`size-1.5 rounded-full shrink-0 ${item.dotColor} mt-0.5`} />
+              <span className="text-slate-400 shrink-0">{item.label}:</span>
+              <span className={`truncate ${item.highlight || 'text-slate-200'}`}>
                 {item.value}
               </span>
             </div>
