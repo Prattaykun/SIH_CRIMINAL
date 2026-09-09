@@ -50,6 +50,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3001",
         "https://sih-criminal.onrender.com",
         "https://sih-criminal-frontend.onrender.com",
+        "https://frontend-phi-amber-54.vercel.app",
     ]
 
     # Password Policy
