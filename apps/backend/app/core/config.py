@@ -48,6 +48,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3001",
+        "https://sih-criminal.onrender.com",
+        "https://sih-criminal-frontend.onrender.com",
     ]
 
     # Password Policy
