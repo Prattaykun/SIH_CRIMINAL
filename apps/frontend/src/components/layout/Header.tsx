@@ -13,6 +13,8 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserMenu, setShowUserMenu] = useState(false);
 
+  if (pathname === '/') return null;
+
   const pathParts = pathname ? pathname.split('/') : [];
   const currentCaseId = (pathParts[1] === 'cases' && pathParts[2] && pathParts[2] !== 'new') ? pathParts[2] : null;
 

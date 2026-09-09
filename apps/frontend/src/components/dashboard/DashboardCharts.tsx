@@ -13,6 +13,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 import { motion } from "framer-motion";
 
@@ -201,7 +202,7 @@ export function EntityDistributionChart({ byType }: EntityDistributionChartProps
 
 // 3. Topology Roles Horizontal Bar Chart
 interface TopologyChartProps {
-  roles: {
+  roles?: {
     high_degree: number;
     bridge: number;
     financial: number;
@@ -214,12 +215,20 @@ export function TopologyRolesChart({ roles }: TopologyChartProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  const activeRoles = roles || {
+    high_degree: 6,
+    bridge: 4,
+    financial: 3,
+    communication: 5,
+    peripheral: 14,
+  };
+
   const data = [
-    { role: "High-Degree Hubs", count: roles.high_degree, color: "#3b82f6", tag: "Deg ≥ 3" },
-    { role: "Bridge Gateways", count: roles.bridge, color: "#a855f7", tag: "Betweenness" },
-    { role: "Communication Relays", count: roles.communication, color: "#06b6d4", tag: "Telecom / CDR" },
-    { role: "Financial Channels", count: roles.financial, color: "#10b981", tag: "Accounts" },
-    { role: "Perimeter Leaves", count: roles.peripheral, color: "#64748b", tag: "Deg = 1" },
+    { role: "High-Degree Hubs", count: activeRoles.high_degree, color: "#3b82f6", tag: "Deg ≥ 3" },
+    { role: "Bridge Gateways", count: activeRoles.bridge, color: "#a855f7", tag: "Betweenness" },
+    { role: "Communication Relays", count: activeRoles.communication, color: "#06b6d4", tag: "Telecom / CDR" },
+    { role: "Financial Channels", count: activeRoles.financial, color: "#10b981", tag: "Accounts" },
+    { role: "Perimeter Leaves", count: activeRoles.peripheral, color: "#64748b", tag: "Deg = 1" },
   ];
 
   if (!mounted) {
@@ -326,3 +335,139 @@ export function InvestigationVelocityChart() {
     </div>
   );
 }
+
+// 5. Kemetra Signature Area Trend Chart (Matching Reference Image)
+export interface KemetraTrendPoint {
+  time: string;
+  value: number;
+}
+
+interface KemetraTrendChartProps {
+  data?: KemetraTrendPoint[];
+  average?: number;
+  minVal?: number;
+  maxVal?: number;
+  isDark?: boolean;
+  gradientId?: string;
+  lineColor?: string;
+  unit?: string;
+}
+
+export function KemetraTrendChart({
+  data,
+  average = 28,
+  minVal = 20,
+  maxVal = 40,
+  isDark = false,
+  gradientId = "kemetraGreenGrad",
+  lineColor = "#5db329",
+  unit = "NODES",
+}: KemetraTrendChartProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const defaultData: KemetraTrendPoint[] = [
+    { time: "00:00", value: 35 },
+    { time: "01:00", value: 32 },
+    { time: "02:00", value: 30 },
+    { time: "03:00", value: 20 },
+    { time: "04:00", value: 40 },
+    { time: "05:00", value: 34 },
+    { time: "06:00", value: 34 },
+    { time: "07:00", value: 34 },
+  ];
+
+  const chartData = data && data.length > 0 ? data : defaultData;
+
+  if (!mounted) {
+    return <div className="h-32 w-full bg-slate-200/40 dark:bg-slate-800/20 rounded animate-pulse" />;
+  }
+
+  return (
+    <div className="h-32 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData} margin={{ top: 8, right: 10, left: -28, bottom: 0 }}>
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={lineColor} stopOpacity={0.25} />
+              <stop offset="95%" stopColor={lineColor} stopOpacity={0.0} />
+            </linearGradient>
+          </defs>
+          <XAxis
+            dataKey="time"
+            stroke={isDark ? "#64748b" : "#94a3b8"}
+            fontSize={9}
+            tickLine={false}
+            axisLine={{ stroke: isDark ? "#1e293b" : "#e2e8f0" }}
+          />
+          <YAxis
+            stroke={isDark ? "#64748b" : "#94a3b8"}
+            fontSize={9}
+            tickLine={false}
+            axisLine={false}
+            domain={[0, 60]}
+            ticks={[10, 20, 30, 40, 50, 60]}
+          />
+          <Tooltip
+            content={({ active, payload, label }: any) => {
+              if (active && payload && payload.length) {
+                return (
+                  <div className="rounded-lg bg-slate-900 text-white text-[11px] px-2 py-1 shadow-lg border border-slate-700">
+                    <div className="font-semibold">{label}</div>
+                    <div className="text-[#5db329] font-mono">
+                      {payload[0].value} {unit}
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            }}
+          />
+          <ReferenceLine
+            y={average}
+            stroke={isDark ? "#475569" : "#cbd5e1"}
+            strokeDasharray="3 3"
+          />
+          <Area
+            type="monotone"
+            dataKey="value"
+            stroke={lineColor}
+            strokeWidth={1.8}
+            fill={`url(#${gradientId})`}
+            dot={(props: any) => {
+              const { cx, cy, payload } = props;
+              if (payload.value === minVal) {
+                return (
+                  <circle
+                    key={`dot-min-${cx}-${cy}`}
+                    cx={cx}
+                    cy={cy}
+                    r={3.5}
+                    fill="#3b82f6"
+                    stroke="#ffffff"
+                    strokeWidth={1.5}
+                  />
+                );
+              }
+              if (payload.value === maxVal) {
+                return (
+                  <circle
+                    key={`dot-max-${cx}-${cy}`}
+                    cx={cx}
+                    cy={cy}
+                    r={3.5}
+                    fill="#f59e0b"
+                    stroke="#ffffff"
+                    strokeWidth={1.5}
+                  />
+                );
+              }
+              return null;
+            }}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
