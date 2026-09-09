@@ -12,13 +12,14 @@ import {
   FileText,
   Activity,
   Network,
-  RotateCcw,
   SlidersHorizontal,
   ChevronDown,
   Layers,
   CheckCircle2,
   Clock,
   AlertTriangle,
+  AlertCircle,
+  BarChart3,
   GitMerge,
   UserCheck,
   Landmark,
@@ -32,7 +33,6 @@ import {
 import { api, DashboardOverviewStats } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { getStoredToken } from '@/lib/auth';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -314,18 +314,6 @@ export default function DashboardOverview() {
             <span className="size-2 rounded-full bg-emerald-500"></span>
             <span className="font-medium tracking-tight">Graph Pipeline Online (Neo4j / NetworkX)</span>
           </div>
-        </div>
-      </motion.div>
-
-          {/* Sync Button */}
-          <button
-            onClick={loadDashboardData}
-            title="Sync Graph Pipeline"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#232b3f] bg-[#121622] hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold shadow-xs transition-colors"
-          >
-            <RotateCcw className={`size-3.5 ${loading ? 'animate-spin text-blue-400' : ''}`} />
-            <span>Sync</span>
-          </button>
         </div>
       </motion.div>
 

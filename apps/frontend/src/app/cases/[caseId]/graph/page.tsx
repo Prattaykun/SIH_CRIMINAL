@@ -68,7 +68,7 @@ const edgeTypes = {
   intelligence: IntelligenceEdge,
 };
 
-type ViewMode = 'OVERVIEW' | 'NETWORK';
+type ViewMode = 'OVERVIEW' | 'NETWORK' | 'TIMELINE' | 'EVIDENCE';
 
 // Dagre Layout computation with ample node separation and accurate dimensions
 const layoutElements = (nodes: Node[], edges: Edge[], direction: 'LR' | 'TB' = 'LR') => {
@@ -577,6 +577,7 @@ export default function CaseGraphPage() {
       {/* Main Content Area */}
       <div className="flex-1 relative overflow-hidden">
         {/* React Flow Intelligence Canvas */}
+        {(viewMode === 'OVERVIEW' || viewMode === 'NETWORK') && (
         <div className="w-full h-full relative">
             <ReactFlow
               nodes={nodes}
