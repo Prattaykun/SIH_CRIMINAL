@@ -83,3 +83,4 @@ apps/backend/app/ml/artifacts/
 postgres_dump.sql
 sqlite_dump.sql
 graphify-out/cache/
+references/

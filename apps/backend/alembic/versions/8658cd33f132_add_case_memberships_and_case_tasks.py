@@ -79,89 +79,128 @@ def upgrade() -> None:
         batch_op.create_index('ix_case_tasks_status', ['status'], unique=False)
 
     # === Data Migration Step ===
+    # Use SAVEPOINTs so a single duplicate-key row cannot abort the whole upgrade txn.
     bind = op.get_bind()
     import uuid
-    from datetime import datetime
-    
+    from datetime import datetime, timezone
+
+    def _utcnow() -> datetime:
+        return datetime.now(timezone.utc)
+
+    active_leads: set[str] = set()
+
     # 1. Fetch all case_access records
     try:
-        access_records = bind.execute(sa.text("SELECT id, user_id, case_id, access_level, assigned_by_user_id, assigned_at, revoked_at, is_active FROM case_access")).fetchall()
-        
-        # 2. Insert into case_memberships
-        for rec in access_records:
-            # Map legacy access level
-            level = rec.access_level.upper()
-            if level in ('MANAGE', 'OWNER', 'LEAD', 'ADMIN'):
-                role = 'CASE_LEAD'
-            elif level in ('WRITE', 'EDITOR', 'INVESTIGATOR'):
-                role = 'INVESTIGATOR'
-            elif level in ('REVIEW', 'VERIFIER'):
-                role = 'REVIEWER'
-            elif level == 'ANALYST':
-                role = 'ANALYST'
-            else:
-                role = 'OBSERVER'
-                
-            status = 'ACTIVE' if rec.is_active else 'REMOVED'
-            
-            # Use raw SQL to insert
-            bind.execute(
-                sa.text('''
-                    INSERT INTO case_memberships 
-                    (id, case_id, user_id, case_role, status, assigned_by, assigned_at, removed_by, removed_at, created_at, updated_at)
-                    VALUES (:id, :case_id, :user_id, :case_role, :status, :assigned_by, :assigned_at, :removed_by, :removed_at, :created_at, :updated_at)
-                '''),
-                {
-                    "id": str(uuid.uuid4()),
-                    "case_id": rec.case_id,
-                    "user_id": rec.user_id,
-                    "case_role": role,
-                    "status": status,
-                    "assigned_by": rec.assigned_by_user_id,
-                    "assigned_at": rec.assigned_at or datetime.utcnow(),
-                    "removed_by": None,
-                    "removed_at": rec.revoked_at,
-                    "created_at": datetime.utcnow(),
-                    "updated_at": datetime.utcnow(),
-                }
+        access_records = bind.execute(
+            sa.text(
+                "SELECT id, user_id, case_id, access_level, assigned_by_user_id, "
+                "assigned_at, revoked_at, is_active FROM case_access"
             )
-            
+        ).fetchall()
+
+        # 2. Insert into case_memberships (at most one ACTIVE CASE_LEAD per case)
+        for rec in access_records:
+            level = (rec.access_level or "").upper()
+            if level in ("MANAGE", "OWNER", "LEAD", "ADMIN"):
+                role = "CASE_LEAD"
+            elif level in ("WRITE", "EDITOR", "INVESTIGATOR"):
+                role = "INVESTIGATOR"
+            elif level in ("REVIEW", "VERIFIER"):
+                role = "REVIEWER"
+            elif level == "ANALYST":
+                role = "ANALYST"
+            else:
+                role = "OBSERVER"
+
+            status = "ACTIVE" if rec.is_active else "REMOVED"
+            if role == "CASE_LEAD" and status == "ACTIVE":
+                if rec.case_id in active_leads:
+                    role = "INVESTIGATOR"
+                else:
+                    active_leads.add(rec.case_id)
+
+            try:
+                with bind.begin_nested():
+                    bind.execute(
+                        sa.text(
+                            """
+                            INSERT INTO case_memberships
+                            (id, case_id, user_id, case_role, status, assigned_by,
+                             assigned_at, removed_by, removed_at, created_at, updated_at)
+                            VALUES (:id, :case_id, :user_id, :case_role, :status, :assigned_by,
+                                    :assigned_at, :removed_by, :removed_at, :created_at, :updated_at)
+                            """
+                        ),
+                        {
+                            "id": str(uuid.uuid4()),
+                            "case_id": rec.case_id,
+                            "user_id": rec.user_id,
+                            "case_role": role,
+                            "status": status,
+                            "assigned_by": rec.assigned_by_user_id,
+                            "assigned_at": rec.assigned_at or _utcnow(),
+                            "removed_by": None,
+                            "removed_at": rec.revoked_at,
+                            "created_at": _utcnow(),
+                            "updated_at": _utcnow(),
+                        },
+                    )
+            except Exception as row_err:
+                print(f"Skipping case_access row {rec.id}: {row_err}")
+
     except Exception as e:
         print(f"Skipping case_access data migration due to error or missing table: {e}")
-        
+
     # 3. Ensure each case has a CASE_LEAD
     try:
         cases = bind.execute(sa.text("SELECT id, created_by FROM cases")).fetchall()
         for c in cases:
-            lead = bind.execute(sa.text("SELECT id FROM case_memberships WHERE case_id = :case_id AND case_role = 'CASE_LEAD' AND status = 'ACTIVE'"), {"case_id": c.id}).fetchone()
-            if not lead:
-                if c.created_by:
-                    lead_user = c.created_by
-                else:
-                    # Pick any active member
-                    any_member = bind.execute(sa.text("SELECT user_id FROM case_memberships WHERE case_id = :case_id AND status = 'ACTIVE' ORDER BY created_at ASC"), {"case_id": c.id}).fetchone()
-                    if any_member:
-                        lead_user = any_member.user_id
-                    else:
-                        # Fallback to a system admin if possible, else skip
-                        continue
-                        
-                bind.execute(
-                    sa.text('''
-                        INSERT INTO case_memberships 
-                        (id, case_id, user_id, case_role, status, assigned_at, created_at, updated_at)
-                        VALUES (:id, :case_id, :user_id, 'CASE_LEAD', 'ACTIVE', :now, :now, :now)
-                    '''),
-                    {
-                        "id": str(uuid.uuid4()),
-                        "case_id": c.id,
-                        "user_id": lead_user,
-                        "now": datetime.utcnow()
-                    }
-                )
+            lead = bind.execute(
+                sa.text(
+                    "SELECT id FROM case_memberships "
+                    "WHERE case_id = :case_id AND case_role = 'CASE_LEAD' AND status = 'ACTIVE'"
+                ),
+                {"case_id": c.id},
+            ).fetchone()
+            if lead:
+                continue
+            if c.created_by:
+                lead_user = c.created_by
+            else:
+                any_member = bind.execute(
+                    sa.text(
+                        "SELECT user_id FROM case_memberships "
+                        "WHERE case_id = :case_id AND status = 'ACTIVE' "
+                        "ORDER BY created_at ASC"
+                    ),
+                    {"case_id": c.id},
+                ).fetchone()
+                if not any_member:
+                    continue
+                lead_user = any_member.user_id
+
+            try:
+                with bind.begin_nested():
+                    bind.execute(
+                        sa.text(
+                            """
+                            INSERT INTO case_memberships
+                            (id, case_id, user_id, case_role, status, assigned_at, created_at, updated_at)
+                            VALUES (:id, :case_id, :user_id, 'CASE_LEAD', 'ACTIVE', :now, :now, :now)
+                            """
+                        ),
+                        {
+                            "id": str(uuid.uuid4()),
+                            "case_id": c.id,
+                            "user_id": lead_user,
+                            "now": _utcnow(),
+                        },
+                    )
+            except Exception as row_err:
+                print(f"Skipping CASE_LEAD for case {c.id}: {row_err}")
     except Exception as e:
         print(f"Skipping CASE_LEAD assignment due to error: {e}")
-        
+
     # ### end Alembic commands ###
 
 

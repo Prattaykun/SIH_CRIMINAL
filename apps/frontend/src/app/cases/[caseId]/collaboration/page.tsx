@@ -6,6 +6,17 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-hot-toast';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import {
+  surfaceBtnPrimary,
+  surfaceBtnSecondary,
+  surfaceCard,
+  surfaceInput,
+  surfacePanel,
+  surfaceSelect,
+} from '@/components/layout/surface';
 
 interface TeamMember {
   id: string;
@@ -229,117 +240,109 @@ export default function CollaborationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0b0d13] flex flex-col items-center justify-center text-slate-400 font-sans">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-sm">Loading Case Collaboration Space...</p>
+      <div className="-m-5 space-y-0 sm:-m-6 lg:-m-8">
+        <PageHeader badge="Collaboration" title="Loading workspace..." />
+        <div className="flex flex-col items-center justify-center px-5 py-20 sm:px-6 lg:px-8">
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+          <p className="text-sm text-white/45">Loading Case Collaboration Space...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0b0d13] p-8 flex flex-col items-center justify-center font-sans text-center">
-        <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4">
-          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <div className="-m-5 space-y-0 sm:-m-6 lg:-m-8">
+        <PageHeader badge="Collaboration" title="Access Denied / Offline" description={error} />
+        <div className="flex flex-col items-center justify-center px-5 py-10 text-center sm:px-6 lg:px-8">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-red-500/20 bg-red-500/10 text-red-400">
+            <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push(`/cases/${caseId}`)}
+            className={surfaceBtnSecondary}
+          >
+            Return to Case Dossier
+          </button>
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Access Denied / Offline</h2>
-        <p className="text-sm text-slate-400 max-w-md mb-6">{error}</p>
-        <button
-          onClick={() => router.push(`/cases/${caseId}`)}
-          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm transition"
-        >
-          Return to Case Dossier
-        </button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0d13] text-slate-200 p-4 lg:p-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-8">
-        
-        {/* Header & Breadcrumb */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#212638] pb-6">
-          <div>
-            <div className="flex items-center gap-2 text-slate-400 text-xs font-mono uppercase tracking-wider mb-1">
-              <Link href="/cases" className="hover:text-white transition">Cases</Link>
-              <span>/</span>
-              <Link href={`/cases/${caseId}`} className="hover:text-white transition font-semibold text-slate-300">{caseId}</Link>
-              <span>/</span>
-              <span className="text-indigo-400">Collaboration &amp; Tasks</span>
-            </div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-              Multi-Investigator Workspace
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                Phase 1 Active
-              </span>
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/cases/${caseId}`}
-              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium border border-slate-700 transition flex items-center gap-1.5"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+    <div className="-m-5 space-y-0 sm:-m-6 lg:-m-8">
+      <PageHeader
+        badge={`Cases / ${caseId}`}
+        title="Multi-Investigator Workspace"
+        description="Collaborate on tasks, assignments, and team roles for this investigation."
+        actions={
+          <>
+            <Link href={`/cases/${caseId}`} className={cn(surfaceBtnSecondary, 'gap-1.5 text-xs')}>
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
               Back to Dossier
             </Link>
             <button
+              type="button"
               onClick={() => setShowNewTaskModal(true)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-lg shadow-indigo-900/20 transition flex items-center gap-1.5"
+              className={cn(surfaceBtnPrimary, 'gap-1.5 text-xs')}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
               New Task
             </button>
             {canManageTeam && (
               <button
+                type="button"
                 onClick={() => setShowAddMemberModal(true)}
-                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5"
+                className={cn(surfaceBtnSecondary, 'gap-1.5 text-xs')}
               >
-                <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                <svg className="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
                 Add Member
               </button>
             )}
-          </div>
-        </header>
+          </>
+        }
+      />
+
+      <div className="mx-auto max-w-7xl space-y-8 px-5 py-5 sm:px-6 lg:px-8">
 
         {/* Section 1: My Work */}
-        <section className="bg-[#141721] border border-[#212638] rounded-2xl p-6 shadow-xl">
-          <div className="flex items-center justify-between mb-4">
+        <Card className={cn(surfaceCard, 'gap-0 p-6')}>
+          <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">My Assigned Work ({myTasks.length})</h2>
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+              <h2 className="text-sm font-bold uppercase tracking-wider text-white/70">My Assigned Work ({myTasks.length})</h2>
             </div>
-            <span className="text-xs text-slate-500 font-mono">Logged in as {user?.username} ({currentMembership?.case_role || user?.role || 'Guest'})</span>
+            <span className="font-mono text-xs text-white/40">Logged in as {user?.username} ({currentMembership?.case_role || user?.role || 'Guest'})</span>
           </div>
 
           {myTasks.length === 0 ? (
-            <div className="p-8 border border-dashed border-slate-800 rounded-xl text-center text-slate-500 text-xs">
+            <div className="rounded-xl border border-dashed border-white/[0.08] p-8 text-center text-xs text-white/40">
               No investigative tasks are currently assigned to you on this case.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {myTasks.map(task => (
-                <div key={task.id} className="bg-[#0b0d13] border border-[#212638] rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 transition">
+                <div key={task.id} className={cn(surfacePanel, 'flex flex-col justify-between p-4 transition hover:border-white/[0.14]')}>
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="rounded bg-white/[0.05] px-2 py-0.5 font-mono text-[10px] uppercase text-white/70">
                         {task.task_type.replace('_', ' ')}
                       </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase
-                        ${task.priority === 'CRITICAL' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 
-                          task.priority === 'HIGH' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 
-                          'bg-slate-800 text-slate-400'}`}>
+                      <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase
+                        ${task.priority === 'CRITICAL' ? 'border border-red-500/20 bg-red-500/10 text-red-400' : 
+                          task.priority === 'HIGH' ? 'border border-amber-500/20 bg-amber-500/10 text-amber-400' : 
+                          'bg-white/[0.05] text-white/45'}`}>
                         {task.priority}
                       </span>
                     </div>
-                    <h3 className="text-sm font-semibold text-white mb-1 line-clamp-1">{task.title}</h3>
+                    <h3 className="mb-1 line-clamp-1 text-sm font-semibold text-white">{task.title}</h3>
                     {task.description && (
-                      <p className="text-xs text-slate-400 line-clamp-2 mb-3">{task.description}</p>
+                      <p className="mb-3 line-clamp-2 text-xs text-white/45">{task.description}</p>
                     )}
                   </div>
 
-                  <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                  <div className="flex items-center justify-between border-t border-white/[0.08] pt-3 text-xs">
                     <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${task.status === 'COMPLETED' ? 'text-emerald-400 bg-emerald-500/10' : 'text-amber-400 bg-amber-500/10'}`}>
                       {task.status}
                     </span>
@@ -356,21 +359,21 @@ export default function CollaborationPage() {
               ))}
             </div>
           )}
-        </section>
+        </Card>
 
         {/* Section 2: Team Tasks */}
-        <section className="bg-[#141721] border border-[#212638] rounded-2xl p-6 shadow-xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <Card className={cn(surfaceCard, 'gap-0 p-6')}>
+          <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">Case Task Queue ({filteredTasks.length})</h2>
+              <span className="h-2.5 w-2.5 rounded-full bg-blue-400" />
+              <h2 className="text-sm font-bold uppercase tracking-wider text-white/70">Case Task Queue ({filteredTasks.length})</h2>
             </div>
 
             <div className="flex items-center gap-3">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-[#0b0d13] border border-[#212638] text-xs text-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500"
+                className={cn(surfaceSelect, 'text-xs')}
               >
                 <option value="ALL">All Statuses</option>
                 <option value="OPEN">OPEN</option>
@@ -382,7 +385,7 @@ export default function CollaborationPage() {
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
-                className="bg-[#0b0d13] border border-[#212638] text-xs text-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500"
+                className={cn(surfaceSelect, 'text-xs')}
               >
                 <option value="ALL">All Priorities</option>
                 <option value="LOW">LOW</option>
@@ -394,7 +397,7 @@ export default function CollaborationPage() {
           </div>
 
           {filteredTasks.length === 0 ? (
-            <div className="p-8 border border-dashed border-slate-800 rounded-xl text-center text-slate-500 text-xs">
+            <div className="rounded-xl border border-dashed border-white/[0.08] p-8 text-center text-xs text-white/40">
               No tasks match the selected filter criteria.
             </div>
           ) : (
@@ -402,32 +405,32 @@ export default function CollaborationPage() {
               {filteredTasks.map(task => {
                 const assignee = team.find(m => m.user_id === task.assigned_to);
                 return (
-                  <div key={task.id} className="bg-[#0b0d13] border border-[#212638] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-700 transition">
+                  <div key={task.id} className={cn(surfacePanel, 'flex flex-col justify-between gap-4 p-4 transition hover:border-white/[0.14] sm:flex-row sm:items-center')}>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase
-                          ${task.priority === 'CRITICAL' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 
-                            task.priority === 'HIGH' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 
-                            'bg-slate-800 text-slate-400'}`}>
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase
+                          ${task.priority === 'CRITICAL' ? 'border border-red-500/20 bg-red-500/10 text-red-400' : 
+                            task.priority === 'HIGH' ? 'border border-amber-500/20 bg-amber-500/10 text-amber-400' : 
+                            'bg-white/[0.05] text-white/45'}`}>
                           {task.priority}
                         </span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase">
+                        <span className="rounded bg-white/[0.05] px-2 py-0.5 font-mono text-[10px] uppercase text-white/45">
                           {task.task_type.replace('_', ' ')}
                         </span>
-                        <span className="text-xs text-slate-500 font-mono">v{task.version}</span>
+                        <span className="font-mono text-xs text-white/40">v{task.version}</span>
                       </div>
-                      <h4 className="text-sm font-semibold text-white truncate">{task.title}</h4>
+                      <h4 className="truncate text-sm font-semibold text-white">{task.title}</h4>
                       {task.description && (
-                        <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">{task.description}</p>
+                        <p className="mt-0.5 line-clamp-1 text-xs text-white/45">{task.description}</p>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-4 shrink-0 text-xs">
+                    <div className="flex shrink-0 items-center gap-4 text-xs">
                       <div className="text-right">
-                        <div className="text-slate-400 text-[11px]">
-                          Assignee: <span className="text-white font-medium">{assignee ? assignee.user_id : (task.assigned_to || 'Unassigned')}</span>
+                        <div className="text-[11px] text-white/45">
+                          Assignee: <span className="font-medium text-white">{assignee ? assignee.user_id : (task.assigned_to || 'Unassigned')}</span>
                         </div>
-                        <div className="text-slate-500 text-[10px]">
+                        <div className="text-[10px] text-white/40">
                           Created: {new Date(task.created_at).toLocaleDateString()}
                         </div>
                       </div>
@@ -444,86 +447,87 @@ export default function CollaborationPage() {
               })}
             </div>
           )}
-        </section>
+        </Card>
 
         {/* Section 3: Team Roster */}
-        <section className="bg-[#141721] border border-[#212638] rounded-2xl p-6 shadow-xl">
-          <div className="flex items-center justify-between mb-6">
+        <Card className={cn(surfaceCard, 'gap-0 p-6')}>
+          <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">Assigned Investigators &amp; Roles ({team.length})</h2>
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+              <h2 className="text-sm font-bold uppercase tracking-wider text-white/70">Assigned Investigators &amp; Roles ({team.length})</h2>
             </div>
             {isCaseLead && team.length > 1 && (
               <button
+                type="button"
                 onClick={() => setShowTransferLeadModal(true)}
-                className="text-xs text-amber-400 hover:text-amber-300 transition underline underline-offset-4"
+                className="text-xs text-amber-400 underline underline-offset-4 transition hover:text-amber-300"
               >
                 Transfer Case Leadership
               </button>
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {team.map(member => (
-              <div key={member.id} className="bg-[#0b0d13] border border-[#212638] rounded-xl p-4 flex flex-col justify-between">
+              <div key={member.id} className={cn(surfacePanel, 'flex flex-col justify-between p-4')}>
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-white font-mono">{member.user_id}</span>
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-white">{member.user_id}</span>
                     {member.case_role === 'CASE_LEAD' ? (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-widest">
+                      <span className="rounded border border-blue-500/30 bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-blue-300">
                         CASE LEAD
                       </span>
                     ) : (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase">
+                      <span className="rounded bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold uppercase text-white/45">
                         {member.case_role}
                       </span>
                     )}
                   </div>
-                  <div className="text-[11px] text-slate-400 space-y-1">
-                    <p>Status: <span className={member.status === 'ACTIVE' ? 'text-emerald-400 font-semibold' : 'text-red-400'}>{member.status}</span></p>
+                  <div className="space-y-1 text-[11px] text-white/45">
+                    <p>Status: <span className={member.status === 'ACTIVE' ? 'font-semibold text-emerald-400' : 'text-red-400'}>{member.status}</span></p>
                     <p>Assigned: {new Date(member.assigned_at).toLocaleDateString()}</p>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-        </section>
+        </Card>
 
       </div>
 
       {/* New Task Modal */}
       {showNewTaskModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleCreateTask} className="bg-[#141721] border border-[#212638] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-white mb-2">Create Investigation Task</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <form onSubmit={handleCreateTask} className={cn(surfaceCard, 'w-full max-w-lg space-y-4 gap-0 p-6')}>
+            <h3 className="mb-2 text-lg font-bold text-white">Create Investigation Task</h3>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Title *</label>
+              <label className="mb-1 block text-xs font-semibold text-white/70">Title *</label>
               <input
                 type="text"
                 required
                 value={newTaskTitle}
                 onChange={(e) => setNewTaskTitle(e.target.value)}
                 placeholder="e.g. Verify beneficiary phone records"
-                className="w-full bg-[#0b0d13] border border-[#212638] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                className={surfaceInput}
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Description</label>
+              <label className="mb-1 block text-xs font-semibold text-white/70">Description</label>
               <textarea
                 rows={2}
                 value={newTaskDesc}
                 onChange={(e) => setNewTaskDesc(e.target.value)}
                 placeholder="Details of evidence or entity verification required..."
-                className="w-full bg-[#0b0d13] border border-[#212638] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                className={surfaceInput}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Task Type</label>
+                <label className="mb-1 block text-xs font-semibold text-white/70">Task Type</label>
                 <select
                   value={newTaskType}
                   onChange={(e) => setNewTaskType(e.target.value)}
-                  className="w-full bg-[#0b0d13] border border-[#212638] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className={cn(surfaceSelect, 'w-full text-xs')}
                 >
                   <option value="GENERAL">GENERAL</option>
                   <option value="VERIFY_ENTITY">VERIFY_ENTITY</option>
@@ -535,11 +539,11 @@ export default function CollaborationPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Priority</label>
+                <label className="mb-1 block text-xs font-semibold text-white/70">Priority</label>
                 <select
                   value={newTaskPriority}
                   onChange={(e) => setNewTaskPriority(e.target.value as any)}
-                  className="w-full bg-[#0b0d13] border border-[#212638] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className={cn(surfaceSelect, 'w-full text-xs')}
                 >
                   <option value="LOW">LOW</option>
                   <option value="MEDIUM">MEDIUM</option>
@@ -549,11 +553,11 @@ export default function CollaborationPage() {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Assignee</label>
+              <label className="mb-1 block text-xs font-semibold text-white/70">Assignee</label>
               <select
                 value={newTaskAssignee}
                 onChange={(e) => setNewTaskAssignee(e.target.value)}
-                className="w-full bg-[#0b0d13] border border-[#212638] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                className={cn(surfaceSelect, 'w-full text-xs')}
               >
                 <option value="">Unassigned (or self-assigned)</option>
                 {team.filter(m => m.status === 'ACTIVE').map(m => (
@@ -561,18 +565,18 @@ export default function CollaborationPage() {
                 ))}
               </select>
             </div>
-            <div className="flex gap-3 justify-end pt-3 border-t border-slate-800">
+            <div className="flex justify-end gap-3 border-t border-white/[0.08] pt-3">
               <button
                 type="button"
                 onClick={() => setShowNewTaskModal(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition"
+                className={surfaceBtnSecondary}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmittingTask}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition flex items-center gap-2"
+                className={surfaceBtnPrimary}
               >
                 {isSubmittingTask ? 'Creating...' : 'Create Task'}
               </button>
@@ -583,26 +587,26 @@ export default function CollaborationPage() {
 
       {/* Add Member Modal */}
       {showAddMemberModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleAddMember} className="bg-[#141721] border border-[#212638] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-white mb-2">Add Investigator to Case</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <form onSubmit={handleAddMember} className={cn(surfaceCard, 'w-full max-w-md space-y-4 gap-0 p-6')}>
+            <h3 className="mb-2 text-lg font-bold text-white">Add Investigator to Case</h3>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">User ID or Username *</label>
+              <label className="mb-1 block text-xs font-semibold text-white/70">User ID or Username *</label>
               <input
                 type="text"
                 required
                 value={newMemberUserId}
                 onChange={(e) => setNewMemberUserId(e.target.value)}
                 placeholder="e.g. demo_analyst or UUID"
-                className="w-full bg-[#0b0d13] border border-[#212638] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                className={surfaceInput}
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Case Role</label>
+              <label className="mb-1 block text-xs font-semibold text-white/70">Case Role</label>
               <select
                 value={newMemberRole}
                 onChange={(e) => setNewMemberRole(e.target.value as any)}
-                className="w-full bg-[#0b0d13] border border-[#212638] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                className={cn(surfaceSelect, 'w-full text-xs')}
               >
                 <option value="INVESTIGATOR">INVESTIGATOR</option>
                 <option value="ANALYST">ANALYST</option>
@@ -611,27 +615,27 @@ export default function CollaborationPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Assignment Reason</label>
+              <label className="mb-1 block text-xs font-semibold text-white/70">Assignment Reason</label>
               <input
                 type="text"
                 value={newMemberReason}
                 onChange={(e) => setNewMemberReason(e.target.value)}
                 placeholder="e.g. Financial transaction tracing support"
-                className="w-full bg-[#0b0d13] border border-[#212638] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                className={surfaceInput}
               />
             </div>
-            <div className="flex gap-3 justify-end pt-3 border-t border-slate-800">
+            <div className="flex justify-end gap-3 border-t border-white/[0.08] pt-3">
               <button
                 type="button"
                 onClick={() => setShowAddMemberModal(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition"
+                className={surfaceBtnSecondary}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmittingMember}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition"
+                className={cn(surfaceBtnPrimary, 'bg-emerald-600 hover:bg-emerald-500')}
               >
                 {isSubmittingMember ? 'Adding...' : 'Add Member'}
               </button>
@@ -642,19 +646,19 @@ export default function CollaborationPage() {
 
       {/* Transfer Lead Modal */}
       {showTransferLeadModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleTransferLead} className="bg-[#141721] border border-[#212638] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-white mb-2">Transfer Case Leadership</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <form onSubmit={handleTransferLead} className={cn(surfaceCard, 'w-full max-w-md space-y-4 gap-0 p-6')}>
+            <h3 className="mb-2 text-lg font-bold text-white">Transfer Case Leadership</h3>
+            <p className="text-xs leading-relaxed text-white/45">
               Designate another active member as the new Case Lead. Your role will be transitioned to Investigator.
             </p>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">New Case Lead *</label>
+              <label className="mb-1 block text-xs font-semibold text-white/70">New Case Lead *</label>
               <select
                 required
                 value={transferTargetUserId}
                 onChange={(e) => setTransferTargetUserId(e.target.value)}
-                className="w-full bg-[#0b0d13] border border-[#212638] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                className={cn(surfaceSelect, 'w-full text-xs')}
               >
                 <option value="">Select an active member</option>
                 {team.filter(m => m.status === 'ACTIVE' && m.case_role !== 'CASE_LEAD').map(m => (
@@ -663,28 +667,28 @@ export default function CollaborationPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Transfer Rationale / Reason *</label>
+              <label className="mb-1 block text-xs font-semibold text-white/70">Transfer Rationale / Reason *</label>
               <input
                 type="text"
                 required
                 value={transferReason}
                 onChange={(e) => setTransferReason(e.target.value)}
                 placeholder="e.g. Lead re-assigned to Senior Inspector"
-                className="w-full bg-[#0b0d13] border border-[#212638] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                className={surfaceInput}
               />
             </div>
-            <div className="flex gap-3 justify-end pt-3 border-t border-slate-800">
+            <div className="flex justify-end gap-3 border-t border-white/[0.08] pt-3">
               <button
                 type="button"
                 onClick={() => setShowTransferLeadModal(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition"
+                className={surfaceBtnSecondary}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmittingTransfer}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold transition"
+                className={cn(surfaceBtnPrimary, 'bg-amber-600 hover:bg-amber-500')}
               >
                 {isSubmittingTransfer ? 'Transferring...' : 'Transfer Leadership'}
               </button>

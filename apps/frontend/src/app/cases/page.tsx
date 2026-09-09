@@ -1,11 +1,23 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
-import { CaseResponse } from '@/types/api';
-import { toast } from 'react-hot-toast';
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { CaseResponse } from "@/types/api";
+import { toast } from "react-hot-toast";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import {
+  surfaceBtnDanger,
+  surfaceBtnPrimary,
+  surfaceBtnSecondary,
+  surfaceCard,
+  surfaceInput,
+  surfacePanel,
+  surfaceSelect,
+} from "@/components/layout/surface";
 
 export default function CasesPage() {
   const router = useRouter();
@@ -14,10 +26,10 @@ export default function CasesPage() {
   const [error, setError] = useState<string | null>(null);
   const [caseToDelete, setCaseToDelete] = useState<CaseResponse | null>(null);
   const [isDeletingCase, setIsDeletingCase] = useState(false);
-  
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState('');
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
 
   const handleDeleteCaseConfirm = async () => {
     if (!caseToDelete) return;
@@ -25,10 +37,10 @@ export default function CasesPage() {
     try {
       await api.deleteCase(caseToDelete.id);
       toast.success(`Case ${caseToDelete.case_number} deleted successfully.`);
-      setCases(prev => prev.filter(c => c.id !== caseToDelete.id));
+      setCases((prev) => prev.filter((c) => c.id !== caseToDelete.id));
       setCaseToDelete(null);
     } catch (err: unknown) {
-      toast.error((err as Error)?.message || 'Failed to delete case.');
+      toast.error((err as Error)?.message || "Failed to delete case.");
     } finally {
       setIsDeletingCase(false);
     }
@@ -39,11 +51,10 @@ export default function CasesPage() {
       try {
         setLoading(true);
         setError(null);
-        // The mock or actual listcases
         const res = await api.listCases(0, 100, statusFilter || undefined);
         setCases(res.cases);
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to load cases');
+        setError(err instanceof Error ? err.message : "Failed to load cases");
       } finally {
         setLoading(false);
       }
@@ -51,163 +62,201 @@ export default function CasesPage() {
     loadCases();
   }, [statusFilter]);
 
-  const filteredCases = cases.filter(c => {
+  const filteredCases = cases.filter((c) => {
     if (priorityFilter && c.priority !== priorityFilter) return false;
-    if (search && !c.title.toLowerCase().includes(search.toLowerCase()) && !c.case_number.toLowerCase().includes(search.toLowerCase())) return false;
+    if (
+      search &&
+      !c.title.toLowerCase().includes(search.toLowerCase()) &&
+      !c.case_number.toLowerCase().includes(search.toLowerCase())
+    )
+      return false;
     return true;
   });
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-100">Cases & Investigations</h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Browse and manage synthetic case files and active investigations.
-          </p>
+    <div className="-m-5 space-y-0 sm:-m-6 lg:-m-8">
+      <PageHeader
+        badge="Investigations"
+        title="Cases & Investigations"
+        description="Browse and manage synthetic case files and active investigations."
+        actions={
+          <Link href="/cases/new" className={surfaceBtnPrimary}>
+            + New Case
+          </Link>
+        }
+      />
+
+      <div className="space-y-6 px-5 py-5 sm:px-6 lg:px-8">
+        <div className={cn(surfacePanel, "flex flex-wrap gap-3 p-4")}>
+          <input
+            type="text"
+            placeholder="Search by case number or title..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={cn(surfaceInput, "min-w-[200px] flex-1")}
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className={surfaceSelect}
+          >
+            <option value="">All Statuses</option>
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="CLOSED">CLOSED</option>
+            <option value="ARCHIVED">ARCHIVED</option>
+          </select>
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className={surfaceSelect}
+          >
+            <option value="">All Priorities</option>
+            <option value="LOW">LOW</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="HIGH">HIGH</option>
+            <option value="CRITICAL">CRITICAL</option>
+          </select>
         </div>
-        <Link 
-          href="/cases/new" 
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded transition"
-        >
-          + New Case
-        </Link>
+
+        {loading ? (
+          <div className="py-12 text-center">
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+            <p className="text-white/45">Loading cases...</p>
+          </div>
+        ) : error ? (
+          <div className="flex items-center gap-3 rounded-xl border border-red-500/30 bg-red-950/40 p-4 text-red-200">
+            {error}
+          </div>
+        ) : filteredCases.length === 0 ? (
+          <Card
+            className={cn(
+              surfaceCard,
+              "border-dashed py-12 text-center text-white/45"
+            )}
+          >
+            No cases found matching your criteria.
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredCases.map((c) => (
+              <Link key={c.id} href={`/cases/${c.id}`} className="group block">
+                <Card
+                  className={cn(
+                    surfaceCard,
+                    "h-full gap-0 p-5 py-5 transition hover:border-blue-500/40"
+                  )}
+                >
+                  <div className="mb-3 flex items-start justify-between">
+                    <span className="rounded-lg bg-white/[0.05] px-2 py-1 font-mono text-xs text-white/70">
+                      {c.case_number}
+                    </span>
+                    <div className="flex gap-2">
+                      <span
+                        className={cn(
+                          "rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                          c.status === "ACTIVE"
+                            ? "bg-emerald-500/10 text-emerald-400"
+                            : "bg-white/[0.05] text-white/45"
+                        )}
+                      >
+                        {c.status}
+                      </span>
+                      <span
+                        className={cn(
+                          "rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                          c.priority === "CRITICAL"
+                            ? "bg-red-500/10 text-red-400"
+                            : c.priority === "HIGH"
+                              ? "bg-amber-500/10 text-amber-400"
+                              : "bg-white/[0.05] text-white/45"
+                        )}
+                      >
+                        {c.priority}
+                      </span>
+                    </div>
+                  </div>
+                  <h3 className="mb-2 text-base font-semibold text-white transition group-hover:text-blue-400">
+                    {c.title}
+                  </h3>
+                  <p className="line-clamp-2 flex-1 text-sm text-white/45">
+                    {c.description || "No description provided."}
+                  </p>
+                  <div className="mt-4 flex items-center justify-between border-t border-white/[0.08] pt-4 text-xs text-white/40">
+                    <span>
+                      Created {new Date(c.created_at).toLocaleDateString()}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(
+                            `/cases/${c.case_number || c.id}/collaboration`
+                          );
+                        }}
+                        className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-blue-500/20 bg-blue-600/10 px-2.5 py-1 text-xs font-medium text-blue-300 transition hover:bg-blue-600/20"
+                      >
+                        Team &amp; Tasks
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setCaseToDelete(c);
+                        }}
+                        className="rounded-lg p-1.5 text-white/40 transition hover:bg-red-500/20 hover:text-red-400"
+                        title={`Delete case ${c.case_number}`}
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                      <span className="flex items-center gap-1 transition group-hover:text-blue-400">
+                        View Details
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex gap-4">
-        <input 
-          type="text" 
-          placeholder="Search by case number or title..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="flex-1 bg-slate-800 border border-slate-700 rounded px-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
-        />
-        <select 
-          value={statusFilter} 
-          onChange={e => setStatusFilter(e.target.value)}
-          className="bg-slate-800 border border-slate-700 rounded px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-        >
-          <option value="">All Statuses</option>
-          <option value="ACTIVE">ACTIVE</option>
-          <option value="CLOSED">CLOSED</option>
-          <option value="ARCHIVED">ARCHIVED</option>
-        </select>
-        <select 
-          value={priorityFilter} 
-          onChange={e => setPriorityFilter(e.target.value)}
-          className="bg-slate-800 border border-slate-700 rounded px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-        >
-          <option value="">All Priorities</option>
-          <option value="LOW">LOW</option>
-          <option value="MEDIUM">MEDIUM</option>
-          <option value="HIGH">HIGH</option>
-          <option value="CRITICAL">CRITICAL</option>
-        </select>
-      </div>
-
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-slate-400">Loading cases...</p>
-        </div>
-      ) : error ? (
-        <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-lg flex items-center gap-3">
-          <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-          {error}
-        </div>
-      ) : filteredCases.length === 0 ? (
-        <div className="text-center py-12 bg-slate-900/50 border border-slate-800 border-dashed rounded-xl">
-          <p className="text-slate-400">No cases found matching your criteria.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCases.map(c => (
-            <Link key={c.id} href={`/cases/${c.id}`} className="block group">
-              <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 hover:border-blue-500/50 transition h-full flex flex-col">
-                <div className="flex justify-between items-start mb-3">
-                  <span className="text-xs font-mono bg-slate-800 px-2 py-1 rounded text-slate-300">
-                    {c.case_number}
-                  </span>
-                  <div className="flex gap-2">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider
-                      ${c.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-400'}`}>
-                      {c.status}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider
-                      ${c.priority === 'CRITICAL' ? 'bg-red-500/10 text-red-400' : 
-                        c.priority === 'HIGH' ? 'bg-amber-500/10 text-amber-400' : 'bg-slate-800 text-slate-400'}`}>
-                      {c.priority}
-                    </span>
-                  </div>
-                </div>
-                <h3 className="text-base font-semibold text-slate-100 group-hover:text-blue-400 transition mb-2">
-                  {c.title}
-                </h3>
-                <p className="text-sm text-slate-400 flex-1 line-clamp-2">
-                  {c.description || 'No description provided.'}
-                </p>
-                <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center text-xs text-slate-500">
-                  <span>Created {new Date(c.created_at).toLocaleDateString()}</span>
-                  <div className="flex items-center gap-2">
-                    <span
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        router.push(`/cases/${c.case_number || c.id}/collaboration`);
-                      }}
-                      className="px-2.5 py-1 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
-                      title="View Team & Tasks Collaboration"
-                    >
-                      <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
-                      Team &amp; Tasks
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setCaseToDelete(c);
-                      }}
-                      className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition"
-                      title={`Delete case ${c.case_number}`}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                    <span className="flex items-center gap-1 group-hover:text-blue-400 transition">
-                      View Details <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-
-      {/* Case Deletion Confirmation Modal */}
       {caseToDelete && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#141721] border border-red-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-150">
-            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            </div>
-            <h3 className="text-lg font-bold text-white mb-2">Delete Investigation Case</h3>
-            <p className="text-sm text-slate-300 mb-4 leading-relaxed">
-              Are you sure you want to permanently delete <span className="font-semibold text-white font-mono">{caseToDelete.case_number}</span> ({caseToDelete.title})?
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className={cn(surfaceCard, "w-full max-w-md gap-0 p-6")}>
+            <h3 className="mb-2 text-lg font-bold text-white">
+              Delete Investigation Case
+            </h3>
+            <p className="mb-4 text-sm leading-relaxed text-white/70">
+              Are you sure you want to permanently delete{" "}
+              <span className="font-mono font-semibold text-white">
+                {caseToDelete.case_number}
+              </span>{" "}
+              ({caseToDelete.title})?
             </p>
-            <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-xs text-red-300 mb-6">
-              This action permanently erases the case, all associated evidence documents, extracted graph nodes, relationships, and audit history. This action cannot be undone.
+            <div className="mb-6 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-300">
+              This action permanently erases the case, evidence, graph nodes,
+              relationships, and audit history.
             </div>
-            <div className="flex gap-3 justify-end">
+            <div className="flex justify-end gap-3">
               <button
                 type="button"
                 disabled={isDeletingCase}
                 onClick={() => setCaseToDelete(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition-colors"
+                className={surfaceBtnSecondary}
               >
                 Cancel
               </button>
@@ -215,16 +264,9 @@ export default function CasesPage() {
                 type="button"
                 disabled={isDeletingCase}
                 onClick={handleDeleteCaseConfirm}
-                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-2 shadow-lg shadow-red-900/30"
+                className={surfaceBtnDanger}
               >
-                {isDeletingCase ? (
-                  <>
-                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Deleting...
-                  </>
-                ) : (
-                  'Permanently Delete Case'
-                )}
+                {isDeletingCase ? "Deleting..." : "Permanently Delete Case"}
               </button>
             </div>
           </div>

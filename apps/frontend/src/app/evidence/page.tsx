@@ -1,7 +1,8 @@
-'use client';
+"use client";
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default function EvidencePage() {
   const router = useRouter();
@@ -13,18 +14,25 @@ export default function EvidencePage() {
         if (res.cases && res.cases.length > 0) {
           router.push(`/cases/${res.cases[0].id}/evidence`);
         } else {
-          router.push('/cases');
+          router.push("/cases");
         }
-      } catch (err) {
-        router.push('/cases');
+      } catch {
+        router.push("/cases");
       }
     }
     fetchAndRedirect();
   }, [router]);
 
   return (
-    <div className="flex justify-center py-20">
-      <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full"></div>
+    <div className="-m-5 space-y-0 sm:-m-6 lg:-m-8">
+      <PageHeader
+        badge="Investigation"
+        title="Evidence"
+        description="Opening the latest case evidence workspace..."
+      />
+      <div className="flex justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+      </div>
     </div>
   );
 }

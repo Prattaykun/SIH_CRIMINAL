@@ -42,17 +42,20 @@ import {
   Network,
   Calendar,
   FileText,
-  Eye,
   X,
-  Sparkles,
-  ChevronRight,
   Focus,
-  Sliders,
-  CheckCircle2,
   Clock,
   ArrowRight,
-  Activity,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import {
+  surfaceBtnPrimary,
+  surfaceBtnSecondary,
+  surfaceCard,
+  surfaceHeader,
+  surfaceInput,
+  surfacePanel,
+} from '@/components/layout/surface';
 
 const nodeTypes = {
   entity: EntityNode,
@@ -496,9 +499,9 @@ export default function CaseGraphPage() {
   }, [selectedRelationship, entities]);
 
   return (
-    <div className="w-full h-screen bg-[#090b10] text-white flex flex-col overflow-hidden select-none">
+    <div className="-m-5 flex h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden text-white select-none sm:-m-6 lg:-m-8">
       {/* Top Bar: Case Identity, Visualization Mode Tabs, & Search */}
-      <header className="h-14 border-b border-white/10 bg-[#0f121d]/90 backdrop-blur px-6 flex items-center justify-between shrink-0 z-30">
+      <header className={cn(surfaceHeader, 'z-30 flex h-14 shrink-0 items-center justify-between px-6')}>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono font-bold text-red-400 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded">
@@ -506,41 +509,49 @@ export default function CaseGraphPage() {
             </span>
             <h1 className="text-sm font-black text-white tracking-wide font-mono">{caseId}</h1>
           </div>
-          <span className="text-slate-600">|</span>
-          <span className="text-xs text-slate-400 font-medium">Criminal Intelligence Network Platform</span>
+          <span className="text-white/20">|</span>
+          <span className="text-xs font-medium text-white/45">Criminal Intelligence Network Platform</span>
         </div>
 
         {/* Mode Selector Tabs */}
-        <div className="flex items-center bg-[#141724] border border-white/10 rounded-xl p-1 gap-1">
+        <div className={cn(surfacePanel, 'flex items-center gap-1 p-1')}>
           <button
+            type="button"
             onClick={() => setViewMode('OVERVIEW')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'OVERVIEW' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
+              viewMode === 'OVERVIEW' ? 'bg-blue-600 text-white shadow-md' : 'text-white/45 hover:text-white'
+            )}
           >
             <Layers className="w-3.5 h-3.5" /> Overview
           </button>
           <button
+            type="button"
             onClick={() => setViewMode('NETWORK')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'NETWORK' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
+              viewMode === 'NETWORK' ? 'bg-blue-600 text-white shadow-md' : 'text-white/45 hover:text-white'
+            )}
           >
             <Network className="w-3.5 h-3.5" /> Network
           </button>
           <button
+            type="button"
             onClick={() => setViewMode('TIMELINE')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'TIMELINE' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
+              viewMode === 'TIMELINE' ? 'bg-blue-600 text-white shadow-md' : 'text-white/45 hover:text-white'
+            )}
           >
             <Calendar className="w-3.5 h-3.5" /> Timeline
           </button>
           <button
+            type="button"
             onClick={() => setViewMode('EVIDENCE')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'EVIDENCE' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
+              viewMode === 'EVIDENCE' ? 'bg-blue-600 text-white shadow-md' : 'text-white/45 hover:text-white'
+            )}
           >
             <FileText className="w-3.5 h-3.5" /> Evidence
           </button>
@@ -548,13 +559,13 @@ export default function CaseGraphPage() {
 
         {/* Quick Search Input */}
         <div className="relative w-64">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search entity, phone, vehicle..."
-            className="w-full bg-[#141724] border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+            className={cn(surfaceInput, 'py-1.5 pl-9 text-xs')}
           />
         </div>
       </header>
@@ -578,19 +589,19 @@ export default function CaseGraphPage() {
               minZoom={0.15}
               maxZoom={1.8}
             >
-              <Background color="#1e293b" gap={28} size={1} />
-              <Controls className="bg-[#141721] border border-white/10 text-white rounded-xl overflow-hidden shadow-xl" />
+              <Background color="#1a1a1a" gap={28} size={1} />
+              <Controls className={cn(surfaceCard, 'overflow-hidden p-0 text-white')} />
               <MiniMap
                 nodeColor={(n: any) =>
                   n.type === 'caseHub' ? '#ef4444' : n.type === 'clusterGroup' ? '#3b82f6' : '#10b981'
                 }
-                className="bg-[#141721] border border-white/10 rounded-xl overflow-hidden shadow-2xl"
-                maskColor="rgba(9, 11, 16, 0.8)"
+                className={cn(surfaceCard, 'overflow-hidden p-0 shadow-2xl')}
+                maskColor="rgba(0, 0, 0, 0.8)"
               />
 
               {/* Focus Mode Banner (if an entity is selected) */}
               {currentFocusEntity && viewMode === 'NETWORK' && (
-                <Panel position="top-center" className="bg-[#111420]/95 backdrop-blur-md border border-cyan-500/40 rounded-2xl px-5 py-2.5 shadow-[0_0_30px_rgba(6,182,212,0.3)] flex items-center gap-4">
+                <Panel position="top-center" className={cn(surfaceCard, 'flex items-center gap-4 border-cyan-500/40 px-5 py-2.5 shadow-[0_0_30px_rgba(6,182,212,0.3)] backdrop-blur-md')}>
                   <div className="flex items-center gap-2">
                     <Focus className="w-4 h-4 text-cyan-400 animate-pulse" />
                     <div>
@@ -603,16 +614,18 @@ export default function CaseGraphPage() {
 
                   {/* N-Hop Depth Buttons */}
                   <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-slate-400 mr-1">Depth:</span>
+                    <span className="mr-1 text-[10px] text-white/45">Depth:</span>
                     {[1, 2, 3].map((h) => (
                       <button
                         key={h}
+                        type="button"
                         onClick={() => setHopDepth(h)}
-                        className={`w-6 h-6 rounded-lg text-[10px] font-bold font-mono transition-all ${
+                        className={cn(
+                          'h-6 w-6 rounded-lg font-mono text-[10px] font-bold transition-all',
                           hopDepth === h
                             ? 'bg-cyan-500 text-black shadow-md'
-                            : 'bg-white/5 text-slate-400 hover:text-white'
-                        }`}
+                            : 'bg-white/[0.05] text-white/45 hover:text-white'
+                        )}
                       >
                         {h}H
                       </button>
@@ -620,8 +633,9 @@ export default function CaseGraphPage() {
                   </div>
 
                   <button
+                    type="button"
                     onClick={handleClearFocus}
-                    className="ml-2 w-6 h-6 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+                    className="ml-2 flex h-6 w-6 items-center justify-center rounded-lg bg-white/[0.05] text-white/45 transition-colors hover:bg-white/[0.1] hover:text-white"
                     title="Exit Focus Mode"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -630,26 +644,26 @@ export default function CaseGraphPage() {
               )}
 
               {/* Filter Panel (Left) */}
-              <Panel position="top-left" className="bg-[#111420]/95 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-2xl space-y-4 w-72">
-                <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                  <div className="flex items-center gap-2 text-white font-bold text-xs uppercase tracking-wider">
-                    <Filter className="w-3.5 h-3.5 text-blue-400" />
+              <Panel position="top-left" className={cn(surfaceCard, 'w-72 space-y-4 p-4 backdrop-blur-md')}>
+                <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white">
+                    <Filter className="h-3.5 w-3.5 text-blue-400" />
                     <span>Investigation Filters</span>
                   </div>
-                  <span className="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                  <span className="rounded border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 font-mono text-[10px] text-white/45">
                     {nodes.length}N • {edges.length}E
                   </span>
                 </div>
 
                 {/* Relationship Status Filter */}
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-slate-300 block">Relationship Hierarchy</label>
-                  <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none">
+                  <label className="block text-[11px] font-bold text-white/70">Relationship Hierarchy</label>
+                  <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-white/70">
                     <input
                       type="checkbox"
                       checked={verifiedOnly}
                       onChange={(e) => setVerifiedOnly(e.target.checked)}
-                      className="rounded border-slate-700 bg-slate-800 text-emerald-500 focus:ring-0"
+                      className="rounded border-white/[0.12] bg-black/50 text-emerald-500 focus:ring-0"
                     />
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
                     <span>Verified / Confirmed Only</span>
@@ -658,17 +672,17 @@ export default function CaseGraphPage() {
 
                 {/* Entity Category Toggles */}
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-slate-300 block">Entity Clusters</label>
+                  <label className="block text-[11px] font-bold text-white/70">Entity Clusters</label>
                   <div className="grid grid-cols-2 gap-1.5 text-[11px]">
                     {Object.keys(typeFilters).map((typeKey) => (
-                      <label key={typeKey} className="flex items-center gap-1.5 text-slate-300 cursor-pointer select-none">
+                      <label key={typeKey} className="flex cursor-pointer select-none items-center gap-1.5 text-white/70">
                         <input
                           type="checkbox"
                           checked={typeFilters[typeKey]}
                           onChange={(e) =>
                             setTypeFilters((prev) => ({ ...prev, [typeKey]: e.target.checked }))
                           }
-                          className="rounded border-slate-700 bg-slate-800 text-blue-500 focus:ring-0"
+                          className="rounded border-white/[0.12] bg-black/50 text-blue-500 focus:ring-0"
                         />
                         <span className="capitalize">{typeKey.toLowerCase().replace('_', ' ')}</span>
                       </label>
@@ -679,7 +693,7 @@ export default function CaseGraphPage() {
                 {/* Minimum Confidence Slider */}
                 <div className="space-y-1.5 pt-1">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-slate-400">Min Score</span>
+                    <span className="text-white/45">Min Score</span>
                     <span className="font-mono text-emerald-400 font-bold">{Math.round(minConfidence * 100)}%</span>
                   </div>
                   <input
@@ -689,14 +703,15 @@ export default function CaseGraphPage() {
                     step="0.05"
                     value={minConfidence}
                     onChange={(e) => setMinConfidence(parseFloat(e.target.value))}
-                    className="w-full accent-blue-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer"
+                    className="h-1.5 w-full cursor-pointer rounded-lg bg-white/[0.08] accent-blue-500"
                   />
                 </div>
 
                 {/* Refresh / Re-layout Button */}
                 <button
+                  type="button"
                   onClick={fetchGraphData}
-                  className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 transition-all shadow-md active:scale-95"
+                  className={cn(surfaceBtnPrimary, 'w-full gap-2 active:scale-95')}
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Recompute Hierarchical Layout
                 </button>
@@ -722,7 +737,7 @@ export default function CaseGraphPage() {
                 <h2 className="text-lg font-black text-white flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-blue-400" /> Chronological Case Timeline
                 </h2>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="mt-1 text-xs text-white/45">
                   Sequential record of communication intercepts, fund transfers, and suspect sightings
                 </p>
               </div>
@@ -735,16 +750,16 @@ export default function CaseGraphPage() {
               {timelineEvents.map((evt) => (
                 <div key={evt.id} className="relative group">
                   {/* Timeline Dot */}
-                  <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-[#090b10] border-2 border-blue-500 flex items-center justify-center group-hover:scale-125 transition-transform" />
+                  <div className="absolute -left-[31px] top-1.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-blue-500 bg-black transition-transform group-hover:scale-125" />
 
-                  <div className="rounded-2xl bg-[#111420] border border-white/10 p-4 shadow-xl hover:border-blue-500/50 transition-all">
+                  <div className={cn(surfaceCard, 'gap-0 p-4 transition-all hover:border-blue-500/50')}>
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase">
                           {evt.category}
                         </span>
-                        <span className="text-xs font-mono text-slate-400 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-slate-500" /> {evt.timestamp}
+                        <span className="flex items-center gap-1 font-mono text-xs text-white/45">
+                          <Clock className="h-3 w-3 text-white/40" /> {evt.timestamp}
                         </span>
                       </div>
                       <span className="text-xs font-mono text-emerald-400 font-bold">
@@ -753,7 +768,7 @@ export default function CaseGraphPage() {
                     </div>
 
                     <h3 className="text-sm font-bold text-white mt-2">{evt.title}</h3>
-                    <p className="text-xs text-slate-300 font-serif italic mt-1 bg-black/30 p-2.5 rounded-lg border border-white/5 border-l-2 border-l-blue-500">
+                    <p className="mt-1 rounded-lg border border-white/[0.08] border-l-2 border-l-blue-500 bg-black/30 p-2.5 font-serif text-xs italic text-white/70">
                       "{evt.description}"
                     </p>
 
@@ -761,11 +776,12 @@ export default function CaseGraphPage() {
                     {evt.primaryEntityId && (
                       <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-end">
                         <button
+                          type="button"
                           onClick={() => {
                             setFocusRootId(evt.primaryEntityId!);
                             setViewMode('NETWORK');
                           }}
-                          className="py-1 px-3 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                          className={cn(surfaceBtnSecondary, 'gap-1.5 border-blue-500/20 bg-blue-500/10 py-1 text-xs text-blue-300 hover:bg-blue-500/20')}
                         >
                           <Focus className="w-3.5 h-3.5 text-blue-400" /> Show Graph Around This Event
                         </button>
@@ -786,7 +802,7 @@ export default function CaseGraphPage() {
                 <h2 className="text-lg font-black text-white flex items-center gap-2">
                   <FileText className="w-5 h-5 text-emerald-400" /> Case Evidence Dossier
                 </h2>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="mt-1 text-xs text-white/45">
                   Evidence-first directory linking source documentation to extracted entities & verified relationships
                 </p>
               </div>
@@ -797,7 +813,7 @@ export default function CaseGraphPage() {
 
             <div className="grid grid-cols-1 gap-4">
               {evidenceItems.map((ev) => (
-                <div key={ev.id} className="rounded-2xl bg-[#111420] border border-white/10 p-5 shadow-xl hover:border-emerald-500/40 transition-all">
+                <div key={ev.id} className={cn(surfaceCard, 'gap-0 p-5 transition-all hover:border-emerald-500/40')}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
@@ -813,11 +829,11 @@ export default function CaseGraphPage() {
                     </span>
                   </div>
 
-                  <div className="mt-3 p-3 rounded-xl bg-black/40 border border-white/5 font-serif text-xs text-slate-300 italic border-l-4 border-l-emerald-500">
+                  <div className="mt-3 rounded-xl border border-white/[0.08] border-l-4 border-l-emerald-500 bg-black/40 p-3 font-serif text-xs italic text-white/70">
                     "{ev.snippet}"
                   </div>
 
-                  <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-xs text-slate-400">
+                  <div className="mt-3 flex items-center justify-between border-t border-white/[0.08] pt-3 text-xs text-white/45">
                     <span className="flex items-center gap-1.5 font-mono text-[11px]">
                       <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Extracted & Validated via Hybrid NER Pipeline
                     </span>

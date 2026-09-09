@@ -1,74 +1,108 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { api } from '@/lib/api';
-import { ShieldAlert, LogIn, Lock } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
+import { ShieldAlert, LogIn, Lock } from "lucide-react";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import {
+  surfaceBtnPrimary,
+  surfaceCard,
+  surfaceInput,
+} from "@/components/layout/surface";
+
+const DEMO_PASSWORD = "DemoPassword123!";
+const DEMO_ACCOUNTS = [
+  "demo_investigator",
+  "demo_admin",
+  "demo_analyst",
+  "demo_reviewer",
+] as const;
 
 export default function LoginPage() {
   const { login, user, token } = useAuth();
   const router = useRouter();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Auto-redirect if already authenticated
   useEffect(() => {
     if (user && token) {
-      router.replace('/cases');
+      router.replace("/cases");
     }
   }, [user, token, router]);
 
+  const fillDemoAccount = (demoUsername: string) => {
+    setUsername(demoUsername);
+    setPassword(DEMO_PASSWORD);
+    setError("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
-    
+
     try {
       const response = await api.login(username, password);
       login(response.access_token, response.user);
-      router.push('/cases');
-    } catch (err: any) {
-      setError(err.message || 'Failed to login. Please check credentials.');
+      router.push("/cases");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to login. Please check credentials."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
-      <Card className="w-full max-w-md bg-slate-900 border-slate-800 shadow-2xl">
-        <CardHeader className="flex flex-col items-center">
-          <div className="h-12 w-12 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center mb-4">
+    <div className="flex min-h-screen items-center justify-center bg-black p-4">
+      <Card className={cn(surfaceCard, "w-full max-w-md gap-0 py-0 ring-0")}>
+        <CardHeader className="flex flex-col items-center px-6 pt-8">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-blue-500/30 bg-blue-600/15 text-blue-400">
             <ShieldAlert size={28} />
           </div>
-          <CardTitle className="text-2xl font-semibold text-slate-100">SIH 26189</CardTitle>
-          <CardDescription className="text-slate-400 text-sm mt-1">Criminal Network Analysis System</CardDescription>
+          <CardTitle className="text-2xl font-semibold text-white">
+            SIH 26189
+          </CardTitle>
+          <CardDescription className="mt-1 text-sm text-white/45">
+            Criminal Network Analysis System
+          </CardDescription>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="px-6 pb-2">
           {error && (
-            <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-md text-center">
+            <div className="mb-6 rounded-xl border border-red-500/30 bg-red-950/40 p-3 text-center text-sm text-red-200">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-slate-300">
+              <Label htmlFor="username" className="text-white/70">
                 Username
               </Label>
               <Input
                 id="username"
                 type="text"
                 required
-                className="w-full bg-slate-950 border-slate-800 text-slate-200"
+                className={surfaceInput}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="e.g. demo_investigator"
@@ -76,7 +110,7 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-300">
+              <Label htmlFor="password" className="text-white/70">
                 Password
               </Label>
               <div className="relative">
@@ -84,22 +118,25 @@ export default function LoginPage() {
                   id="password"
                   type="password"
                   required
-                  className="w-full bg-slate-950 border-slate-800 text-slate-200 pr-10"
+                  className={cn(surfaceInput, "pr-10")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                 />
-                <Lock size={16} className="absolute right-3 top-3 text-slate-500" />
+                <Lock
+                  size={16}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30"
+                />
               </div>
             </div>
 
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white"
+              className={cn(surfaceBtnPrimary, "w-full")}
             >
               {loading ? (
-                <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
               ) : (
                 <>
                   <LogIn size={18} className="mr-2" />
@@ -109,18 +146,37 @@ export default function LoginPage() {
             </Button>
           </form>
         </CardContent>
-        
-        <CardFooter className="flex flex-col border-t border-slate-800 mt-2 pt-6">
-          <div className="text-xs text-slate-400 text-center space-y-1.5 w-full">
-            <span className="font-semibold text-slate-300">Synchronized Evaluator / Demo Accounts:</span>
-            <div className="flex flex-wrap gap-1 justify-center py-1">
-              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-blue-300 font-mono text-[11px]">demo_investigator</span>
-              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-blue-300 font-mono text-[11px]">demo_admin</span>
-              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-blue-300 font-mono text-[11px]">demo_analyst</span>
-              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-blue-300 font-mono text-[11px]">demo_reviewer</span>
+
+        <CardFooter className="mt-2 flex flex-col border-t border-white/[0.08] px-6 py-6">
+          <div className="w-full space-y-1.5 text-center text-xs text-white/45">
+            <span className="font-semibold text-white/70">
+              Synchronized Evaluator / Demo Accounts:
+            </span>
+            <p className="text-[11px] text-white/35">
+              Click an account to autofill username and password
+            </p>
+            <div className="flex flex-wrap justify-center gap-1 py-1">
+              {DEMO_ACCOUNTS.map((account) => (
+                <button
+                  key={account}
+                  type="button"
+                  onClick={() => fillDemoAccount(account)}
+                  className={cn(
+                    "cursor-pointer rounded-lg border px-1.5 py-0.5 font-mono text-[11px] transition-colors",
+                    username === account
+                      ? "border-blue-500/50 bg-blue-600/30 text-blue-200"
+                      : "border-transparent bg-white/[0.05] text-blue-300 hover:border-white/[0.12] hover:bg-white/[0.08]"
+                  )}
+                >
+                  {account}
+                </button>
+              ))}
             </div>
-            <div className="text-slate-400">
-              Fixed Password: <code className="text-emerald-400 font-semibold px-1.5 py-0.5 rounded bg-slate-800/80 font-mono">DemoPassword123!</code>
+            <div className="text-white/45">
+              Fixed Password:{" "}
+              <code className="rounded-lg bg-white/[0.05] px-1.5 py-0.5 font-mono font-semibold text-emerald-400">
+                {DEMO_PASSWORD}
+              </code>
             </div>
           </div>
         </CardFooter>

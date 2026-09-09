@@ -14,21 +14,22 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { surfacePanel } from "@/components/layout/surface";
 
-// Custom Cyber Dark Tooltip
+// Custom pitch-black admin tooltip
 function CustomChartTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     return (
-      <div className="rounded-lg bg-[#0b0f19]/95 border border-slate-700/80 px-3 py-2 shadow-2xl backdrop-blur-md text-xs font-mono text-slate-200">
-        {label && <div className="text-slate-400 font-bold mb-1">{label}</div>}
+      <div className={cn(surfacePanel, "px-3 py-2 shadow-2xl backdrop-blur-md text-xs font-mono bg-black/95")}>
+        {label && <div className="text-white/45 font-bold mb-1">{label}</div>}
         {payload.map((entry: any, index: number) => (
           <div key={`item-${index}`} className="flex items-center gap-2">
             <span
               className="size-2 rounded-full"
               style={{ backgroundColor: entry.color || entry.payload?.fill || "#3b82f6" }}
             />
-            <span className="text-slate-300 font-sans">{entry.name}:</span>
+            <span className="text-white/70 font-sans">{entry.name}:</span>
             <span className="font-bold text-white">{entry.value}</span>
           </div>
         ))}
@@ -50,7 +51,7 @@ export function MicroSparkline({ data, color = "#3b82f6", gradientId }: MicroSpa
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    return <div className="h-10 w-24 bg-slate-800/20 rounded animate-pulse" />;
+    return <div className="h-10 w-24 bg-white/[0.05] rounded animate-pulse" />;
   }
 
   const chartData = data.map((val, idx) => ({ idx, val }));
@@ -125,7 +126,7 @@ export function EntityDistributionChart({ byType }: EntityDistributionChartProps
   const total = data.reduce((acc, curr) => acc + curr.value, 0);
 
   if (!mounted) {
-    return <div className="h-56 w-full bg-slate-800/20 rounded-xl animate-pulse" />;
+    return <div className="h-56 w-full bg-white/[0.05] rounded-xl animate-pulse" />;
   }
 
   return (
@@ -149,7 +150,7 @@ export function EntityDistributionChart({ byType }: EntityDistributionChartProps
                 <Cell
                   key={`cell-${index}`}
                   fill={entry.color}
-                  stroke="#111624"
+                  stroke="#0c0c0c"
                   strokeWidth={2}
                   className="transition-all duration-300 hover:opacity-80 cursor-pointer"
                   style={{
@@ -163,7 +164,7 @@ export function EntityDistributionChart({ byType }: EntityDistributionChartProps
         {/* Centered Total Count Indicator */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-2xl font-extrabold text-white font-mono">{total}</span>
-          <span className="text-[10px] uppercase font-mono text-slate-400 tracking-wider">Entities</span>
+          <span className="text-[10px] uppercase font-mono text-white/45 tracking-wider">Entities</span>
         </div>
       </div>
 
@@ -177,19 +178,20 @@ export function EntityDistributionChart({ byType }: EntityDistributionChartProps
               key={item.name}
               onMouseEnter={() => setActiveIndex(idx)}
               onMouseLeave={() => setActiveIndex(null)}
-              className={`p-2 rounded-lg border transition-all cursor-pointer flex items-center justify-between ${
+              className={cn(
+                "p-2 rounded-lg border transition-all cursor-pointer flex items-center justify-between",
                 isSelected
-                  ? "bg-slate-800/80 border-slate-600 shadow-md"
-                  : "bg-slate-900/40 border-slate-800/60 hover:border-slate-700"
-              }`}
+                  ? "bg-white/[0.08] border-white/[0.15] shadow-md"
+                  : "bg-white/[0.03] border-white/[0.08] hover:border-white/[0.12]"
+              )}
             >
               <div className="flex items-center gap-2 truncate">
                 <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                <span className="text-slate-300 truncate">{item.name}</span>
+                <span className="text-white/70 truncate">{item.name}</span>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="font-bold text-white">{item.value}</span>
-                <span className="text-[10px] text-slate-500">({pct}%)</span>
+                <span className="text-[10px] text-white/35">({pct}%)</span>
               </div>
             </div>
           );
@@ -223,7 +225,7 @@ export function TopologyRolesChart({ roles }: TopologyChartProps) {
   ];
 
   if (!mounted) {
-    return <div className="h-48 w-full bg-slate-800/20 rounded-xl animate-pulse" />;
+    return <div className="h-48 w-full bg-white/[0.05] rounded-xl animate-pulse" />;
   }
 
   return (
@@ -235,11 +237,11 @@ export function TopologyRolesChart({ roles }: TopologyChartProps) {
           margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
           barSize={14}
         >
-          <XAxis type="number" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
+          <XAxis type="number" stroke="rgba(255,255,255,0.25)" fontSize={10} tickLine={false} axisLine={false} />
           <YAxis
             type="category"
             dataKey="role"
-            stroke="#94a3b8"
+            stroke="rgba(255,255,255,0.45)"
             fontSize={11}
             tickLine={false}
             axisLine={false}
@@ -273,7 +275,7 @@ export function InvestigationVelocityChart() {
   ];
 
   if (!mounted) {
-    return <div className="h-64 w-full bg-slate-800/20 rounded-xl animate-pulse" />;
+    return <div className="h-64 w-full bg-white/[0.05] rounded-xl animate-pulse" />;
   }
 
   return (
@@ -294,8 +296,8 @@ export function InvestigationVelocityChart() {
               <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
             </linearGradient>
           </defs>
-          <XAxis dataKey="day" stroke="#475569" fontSize={11} tickLine={false} />
-          <YAxis stroke="#475569" fontSize={11} tickLine={false} axisLine={false} />
+          <XAxis dataKey="day" stroke="rgba(255,255,255,0.25)" fontSize={11} tickLine={false} />
+          <YAxis stroke="rgba(255,255,255,0.25)" fontSize={11} tickLine={false} axisLine={false} />
           <Tooltip content={<CustomChartTooltip />} />
           <Area
             type="monotone"
