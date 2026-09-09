@@ -14,8 +14,8 @@ from collections import defaultdict
 
 import spacy
 
-MODEL_PATH = os.path.join("models", "ner_v5", "model-best")
-TEST_PATH  = os.path.join("data", "ner", "test.jsonl")
+MODEL_PATH = os.path.join("models", "ner_v6", "model-best")
+TEST_PATH  = os.path.join("data", "ner", "test_v6.jsonl")
 
 
 def prf(tp: int, fp: int, fn: int) -> tuple[float, float, float]:

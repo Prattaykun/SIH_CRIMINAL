@@ -43,11 +43,11 @@ def main():
         out_nodes_path = sys.argv[3]
         out_edges_path = sys.argv[4]
     else:
-        nodes_path = os.path.join("data", "case_type_cyber", "graphs", "ner_nodes_full_v5.json")
-        edges_path = os.path.join("data", "case_type_cyber", "graphs", "ner_edges_full_v5.json")
+        nodes_path = os.path.join("data", "case_type_cyber", "graphs", "ner_nodes_full_v6.json")
+        edges_path = os.path.join("data", "case_type_cyber", "graphs", "ner_edges_full_v6.json")
         
-        out_nodes_path = os.path.join("data", "case_type_cyber", "graphs", "ner_nodes_cleaned_v5.json")
-        out_edges_path = os.path.join("data", "case_type_cyber", "graphs", "ner_edges_cleaned_v5.json")
+        out_nodes_path = os.path.join("data", "case_type_cyber", "graphs", "ner_nodes_cleaned_v6.json")
+        out_edges_path = os.path.join("data", "case_type_cyber", "graphs", "ner_edges_cleaned_v6.json")
         
     with open(nodes_path, "r", encoding="utf-8") as f:
         nodes = json.load(f)

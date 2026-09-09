@@ -1,0 +1,1 @@
+{"features": ["degree", "weighted_degree", "betweenness_centrality", "closeness_centrality", "pagerank", "clustering_coefficient", "k_core_number", "connected_component_size", "average_neighbor_degree", "number_of_unique_neighbors", "number_of_connected_entity_types"]}

@@ -32,14 +32,14 @@ def main():
         
         # Validate
         is_ok = health_data.get("status") == "ok"
-        has_ner = "ner_v4" in health_data.get("ner_model_version", "")
+        has_ner = "ner_v5" in health_data.get("ner_model_version", "")
         no_paths = "\\" not in str(health_data) and "/" not in str(health_data)
         
         if is_ok and has_ner and no_paths:
             report["health_status"] = "PASSED"
             report["health_data"] = health_data
         else:
-            report["health_status"] = f"FAILED_VALIDATION (ok: {is_ok}, ner_v4: {has_ner}, no_paths: {no_paths})"
+            report["health_status"] = f"FAILED_VALIDATION (ok: {is_ok}, ner_v5: {has_ner}, no_paths: {no_paths})"
     except Exception as e:
         report["health_status"] = f"ERROR: {str(e)}"
         

@@ -6,9 +6,9 @@ import networkx as nx
 
 def main():
     import sys
-    nodes_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join("data", "case_type_cyber", "graphs", "ner_nodes_cleaned_v5.json")
-    edges_path = sys.argv[2] if len(sys.argv) > 2 else os.path.join("data", "case_type_cyber", "graphs", "ner_edges_cleaned_v5.json")
-    out_path = sys.argv[3] if len(sys.argv) > 3 else os.path.join("data", "case_type_cyber", "ml", "graph_features_rich_cleaned_v5.csv")
+    nodes_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join("data", "case_type_cyber", "graphs", "ner_nodes_cleaned_v6.json")
+    edges_path = sys.argv[2] if len(sys.argv) > 2 else os.path.join("data", "case_type_cyber", "graphs", "ner_edges_cleaned_v6.json")
+    out_path = sys.argv[3] if len(sys.argv) > 3 else os.path.join("data", "case_type_cyber", "ml", "graph_features_rich_cleaned_v6.csv")
     
     if not os.path.exists(nodes_path) or not os.path.exists(edges_path):
         print("Graph files not found.")

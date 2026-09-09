@@ -30,10 +30,10 @@ INPUT_PATH = os.path.join(
     "data", "ner", "doccano_all_labeled_unified.jsonl"
 )
 GRAPH_DIR = os.path.join("data", "case_type_cyber", "graphs")
-NODES_PATH = os.path.join(GRAPH_DIR, "ner_nodes_full_v5.json")
-EDGES_PATH = os.path.join(GRAPH_DIR, "ner_edges_full_v5.json")
+NODES_PATH = os.path.join(GRAPH_DIR, "ner_nodes_full_v6.json")
+EDGES_PATH = os.path.join(GRAPH_DIR, "ner_edges_full_v6.json")
 
-MODEL_PATH = os.path.join("models", "ner_v5", "model-best")
+MODEL_PATH = os.path.join("models", "ner_v6", "model-best")
 
 # Minimum edge weight to include in output (keeps the graph clean for demo)
 MIN_EDGE_WEIGHT = 1

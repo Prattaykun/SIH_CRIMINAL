@@ -5,7 +5,7 @@ import spacy
 def main():
     in_path = os.path.join("data", "case_type_murder", "ner", "murder_cases_raw.jsonl")
     out_path = os.path.join("data", "case_type_murder", "ner", "murder_cases_labeled.jsonl")
-    model_path = os.path.join("models", "ner_v3", "model-best")
+    model_path = os.path.join("models", "ner_v5", "model-best")
     
     if not os.path.exists(in_path):
         print(f"ERROR: {in_path} not found.")

@@ -1,4 +1,8 @@
-NER model: ner_v5
-Graph model: cleaned graph features v5
-Random Forest: context proxy v2
+SIH 26189 Release Manifest
+==========================
+NER model: ner_v6
+Graph model: cleaned graph features v6
+Random Forest: context proxy v3
 Random Forest status: experimental, automatically labeled
+
+Date: 2026-09-10
