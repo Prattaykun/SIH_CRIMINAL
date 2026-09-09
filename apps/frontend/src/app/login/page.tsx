@@ -77,8 +77,13 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-black p-4">
       <Card className={cn(surfaceCard, "w-full max-w-md gap-0 py-0 ring-0")}>
         <CardHeader className="flex flex-col items-center px-6 pt-8">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-blue-500/30 bg-blue-600/15 text-blue-400">
-            <ShieldAlert size={28} />
+          <div className="relative mb-4 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/[0.12] bg-[#0b101e] shadow-xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt="GoyendaBondhu Logo"
+              className="h-full w-full object-cover"
+            />
           </div>
           <CardTitle className="text-2xl font-semibold text-white">
             GoyendaBondhu

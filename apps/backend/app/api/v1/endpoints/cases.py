@@ -338,3 +338,133 @@ def get_case_intelligence_summary(
         "timeline_events": timeline_events,
         "linked_assets": linked_assets
     }
+
+@router.get(
+    "/{case_id}/simple",
+    summary="Get simple layman's case summary",
+)
+def get_case_simple(
+    case_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    import csv
+    import os
+    from collections import Counter
+    
+    case = db.query(Case).filter((Case.id == case_id) | (Case.case_number == case_id)).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    case_title = getattr(case, "title", "Unknown Case")
+    case_type = getattr(case, "case_type", "investigation")
+    case_status = getattr(case, "status", "under investigation")
+    incident_date = getattr(case, "incident_date", None)
+    fir_date = getattr(case, "fir_date", None)
+    arrest_date = getattr(case, "arrest_date", None)
+    
+    timeline = []
+    if incident_date:
+        timeline.append({"date": str(incident_date), "description": f"Incident reportedly occurred on {incident_date}"})
+    if fir_date:
+        timeline.append({"date": str(fir_date), "description": f"FIR registered on {fir_date}"})
+    if arrest_date:
+        timeline.append({"date": str(arrest_date), "description": f"Accused arrested on {arrest_date}"})
+    
+    timeline.sort(key=lambda x: x["date"] or "")
+
+    entities = db.query(ExtractedEntity).filter(ExtractedEntity.case_id == case.id).all()
+    entity_names = {e.canonical_name for e in entities if e.canonical_name}
+
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../../"))
+    entities_csv = os.path.join(project_root, "data", "case_type_cyber", "ml", "entity_context_review_completed_v6.csv")
+    anomalies_csv = os.path.join(project_root, "data", "case_type_cyber", "ml", "anomaly_scores_cleaned_v6.csv")
+    
+    key_people = []
+    locations = []
+    ai_insights = []
+    
+    role_map = {
+        "SUSPECT_OR_ACCUSED": "Accused",
+        "VICTIM": "Victim",
+        "COMPLAINANT": "Complainant",
+        "WITNESS": "Witness",
+        "OFFICIAL_OR_INSTITUTION": "Official"
+    }
+
+    seen_people = set()
+    location_counter = Counter()
+
+    try:
+        if os.path.exists(entities_csv):
+            with open(entities_csv, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    text = row.get("original_entity_text", "")
+                    if text in entity_names:
+                        role = row.get("context_role")
+                        if role in role_map:
+                            mapped = role_map[role]
+                            if (text, mapped) not in seen_people:
+                                key_people.append({"name": text, "role": mapped})
+                                seen_people.add((text, mapped))
+                        
+                        cat = row.get("corrected_semantic_category")
+                        if cat == "LOCATION" or row.get("original_ner_entity_type") == "LOCATION":
+                            location_counter[text] += 1
+    except Exception as e:
+        print(f"Error reading entities CSV: {e}")
+
+    top_locations = [loc for loc, _ in location_counter.most_common(5)]
+    
+    victim_names = [p["name"] for p in key_people if p["role"] == "Victim"][:2]
+    accused_names = [p["name"] for p in key_people if p["role"] == "Accused"][:2]
+    
+    victim_str = ", ".join(victim_names) if victim_names else "unidentified victim(s)"
+    accused_str = ", ".join(accused_names) if accused_names else "The suspect(s)"
+    loc_str = top_locations[0] if top_locations else "an unknown location"
+    date_str = str(incident_date) if incident_date else (str(fir_date) if fir_date else "an unknown date")
+    
+    # [LLM integration point: replace this rule-based summary with an LLM call using the gathered metadata]
+    summary = f"This is a {case_type} case involving {victim_str}. The incident reportedly occurred on/near {date_str} at {loc_str}. {accused_str} is/are currently being investigated. The case is currently {case_status}."
+    
+    try:
+        if os.path.exists(anomalies_csv):
+            with open(anomalies_csv, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    text = row.get("entity_text", "")
+                    if text in entity_names:
+                        score_str = row.get("anomaly_score", "0")
+                        try:
+                            score = float(score_str)
+                        except ValueError:
+                            score = 0.0
+                        deg_str = row.get("degree", "0")
+                        try:
+                            degree = int(deg_str)
+                        except ValueError:
+                            degree = 0
+                            
+                        if score > 0.1 and len(ai_insights) < 2:
+                            ai_insights.append(f"{text} shows an unusual pattern of connections compared to other entities in this case.")
+                        if degree > 10 and len(ai_insights) < 4:
+                            ai_insights.append(f"{text} is connected to many people and events in this case; it may be a key piece of the puzzle.")
+    except Exception as e:
+        print(f"Error reading anomalies CSV: {e}")
+        
+    if not ai_insights:
+        ai_insights.append("AI insights are not available for this case yet.")
+        
+    key_people = key_people[:10]
+
+    return {
+        "case_id": str(case.id),
+        "title": case_title,
+        "case_type": case_type,
+        "summary": summary,
+        "timeline": timeline,
+        "key_people": key_people,
+        "key_locations": top_locations,
+        "ai_insights": list(set(ai_insights))[:6]
+    }
