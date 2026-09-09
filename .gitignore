@@ -82,3 +82,4 @@ apps/backend/app/ml/artifacts/
 *_dump.sql
 postgres_dump.sql
 sqlite_dump.sql
+graphify-out/cache/

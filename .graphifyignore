@@ -1,0 +1,95 @@
+# Dependencies & package managers
+node_modules/
+**/node_modules/
+.venv/
+**/.venv/
+venv/
+**/venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+**/.pytest_cache/
+.mypy_cache/
+**/.mypy_cache/
+.ruff_cache/
+**/.ruff_cache/
+.cache/
+**/.cache/
+*.egg-info/
+dist/
+build/
+.next/
+**/.next/
+out/
+coverage/
+**/coverage/
+htmlcov/
+.turbo/
+.parcel-cache/
+
+# Graphify / tooling outputs
+graphify-out/
+graphify-out/**
+**/graphify-out/
+
+# Tests (keep graph focused on application code)
+tests/
+**/tests/
+**/*_test.py
+**/test_*.py
+*.generated.py
+
+# Locks & huge generated assets (keep package.json / pyproject)
+package-lock.json
+**/package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Local env & secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# ML / binary / large artifacts (not useful as source graph nodes)
+apps/backend/model_artifacts/**
+!**/.gitkeep
+*.pkl
+*.pickle
+*.joblib
+*.onnx
+*.pt
+*.pth
+*.bin
+*.h5
+*.sqlite
+*.db
+sih_dev.db
+
+# Uploads & synthetic bulk data dumps
+data/uploads/
+**/data/uploads/
+*.csv
+*.parquet
+
+# IDE / OS
+.idea/
+.vscode/
+.cursor/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Git / CI noise
+.git/
+.github/workflows/**/*.log
+
+# Frontend build & public static bulk (code under apps/frontend/src|app still indexed via .gitignore merge)
+apps/frontend/public/**/*.png
+apps/frontend/public/**/*.jpg
+apps/frontend/public/**/*.webp

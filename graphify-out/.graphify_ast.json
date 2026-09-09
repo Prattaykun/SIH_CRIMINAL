@@ -1,0 +1,1786 @@
+{
+  "nodes": [
+    {
+      "id": "apps_frontend_src_app_audit_page_auditpage",
+      "label": "AuditPage",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/app/audit/page.tsx",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_app_evidence_page_evidencepage",
+      "label": "EvidencePage",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/app/evidence/page.tsx",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_app_graph_page_networkgraphpage",
+      "label": "NetworkGraphPage",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/app/graph/page.tsx",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_app_layout_rootlayout",
+      "label": "RootLayout",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/app/layout.tsx",
+      "source_location": "L24",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_app_settings_page_settingspage",
+      "label": "SettingsPage",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/app/settings/page.tsx",
+      "source_location": "L3",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_app_template_template",
+      "label": "Template",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/app/template.tsx",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_components_analytics_entityfeaturespanel_entityfeaturespanel",
+      "label": "EntityFeaturesPanel",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/components/analytics/EntityFeaturesPanel.tsx",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_components_cases_casetimeline_timelineevent",
+      "label": "TimelineEvent",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/components/cases/CaseTimeline.tsx",
+      "source_location": "L3",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_components_extraction_extractioncandidatecard_verificationstatus",
+      "label": "VerificationStatus",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/components/extraction/ExtractionCandidateCard.tsx",
+      "source_location": "L5",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_components_extraction_extractioncandidatecard_entitycandidate",
+      "label": "EntityCandidate",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/components/extraction/ExtractionCandidateCard.tsx",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_components_extraction_extractionstatus_extractionstatusprops",
+      "label": "ExtractionStatusProps",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/components/extraction/ExtractionStatus.tsx",
+      "source_location": "L5",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_components_extraction_relationshipcandidatecard_relationshipcandidate",
+      "label": "RelationshipCandidate",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/components/extraction/RelationshipCandidateCard.tsx",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_components_graph_graphfilters_graphfilters",
+      "label": "GraphFilters",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/components/graph/GraphFilters.tsx",
+      "source_location": "L16",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_components_graph_intelligenceedge_intelligenceedgedata",
+      "label": "IntelligenceEdgeData",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/components/graph/IntelligenceEdge.tsx",
+      "source_location": "L11",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_components_layout_sidebar_sidebar",
+      "label": "Sidebar",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/components/layout/Sidebar.tsx",
+      "source_location": "L136",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_context_authcontext_user",
+      "label": "User",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/context/AuthContext.tsx",
+      "source_location": "L17",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_api_dashboardoverviewstats",
+      "label": "DashboardOverviewStats",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L121",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_auth_storeduser",
+      "label": "StoredUser",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/auth.ts",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_auth_getstoredtoken",
+      "label": "getStoredToken",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/auth.ts",
+      "source_location": "L19",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_auth_setstoredtoken",
+      "label": "setStoredToken",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/auth.ts",
+      "source_location": "L31",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_auth_getstoreduser",
+      "label": "getStoredUser",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/auth.ts",
+      "source_location": "L47",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_auth_setstoreduser",
+      "label": "setStoredUser",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/auth.ts",
+      "source_location": "L60",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_auth_clearauth",
+      "label": "clearAuth",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/auth.ts",
+      "source_location": "L76",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_auth_subscribetoauthsync",
+      "label": "subscribeToAuthSync",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/auth.ts",
+      "source_location": "L89",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_graphintelligence_normalizedentity",
+      "label": "NormalizedEntity",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/graphIntelligence.ts",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_graphintelligence_normalizedrelationship",
+      "label": "NormalizedRelationship",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/graphIntelligence.ts",
+      "source_location": "L25",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_graphintelligence_clustergroup",
+      "label": "ClusterGroup",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/graphIntelligence.ts",
+      "source_location": "L43",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_graphintelligence_timelineevent",
+      "label": "TimelineEvent",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/graphIntelligence.ts",
+      "source_location": "L55",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_graphintelligence_evidenceitem",
+      "label": "EvidenceItem",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/graphIntelligence.ts",
+      "source_location": "L67",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_graphintelligence_normalizegraphdata",
+      "label": "normalizeGraphData",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/graphIntelligence.ts",
+      "source_location": "L158",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_graphintelligence_filternhopneighborhood",
+      "label": "filterNHopNeighborhood",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/graphIntelligence.ts",
+      "source_location": "L441",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_graphintelligence_extracttimelineevents",
+      "label": "extractTimelineEvents",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/graphIntelligence.ts",
+      "source_location": "L488",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_graphintelligence_extractevidenceitems",
+      "label": "extractEvidenceItems",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/graphIntelligence.ts",
+      "source_location": "L537",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_mockgraphdata_getmockcasegraph",
+      "label": "getMockCaseGraph",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/mockGraphData.ts",
+      "source_location": "L3",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_lib_utils_cn",
+      "label": "cn",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/lib/utils.ts",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_graphnode",
+      "label": "GraphNode",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_graphedge",
+      "label": "GraphEdge",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_analyticsrunresponse",
+      "label": "AnalyticsRunResponse",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L23",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_patternalert",
+      "label": "PatternAlert",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L38",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_entitygraphfeature",
+      "label": "EntityGraphFeature",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L54",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_similaritymatch",
+      "label": "SimilarityMatch",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L63",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_similarityresponse",
+      "label": "SimilarityResponse",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L75",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_modelprediction",
+      "label": "ModelPrediction",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L81",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_mlrunresponse",
+      "label": "MLRunResponse",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L95",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_graphresponse",
+      "label": "GraphResponse",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L107",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_entityneighbourresponse",
+      "label": "EntityNeighbourResponse",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L115",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_relationshipevidenceresponse",
+      "label": "RelationshipEvidenceResponse",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L121",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_graphhealthresponse",
+      "label": "GraphHealthResponse",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L134",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_caseresponse",
+      "label": "CaseResponse",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L142",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_caselistresponse",
+      "label": "CaseListResponse",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L154",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_documentresponse",
+      "label": "DocumentResponse",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L159",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_ingestionsummary",
+      "label": "IngestionSummary",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L174",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_apierror",
+      "label": "ApiError",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L179",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_extractionrun",
+      "label": "ExtractionRun",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L186",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_providercomparisonresult",
+      "label": "ProviderComparisonResult",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L199",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_trainingreadinesssplit",
+      "label": "TrainingReadinessSplit",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L206",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_trainingreadinessstatus",
+      "label": "TrainingReadinessStatus",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L213",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_extractionmodel",
+      "label": "ExtractionModel",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L224",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_extractionmodelmetrics",
+      "label": "ExtractionModelMetrics",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L237",
+      "_origin": "ast"
+    },
+    {
+      "id": "apps_frontend_src_types_api_documentlistresponse",
+      "label": "DocumentListResponse",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/types/api.ts",
+      "source_location": "L244",
+      "_origin": "ast"
+    }
+  ],
+  "edges": [
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_alert",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_audit_log",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_case",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_document",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_entity",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_extraction_run",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_feedback",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_processing_job",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_relationship",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_user",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_analytics",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_ml",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_extraction_model",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_case_access",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_case_membership",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L41",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_models_init",
+      "target": "apps_backend_app_models_case_task",
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/models/__init__.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_tests_graph_test",
+      "target": "apps_frontend_src_types_api_graphresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/__tests__/Graph.test.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_cases_caseid_evidence_page",
+      "target": "apps_frontend_src_types_api_caseresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/cases/[caseId]/evidence/page.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_cases_caseid_evidence_page",
+      "target": "apps_frontend_src_types_api_relationshipevidenceresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/cases/[caseId]/evidence/page.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_cases_caseid_evidence_page",
+      "target": "apps_frontend_src_types_api_documentresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/cases/[caseId]/evidence/page.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_cases_caseid_evidence_page",
+      "target": "apps_frontend_src_components_cases_casetimeline_timelineevent",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/cases/[caseId]/evidence/page.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_cases_caseid_graph_page",
+      "target": "apps_frontend_src_lib_graphintelligence_normalizegraphdata",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/cases/[caseId]/graph/page.tsx",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_cases_caseid_graph_page",
+      "target": "apps_frontend_src_lib_graphintelligence_filternhopneighborhood",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/cases/[caseId]/graph/page.tsx",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_cases_caseid_graph_page",
+      "target": "apps_frontend_src_lib_graphintelligence_extracttimelineevents",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/cases/[caseId]/graph/page.tsx",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_cases_caseid_graph_page",
+      "target": "apps_frontend_src_lib_graphintelligence_extractevidenceitems",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/cases/[caseId]/graph/page.tsx",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_cases_caseid_graph_page",
+      "target": "apps_frontend_src_lib_graphintelligence_normalizedentity",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/cases/[caseId]/graph/page.tsx",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_cases_caseid_graph_page",
+      "target": "apps_frontend_src_lib_graphintelligence_normalizedrelationship",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/cases/[caseId]/graph/page.tsx",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_cases_caseid_graph_page",
+      "target": "apps_frontend_src_lib_graphintelligence_clustergroup",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/cases/[caseId]/graph/page.tsx",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_cases_caseid_graph_page",
+      "target": "apps_frontend_src_lib_graphintelligence_timelineevent",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/cases/[caseId]/graph/page.tsx",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_cases_caseid_graph_page",
+      "target": "apps_frontend_src_lib_graphintelligence_evidenceitem",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/cases/[caseId]/graph/page.tsx",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_cases_page",
+      "target": "apps_frontend_src_types_api_caseresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/cases/page.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_layout",
+      "target": "apps_frontend_src_lib_utils_cn",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/layout.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_page",
+      "target": "apps_frontend_src_lib_api_dashboardoverviewstats",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/page.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_app_page",
+      "target": "apps_frontend_src_lib_auth_getstoredtoken",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/page.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_analytics_casesimilaritycard",
+      "target": "apps_frontend_src_types_api_similarityresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/analytics/CaseSimilarityCard.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_analytics_entityfeaturespanel",
+      "target": "apps_frontend_src_types_api_entitygraphfeature",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/analytics/EntityFeaturesPanel.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_analytics_modelmetadatapanel",
+      "target": "apps_frontend_src_types_api_mlrunresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/analytics/ModelMetadataPanel.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_analytics_modelpredictioncard",
+      "target": "apps_frontend_src_types_api_modelprediction",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/analytics/ModelPredictionCard.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_analytics_patternalertcard",
+      "target": "apps_frontend_src_types_api_patternalert",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/analytics/PatternAlertCard.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_analytics_patternalertlist",
+      "target": "apps_frontend_src_types_api_patternalert",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/analytics/PatternAlertList.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_evidence_evidencetable",
+      "target": "apps_frontend_src_components_extraction_extractioncandidatecard_verificationstatus",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/evidence/EvidenceTable.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_extraction_evaluationmetrics",
+      "target": "apps_frontend_src_types_api_providercomparisonresult",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/extraction/EvaluationMetrics.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_extraction_extractionreviewpanel",
+      "target": "apps_frontend_src_components_extraction_extractioncandidatecard_entitycandidate",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/extraction/ExtractionReviewPanel.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_extraction_extractionreviewpanel",
+      "target": "apps_frontend_src_components_extraction_extractioncandidatecard_verificationstatus",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/extraction/ExtractionReviewPanel.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_extraction_extractionreviewpanel",
+      "target": "apps_frontend_src_components_extraction_relationshipcandidatecard_relationshipcandidate",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/extraction/ExtractionReviewPanel.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_extraction_extractionrunlist",
+      "target": "apps_frontend_src_types_api_extractionrun",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/extraction/ExtractionRunList.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_extraction_modelregistry",
+      "target": "apps_frontend_src_types_api_extractionmodel",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/extraction/ModelRegistry.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_extraction_nermetricspanel",
+      "target": "apps_frontend_src_types_api_extractionmodelmetrics",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/extraction/NERMetricsPanel.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_extraction_providercomparison",
+      "target": "apps_frontend_src_types_api_providercomparisonresult",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/extraction/ProviderComparison.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_extraction_relationshipcandidatecard",
+      "target": "apps_frontend_src_components_extraction_extractioncandidatecard_verificationstatus",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/extraction/RelationshipCandidateCard.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_extraction_trainingreadiness",
+      "target": "apps_frontend_src_types_api_trainingreadinessstatus",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/extraction/TrainingReadiness.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_graph_entitypanel",
+      "target": "apps_frontend_src_types_api_graphnode",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/EntityPanel.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_graph_entitypanel",
+      "target": "apps_frontend_src_types_api_entitygraphfeature",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/EntityPanel.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_graph_entitypanel",
+      "target": "apps_frontend_src_components_analytics_entityfeaturespanel_entityfeaturespanel",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/EntityPanel.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_graph_networkgraph",
+      "target": "apps_frontend_src_types_api_graphresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/NetworkGraph.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_graph_networkgraph",
+      "target": "apps_frontend_src_types_api_graphnode",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/NetworkGraph.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_graph_networkgraph",
+      "target": "apps_frontend_src_types_api_graphedge",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/NetworkGraph.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_graph_networkgraph",
+      "target": "apps_frontend_src_components_graph_graphfilters_graphfilters",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/NetworkGraph.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_graph_relationshipevidencedrawer",
+      "target": "apps_frontend_src_lib_graphintelligence_normalizedrelationship",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/RelationshipEvidenceDrawer.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_graph_relationshipevidencedrawer",
+      "target": "apps_frontend_src_lib_graphintelligence_normalizedentity",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/RelationshipEvidenceDrawer.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_graph_relationshippanel",
+      "target": "apps_frontend_src_types_api_graphedge",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/RelationshipPanel.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_context_authcontext",
+      "target": "apps_frontend_src_lib_auth_getstoredtoken",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/context/AuthContext.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_context_authcontext",
+      "target": "apps_frontend_src_lib_auth_setstoredtoken",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/context/AuthContext.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_context_authcontext",
+      "target": "apps_frontend_src_lib_auth_getstoreduser",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/context/AuthContext.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_context_authcontext",
+      "target": "apps_frontend_src_lib_auth_setstoreduser",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/context/AuthContext.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_context_authcontext",
+      "target": "apps_frontend_src_lib_auth_clearauth",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/context/AuthContext.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_context_authcontext",
+      "target": "apps_frontend_src_lib_auth_subscribetoauthsync",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/context/AuthContext.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_types_api_graphresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_types_api_entityneighbourresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_types_api_relationshipevidenceresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_types_api_graphhealthresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_types_api_caseresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_types_api_caselistresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_types_api_apierror",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_types_api_analyticsrunresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_types_api_patternalert",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_types_api_entitygraphfeature",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_types_api_documentresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_types_api_documentlistresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_lib_auth_getstoredtoken",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L34",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_lib_auth_setstoredtoken",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L34",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_lib_auth_setstoreduser",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L34",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_api",
+      "target": "apps_frontend_src_lib_auth_clearauth",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L34",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_mockgraphdata",
+      "target": "apps_frontend_src_types_api_graphresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/mockGraphData.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_mockgraphdata",
+      "target": "apps_frontend_src_types_api_graphnode",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/mockGraphData.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_lib_mockgraphdata",
+      "target": "apps_frontend_src_types_api_graphedge",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/mockGraphData.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_api_v1_router",
+      "target": "apps_backend_app_api_v1_endpoints_cases",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/api/v1/router.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_api_v1_router",
+      "target": "apps_backend_app_api_v1_endpoints_team",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/api/v1/router.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_api_v1_router",
+      "target": "apps_backend_app_api_v1_endpoints_tasks",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/api/v1/router.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_api_v1_router",
+      "target": "apps_backend_app_api_v1_endpoints_documents",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/api/v1/router.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_api_v1_router",
+      "target": "apps_backend_app_api_v1_endpoints_health",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/api/v1/router.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_api_v1_router",
+      "target": "apps_backend_app_api_v1_endpoints_graph",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/api/v1/router.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_api_v1_router",
+      "target": "apps_backend_app_api_v1_endpoints_ingestion",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/api/v1/router.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_api_v1_router",
+      "target": "apps_backend_app_api_v1_endpoints_analytics",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/api/v1/router.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_api_v1_router",
+      "target": "apps_backend_app_api_v1_endpoints_similarity",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/api/v1/router.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_api_v1_router",
+      "target": "apps_backend_app_api_v1_endpoints_ml",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/api/v1/router.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_api_v1_router",
+      "target": "apps_backend_app_api_v1_endpoints_extraction",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/api/v1/router.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_api_v1_router",
+      "target": "apps_backend_app_api_v1_endpoints_auth",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/api/v1/router.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_api_v1_router",
+      "target": "apps_backend_app_api_v1_endpoints_reports",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/api/v1/router.py",
+      "source_location": "L37",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_similarity_features",
+      "target": "apps_backend_app_models_case",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/similarity/features.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_backend_app_similarity_features",
+      "target": "apps_backend_app_models_alert",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/backend/app/similarity/features.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_app_page_loaddashboarddata",
+      "target": "apps_frontend_src_lib_auth_getstoredtoken",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/app/page.tsx",
+      "source_location": "L31",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_lib_api_fetchwithtimeout",
+      "target": "apps_frontend_src_lib_auth_getstoredtoken",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L40",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_lib_api_handleresponse",
+      "target": "apps_frontend_src_lib_auth_clearauth",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L99",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_components_analytics_casesimilaritycard_casesimilaritycardprops",
+      "target": "apps_frontend_src_types_api_similarityresponse",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/analytics/CaseSimilarityCard.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_components_analytics_entityfeaturespanel_entityfeaturespanelprops",
+      "target": "apps_frontend_src_types_api_entitygraphfeature",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/analytics/EntityFeaturesPanel.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_components_analytics_modelmetadatapanel_modelmetadatapanelprops",
+      "target": "apps_frontend_src_types_api_mlrunresponse",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/analytics/ModelMetadataPanel.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_components_analytics_modelpredictioncard_modelpredictioncardprops",
+      "target": "apps_frontend_src_types_api_modelprediction",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/analytics/ModelPredictionCard.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_components_analytics_patternalertcard_patternalertcardprops",
+      "target": "apps_frontend_src_types_api_patternalert",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/analytics/PatternAlertCard.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_components_analytics_patternalertlist_patternalertlistprops",
+      "target": "apps_frontend_src_types_api_patternalert",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/analytics/PatternAlertList.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "apps_frontend_src_components_extraction_relationshipcandidatecard_relationshipcandidate",
+      "target": "apps_frontend_src_components_extraction_extractioncandidatecard_verificationstatus",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/extraction/RelationshipCandidateCard.tsx",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_components_extraction_relationshipcandidatecard_props",
+      "target": "apps_frontend_src_components_extraction_extractioncandidatecard_verificationstatus",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/extraction/RelationshipCandidateCard.tsx",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_components_graph_entitypanel_entitypanelprops",
+      "target": "apps_frontend_src_types_api_graphnode",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/EntityPanel.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_components_graph_networkgraph_networkgraphprops",
+      "target": "apps_frontend_src_types_api_graphresponse",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/NetworkGraph.tsx",
+      "source_location": "L24",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_components_graph_relationshipevidencedrawer_relationshipevidencedrawerprops",
+      "target": "apps_frontend_src_lib_graphintelligence_normalizedrelationship",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/RelationshipEvidenceDrawer.tsx",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_components_graph_relationshipevidencedrawer_relationshipevidencedrawerprops",
+      "target": "apps_frontend_src_lib_graphintelligence_normalizedentity",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/RelationshipEvidenceDrawer.tsx",
+      "source_location": "L21",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_components_graph_relationshippanel_relationshippanelprops",
+      "target": "apps_frontend_src_types_api_graphedge",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/components/graph/RelationshipPanel.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "d_projects_sih_sih_criminal_apps_frontend_src_lib_api_apiclienterror_constructor",
+      "target": "apps_frontend_src_types_api_apierror",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/lib/api.ts",
+      "source_location": "L24",
+      "weight": 1.0,
+      "_origin": "ast"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

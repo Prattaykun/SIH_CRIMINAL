@@ -8,7 +8,9 @@ class Settings(BaseSettings):
     """Application configuration settings loaded from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # Prefer apps/backend/.env when running uvicorn from the repo root;
+        # also accept a local .env when the process cwd is apps/backend.
+        env_file=(".env", "apps/backend/.env"),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
