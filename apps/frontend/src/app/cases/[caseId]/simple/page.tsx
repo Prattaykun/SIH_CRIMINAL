@@ -123,23 +123,31 @@ export default function SimpleViewPage() {
         // AI Insights
         const insights: string[] = [];
         const score = summaryRes?.anomaly_index?.score || 0;
-        if (score >= 70) {
-          insights.push(`Topological anomaly index is elevated (${score}/100), indicating unusually high connection density among entities in this network.`);
+        
+        if (score >= 90) {
+          insights.push(`The system flagged this case as highly suspicious (score: ${score}/100) because the people involved are interacting in hidden or unusual patterns.`);
+        } else if (score >= 70) {
+          insights.push(`There are suspicious activity patterns in this case (score: ${score}/100) that usually warrant a closer look by investigators.`);
         }
+
         if (summaryRes?.primary_subject?.name) {
           const subName = summaryRes.primary_subject.name;
           const roleLabel = classifyPersonRole(subName, true);
-          if (roleLabel === 'Judicial Authority') {
-            insights.push(`${subName} is referenced as the presiding judicial authority overseeing the proceedings.`);
-          } else {
-            insights.push(`${subName} is a central node connecting communication and organizational records.`);
+          if (roleLabel !== 'Judicial Authority' && roleLabel !== 'Investigating Officer / Official') {
+            insights.push(`The evidence suggests ${subName} is the central figure coordinating these activities.`);
           }
         }
+
         if (summaryRes?.linked_assets && summaryRes.linked_assets.length > 0) {
-          insights.push('Multiple communication numbers and financial nodes are linked across this case network.');
+          insights.push(`The suspects are using multiple different phone numbers and accounts, which is a common tactic in organized crime.`);
         }
+
+        if (timelineList.length >= 4) {
+          insights.push(`There is a rapid sequence of events recorded, indicating highly coordinated or pre-planned actions.`);
+        }
+
         if (insights.length === 0) {
-          insights.push('Pattern detection and graph features are actively analyzing entity relationships for this case.');
+          insights.push('The system is still gathering enough evidence to form concrete insights.');
         }
 
         // Clean natural summary
