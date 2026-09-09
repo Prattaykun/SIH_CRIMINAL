@@ -38,13 +38,13 @@ def create_document(
 ) -> DocumentResponse:
     """Create a new document record for a case."""
     case_repo = CaseRepository(db)
-    case = case_repo.get_by_id(case_id)
+    case = case_repo.get_by_id(case_id) or case_repo.get_by_case_number(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail="Case not found.")
 
     doc_repo = DocumentRepository(db)
     try:
-        doc = doc_repo.create(case_id=case_id, data=data)
+        doc = doc_repo.create(case_id=str(case.id), data=data)
         log_action(
             db=db,
             action=DOCUMENT_UPLOADED,

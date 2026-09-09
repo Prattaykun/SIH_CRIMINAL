@@ -144,7 +144,7 @@ def get_case(
     access: CaseMembership = Depends(require_case_permission(Permission.VIEW_CASE)),
 ) -> CaseResponse:
     repo = CaseRepository(db)
-    case = repo.get_by_id(case_id)
+    case = repo.get_by_id(case_id) or repo.get_by_case_number(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail="Case not found.")
     return CaseResponse.model_validate(case)
@@ -163,14 +163,14 @@ def update_case(
     access: CaseMembership = Depends(require_case_permission(Permission.VIEW_CASE)),
 ) -> CaseResponse:
     repo = CaseRepository(db)
-    case = repo.get_by_id(case_id)
+    case = repo.get_by_id(case_id) or repo.get_by_case_number(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail="Case not found.")
     
     prev_state = {"status": case.status, "priority": case.priority, "title": case.title, "description": case.description}
 
     try:
-        case = repo.update(case_id, data)
+        case = repo.update(str(case.id), data)
         new_state = {"status": case.status, "priority": case.priority, "title": case.title, "description": case.description}
         
         log_action(
