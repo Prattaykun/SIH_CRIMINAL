@@ -61,64 +61,97 @@ export default function SimpleViewPage() {
         const primaryJurisdiction = summaryRes?.primary_subject?.jurisdiction || caseRes?.description || 'Active Jurisdiction';
         const status = caseRes?.status || 'Active Investigation';
 
-        // Extract key people
+        // Role classification helper
+        const classifyPersonRole = (name: string, isPrimary: boolean) => {
+          if (/magistrate|judge|court|justice/i.test(name)) return 'Judicial Authority';
+          if (/inspector|officer|sub-inspector|sho|constable|dsp|sp|investigat/i.test(name)) return 'Investigating Officer / Official';
+          if (isPrimary) return 'Primary Subject of Interest';
+          return 'Involved Person / Witness';
+        };
+
+        // Extract key people with accurate role classification
         const peopleList: { name: string; role: string }[] = [];
         const seenPeople = new Set<string>();
 
         if (summaryRes?.primary_subject?.name) {
+          const pName = summaryRes.primary_subject.name;
           peopleList.push({
-            name: summaryRes.primary_subject.name,
-            role: 'Accused / Key Node',
+            name: pName,
+            role: classifyPersonRole(pName, true),
           });
-          seenPeople.add(summaryRes.primary_subject.name);
+          seenPeople.add(pName);
         }
 
         const rawEntities = candidatesRes?.entities || candidatesRes?.data?.entities || [];
         rawEntities.forEach((ent: any) => {
           const type = ent.type || ent.entity_type;
-          const name = ent.text || ent.label || ent.canonical_name;
+          const name = (ent.text || ent.label || ent.canonical_name || '').trim();
           if (type === 'PERSON' && name && !seenPeople.has(name) && name.length >= 3 && name.length <= 40) {
             seenPeople.add(name);
-            peopleList.push({ name, role: 'Official / Involved Person' });
+            peopleList.push({ name, role: classifyPersonRole(name, false) });
           }
         });
 
-        // Extract locations
+        // Location filtering: distinguish genuine locations from case allegations/descriptions
+        const isDescriptionText = (s: string) =>
+          s.length > 45 || /alleged|sale|forged|dispute|transfer|booking|case|report|plots|fraud/i.test(s);
+
         const locSet = new Set<string>();
-        if (summaryRes?.primary_subject?.jurisdiction && summaryRes.primary_subject.jurisdiction !== 'Active Jurisdiction') {
-          locSet.add(summaryRes.primary_subject.jurisdiction);
-        }
         rawEntities.forEach((ent: any) => {
           const type = ent.type || ent.entity_type;
-          const name = ent.text || ent.label || ent.canonical_name;
-          if ((type === 'LOCATION' || type === 'ADDRESS') && name) {
+          const name = (ent.text || ent.label || ent.canonical_name || '').trim();
+          if ((type === 'LOCATION' || type === 'ADDRESS') && name && !isDescriptionText(name) && name.length >= 3) {
             locSet.add(name);
           }
         });
 
-        // Extract timeline
-        const timelineList = (summaryRes?.timeline_events || []).map((evt: any) => ({
-          date: evt.date || null,
-          description: evt.desc ? `${evt.title}: ${evt.desc}` : evt.title,
-        }));
+        // Deduplicate timeline events to prevent identical repeated entries
+        const seenEvents = new Set<string>();
+        const timelineList: { date: string | null; description: string }[] = [];
+        (summaryRes?.timeline_events || []).forEach((evt: any) => {
+          const desc = evt.desc ? `${evt.title}: ${evt.desc}` : evt.title;
+          const key = `${evt.date || ''}|${desc}`;
+          if (!seenEvents.has(key)) {
+            seenEvents.add(key);
+            timelineList.push({
+              date: evt.date || null,
+              description: desc,
+            });
+          }
+        });
 
         // AI Insights
         const insights: string[] = [];
         const score = summaryRes?.anomaly_index?.score || 0;
         if (score >= 70) {
-          insights.push(`The topological anomaly index is elevated (${score}/100), indicating unusually dense connections among primary entities.`);
+          insights.push(`Topological anomaly index is elevated (${score}/100), indicating unusually high connection density among entities in this network.`);
         }
         if (summaryRes?.primary_subject?.name) {
-          insights.push(`${summaryRes.primary_subject.name} acts as a central communication or organizational hub in this case.`);
+          const subName = summaryRes.primary_subject.name;
+          const roleLabel = classifyPersonRole(subName, true);
+          if (roleLabel === 'Judicial Authority') {
+            insights.push(`${subName} is referenced as the presiding judicial authority overseeing the proceedings.`);
+          } else {
+            insights.push(`${subName} is a central node connecting communication and organizational records.`);
+          }
         }
         if (summaryRes?.linked_assets && summaryRes.linked_assets.length > 0) {
-          insights.push(`Cross-referenced financial and communication channels linked to this case indicate organized operational coordination.`);
+          insights.push('Multiple communication numbers and financial nodes are linked across this case network.');
         }
         if (insights.length === 0) {
-          insights.push('AI insights are actively being computed from the case knowledge graph.');
+          insights.push('Pattern detection and graph features are actively analyzing entity relationships for this case.');
         }
 
-        const syntheticSummary = `This case (${effectiveNumber}) is currently an ${status} involving ${primarySub} and entities linked to ${primaryOrg}. Proceedings and events are focused around ${primaryJurisdiction}. Investigative priority is currently set to ${priority}.`;
+        // Clean natural summary
+        const displayStatus = (status || 'ACTIVE').toLowerCase().includes('active')
+          ? 'active investigation'
+          : (status || 'case').toLowerCase();
+        
+        const allegationText = isDescriptionText(primaryJurisdiction)
+          ? `The proceedings examine allegations regarding ${primaryJurisdiction.replace(/\.+$/, '')}.`
+          : `The proceedings are centered around ${primaryJurisdiction}.`;
+
+        const syntheticSummary = `Case ${effectiveNumber} is currently an ${displayStatus}. ${allegationText} Multiple entities and contacts including ${primaryOrg} are being reviewed under ${priority} priority.`;
 
         setData({
           case_id: caseId,
