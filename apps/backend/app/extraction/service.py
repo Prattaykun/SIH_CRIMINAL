@@ -590,6 +590,15 @@ class DocumentExtractionService:
         self.db.refresh(doc)
         self._set_doc_progress(doc, status="PROCESSED", stage="complete")
 
+        # Kick off async Simple View regeneration from case + graph topology
+        try:
+            from apps.backend.app.services.simple_summary import schedule_simple_summary_generation
+
+            if doc.case_id:
+                schedule_simple_summary_generation(str(doc.case_id), force=True)
+        except Exception:
+            pass
+
         return {
             "status": "success",
             "extraction_run_id": run.extraction_run_id,
@@ -925,11 +934,22 @@ class DocumentExtractionService:
             
         try:
             with neo4j_manager.get_session() as session:
+                from apps.backend.app.graph.repository import (
+                    GraphRepository,
+                    map_entity_type_to_label,
+                    map_relation_type,
+                )
                 repo = GraphRepository(session)
                 # Sync Entities
                 for e in entities:
-                    props = {"name": e.canonical_name, "original_value": e.original_value, "source_document": document_id}
-                    repo.create_or_merge_entity(e.entity_type.capitalize(), e.id, props, e.case_id, [document_id])
+                    label = map_entity_type_to_label(e.entity_type)
+                    props = {
+                        "name": e.canonical_name,
+                        "original_value": e.original_value,
+                        "source_document": document_id,
+                        "entity_type": e.entity_type,
+                    }
+                    repo.create_or_merge_entity(label, e.id, props, e.case_id, [document_id])
                     e.graph_sync_status = "SYNCED"
                     e.graph_synced_at = datetime.now(timezone.utc)
                     
@@ -939,7 +959,7 @@ class DocumentExtractionService:
                     src = self.db.query(ExtractedEntity).filter(ExtractedEntity.id == r.source_entity_id).first()
                     tgt = self.db.query(ExtractedEntity).filter(ExtractedEntity.id == r.target_entity_id).first()
                     
-                    if src.graph_sync_status == "SYNCED" and tgt.graph_sync_status == "SYNCED":
+                    if src and tgt and src.graph_sync_status == "SYNCED" and tgt.graph_sync_status == "SYNCED":
                         props = {
                             "confidence": float(r.confidence_score or 0),
                             "verified_by": r.verified_by,
@@ -947,9 +967,9 @@ class DocumentExtractionService:
                             "source_snippet": (r.source_text_snippet or "")[:500],
                         }
                         repo.create_or_merge_relationship(
-                            src.entity_type.capitalize(), src.id, 
-                            tgt.entity_type.capitalize(), tgt.id, 
-                            r.relation_type, r.id, props
+                            map_entity_type_to_label(src.entity_type), src.id,
+                            map_entity_type_to_label(tgt.entity_type), tgt.id,
+                            map_relation_type(r.relation_type), r.id, props
                         )
                         r.graph_sync_status = "SYNCED"
                         r.graph_synced_at = datetime.now(timezone.utc)
@@ -958,6 +978,17 @@ class DocumentExtractionService:
                         r.graph_sync_error = "Endpoints not synced"
             
             self.db.commit()
+            _agent_debug_log(
+                "S2",
+                "extraction/service.py:sync_approved_to_graph",
+                "neo4j sync finished",
+                {
+                    "document_id": document_id,
+                    "synced_entities": len(entities),
+                    "synced_relationships": len(relationships),
+                    "status": "SUCCESS",
+                },
+            )
             return {"status": "SUCCESS", "synced_entities": len(entities), "synced_relationships": len(relationships)}
         except Exception as ex:
             for e in entities:
@@ -966,6 +997,18 @@ class DocumentExtractionService:
             for r in relationships:
                 r.graph_sync_status = "RETRYABLE_FAILURE"
                 r.graph_sync_error = str(ex)
+            self.db.commit()
+            _agent_debug_log(
+                "S2",
+                "extraction/service.py:sync_approved_to_graph",
+                "neo4j sync failed",
+                {
+                    "document_id": document_id,
+                    "error": str(ex)[:300],
+                    "status": "RETRYABLE_FAILURE",
+                },
+            )
+            return {"status": "RETRYABLE_FAILURE", "reason": str(ex)}
             self.db.commit()
             return {"status": "RETRYABLE_FAILURE", "reason": str(ex)}
 

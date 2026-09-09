@@ -1,6 +1,8 @@
 """Case SQLAlchemy model."""
 
-from sqlalchemy import ForeignKey, Index, String, Text
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, Index, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from apps.backend.app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -22,6 +24,16 @@ class Case(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )  # LOW | MEDIUM | HIGH | CRITICAL
     created_by: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("users.id"), nullable=True
+    )
+
+    # Async plain-language Simple View (Postgres JSON)
+    simple_summary_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="NONE"
+    )  # NONE | PENDING | GENERATING | READY | FAILED
+    simple_summary: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    simple_summary_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    simple_summary_generated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     # Relationships

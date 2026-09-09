@@ -7,6 +7,8 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { CaseWorkspacePicker } from '@/components/case/CaseWorkspacePicker';
+import { EntityAssignmentPanel } from '@/components/team/EntityAssignmentPanel';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import {
@@ -275,7 +277,8 @@ export default function CollaborationPage() {
       <PageHeader
         badge={`Cases / ${caseId}`}
         title="Multi-Investigator Workspace"
-        description="Collaborate on tasks, assignments, and team roles for this investigation."
+        description="Assign entities to officers, collaborate on tasks, and manage team roles."
+        leading={<CaseWorkspacePicker currentCaseId={caseId} workspace="collaboration" />}
         actions={
           <>
             <Link href={`/cases/${caseId}`} className={cn(surfaceBtnSecondary, 'gap-1.5 text-xs')}>
@@ -305,6 +308,7 @@ export default function CollaborationPage() {
       />
 
       <div className="mx-auto max-w-7xl space-y-8 px-5 py-5 sm:px-6 lg:px-8">
+        <EntityAssignmentPanel caseId={caseId} />
 
         {/* Section 1: My Work */}
         <Card className={cn(surfaceCard, 'gap-0 p-6')}>

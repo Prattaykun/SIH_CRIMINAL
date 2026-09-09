@@ -90,16 +90,20 @@ export const EntityNode = memo(({ data, selected }: any) => {
   const isVerified = data?.status === 'ACCEPTED' || data?.status === 'CORRECTED';
   const isFocusRoot = data?.isFocusRoot ?? false;
   const isFaded = data?.isFaded ?? false;
+  const isSearchMatch = data?.isSearchMatch ?? false;
   const connectionsCount = data?.connectionsCount || 0;
   const evidenceCount = data?.evidenceCount || 0;
   const confidence = Math.round((data?.confidence ?? 0.85) * 100);
   const subTitle = data?.subTitle || (type === 'PERSON' ? 'Identified Subject' : type);
 
-  // Focus root / Selected border override
+  // Focus root / Search match / Selected border override
   let cardBorder = colors.border;
   let shadowClass = colors.glow;
 
-  if (isFocusRoot) {
+  if (isSearchMatch) {
+    cardBorder = 'border-2 border-amber-400 ring-4 ring-amber-400/35';
+    shadowClass = 'shadow-[0_0_40px_rgba(251,191,36,0.55)]';
+  } else if (isFocusRoot) {
     cardBorder = 'border-2 border-cyan-400 ring-4 ring-cyan-500/30';
     shadowClass = 'shadow-[0_0_35px_rgba(6,182,212,0.5)]';
   } else if (selected) {
@@ -110,9 +114,18 @@ export const EntityNode = memo(({ data, selected }: any) => {
   return (
     <div
       className={`w-64 rounded-2xl bg-[#131622] ${cardBorder} p-3.5 ${shadowClass} transition-all duration-300 select-none ${
-        isFaded ? 'opacity-15 hover:opacity-100 grayscale hover:grayscale-0' : 'opacity-100 hover:scale-102 hover:border-white/60'
+        isFaded && !isSearchMatch
+          ? 'opacity-20 hover:opacity-100 grayscale hover:grayscale-0'
+          : isSearchMatch
+            ? 'opacity-100 scale-[1.03] z-10'
+            : 'opacity-100 hover:scale-102 hover:border-white/60'
       }`}
     >
+      {isSearchMatch && (
+        <div className="mb-2 flex items-center gap-1.5 rounded-md border border-amber-400/40 bg-amber-500/15 px-2 py-0.5">
+          <span className="text-[9px] font-black uppercase tracking-wider text-amber-300">Search match</span>
+        </div>
+      )}
       {/* Semantic Connection Ports (Left = Target, Right = Source, Top/Bottom = Hierarchical) */}
       <Handle
         type="target"

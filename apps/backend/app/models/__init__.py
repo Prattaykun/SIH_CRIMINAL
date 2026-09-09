@@ -14,6 +14,7 @@ from apps.backend.app.models.analytics import EntityGraphFeature, CaseGraphAnaly
 from apps.backend.app.models.ml import CaseFeatureVector, ModelPrediction, SimilarityResult, ModelArtifact
 from apps.backend.app.models.extraction_model import ExtractionModel
 from apps.backend.app.models.case_access import CaseAccess, CaseAccessLevel
+from apps.backend.app.models.entity_assignment import EntityAssignment
 
 __all__ = [
     "Alert",
@@ -37,6 +38,7 @@ __all__ = [
     "CaseAccessLevel",
     "CaseMembership",
     "CaseTask",
+    "EntityAssignment",
 ]
 from apps.backend.app.models.case_membership import CaseMembership
 from apps.backend.app.models.case_task import CaseTask

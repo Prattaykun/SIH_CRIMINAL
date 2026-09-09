@@ -35,6 +35,7 @@ function EvidenceContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeDocumentId, setActiveDocumentId] = useState<string | undefined>(undefined);
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
 
   // Ingested Documents state
   const [documents, setDocuments] = useState<DocumentResponse[]>([]);
@@ -136,17 +137,61 @@ function EvidenceContent() {
     async function loadData() {
       try {
         setLoading(true);
-        const [caseRes, casesRes] = await Promise.all([
+        const [caseRes, casesRes, candidatesRes] = await Promise.all([
           api.getCase(caseId),
           api.listCases().catch(() => ({ cases: [] as CaseResponse[] })),
+          api.getExtractionCandidates(caseId, 'case').catch(() => ({ entities: [], relationships: [] })),
         ]);
         setCaseData(caseRes);
         setAvailableCases(casesRes.cases || []);
 
+        let ev: RelationshipEvidenceResponse | null = null;
         if (relId) {
-          const ev = await api.getRelationshipEvidence(relId).catch(() => null);
+          ev = await api.getRelationshipEvidence(relId).catch(() => null);
           setEvidence(ev);
         }
+
+        const ents = candidatesRes?.entities || [];
+        const rels = candidatesRes?.relationships || [];
+        const entLabel = (id: string) => {
+          const e = ents.find((x: any) => x.id === id);
+          return e?.normalized_value || e?.original_value || id.slice(0, 8);
+        };
+        const dated: TimelineEvent[] = rels
+          .filter((r: any) => !!(r.event_timestamp || r.timestamp))
+          .map((r: any) => ({
+            id: String(r.id),
+            date: String(r.event_timestamp || r.timestamp),
+            type: String(r.relation_type || r.relationship_type || 'ASSOCIATED'),
+            description:
+              r.source_text ||
+              r.source_text_snippet ||
+              `${entLabel(r.source_entity_id)} → ${r.relation_type} → ${entLabel(r.target_entity_id)}`,
+            entities: [entLabel(r.source_entity_id), entLabel(r.target_entity_id)],
+            sourceDocument: r.document_id || 'Case evidence',
+            confidence: typeof r.confidence === 'number' ? r.confidence : Number(r.confidence_score) || null,
+            verified: r.verification_status === 'ACCEPTED' || r.verification_status === 'CORRECTED',
+          }));
+
+        if (dated.length === 0 && ev?.event_date) {
+          dated.push({
+            id: ev.relationship_id,
+            date: ev.event_date,
+            type: ev.relationship_type,
+            description:
+              ev.evidence_text ||
+              `Extracted ${ev.relationship_type.toLowerCase()} relationship`,
+            entities: [ev.source_id, ev.target_id],
+            sourceDocument: ev.source_document_id || 'Unknown Document',
+            confidence: ev.confidence,
+            verified: ev.verified,
+          });
+        }
+
+        setTimelineEvents(dated);
+        // #region agent log
+        fetch('http://127.0.0.1:7267/ingest/e2dbf843-7e56-4e83-b0d0-931cc70abd78',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e250be'},body:JSON.stringify({sessionId:'e250be',runId:'post-fix',hypothesisId:'T1,E1',location:'evidence/page.tsx:loadData',message:'evidence timeline + candidates loaded',data:{caseId,entityCount:ents.length,relCount:rels.length,datedCount:dated.length,acceptedEnts:ents.filter((e:any)=>e.verification_status==='ACCEPTED').length,unreviewedEnts:ents.filter((e:any)=>e.verification_status==='UNREVIEWED').length},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to load case data.');
       } finally {
@@ -166,23 +211,6 @@ function EvidenceContent() {
       </div>
     );
   }
-
-  // Generate a mock timeline based on the evidence if a specific relationship was requested.
-  // In a real implementation, we'd fetch the timeline events from a dedicated endpoint.
-  const timelineEvents: TimelineEvent[] = [];
-  if (evidence && evidence.event_date) {
-    timelineEvents.push({
-      id: evidence.relationship_id,
-      date: evidence.event_date,
-      type: evidence.relationship_type,
-      description: evidence.evidence_text || `Extracted ${evidence.relationship_type.toLowerCase()} relationship`,
-      entities: [evidence.source_id, evidence.target_id],
-      sourceDocument: evidence.source_document_id || 'Unknown Document',
-      confidence: evidence.confidence,
-      verified: evidence.verified
-    });
-  }
-
   return (
     <div className="-m-5 space-y-0 sm:-m-6 lg:-m-8">
       <PageHeader
@@ -257,7 +285,7 @@ function EvidenceContent() {
           
           <button
             type="button"
-            onClick={fetchDocuments}
+            onClick={() => fetchDocuments()}
             disabled={loadingDocs}
             className={cn(surfaceBtnSecondary, 'self-start gap-1.5 text-xs sm:self-auto')}
           >

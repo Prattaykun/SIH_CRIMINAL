@@ -14,6 +14,7 @@ import {
   surfaceBtnPrimary,
   surfaceBtnSecondary,
   surfaceBtnDanger,
+  surfaceInput,
 } from '@/components/layout/surface';
 
 export default function ThreatIntelDashboard({ caseData, caseId }: any) {
@@ -21,6 +22,12 @@ export default function ThreatIntelDashboard({ caseData, caseId }: any) {
   const effectiveId = caseData?.case_number || caseId;
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [displayTitle, setDisplayTitle] = useState<string | null>(null);
+  const [displayDescription, setDisplayDescription] = useState<string | null>(null);
 
   const handleDeleteCase = async () => {
     setIsDeleting(true);
@@ -41,11 +48,84 @@ export default function ThreatIntelDashboard({ caseData, caseId }: any) {
   const handleGoToAudit = () => router.push(`/cases/${effectiveId}/audit`);
   const handleGoToCollaboration = () => router.push(`/cases/${effectiveId}/collaboration`);
 
-  const primarySubject = caseData?.primary_subject?.name || "Unknown";
-  const primaryOrg = caseData?.primary_subject?.org || "Unknown";
-  const primaryVehicle = caseData?.primary_subject?.vehicle || "Unknown";
-  const primaryPhone = caseData?.primary_subject?.phone || "Unknown";
+  const primarySubjects: Array<{
+    id?: string;
+    name: string;
+    link_degree: number;
+    confidence?: number;
+    role?: string;
+    org?: string | null;
+    anomaly_flag?: boolean;
+    anomaly_reason?: string;
+  }> =
+    caseData?.primary_subjects?.length > 0
+      ? caseData.primary_subjects
+      : caseData?.primary_subject?.name
+        ? [
+            {
+              id: caseData.primary_subject.id,
+              name: caseData.primary_subject.name,
+              link_degree: caseData.primary_subject.link_degree ?? 0,
+              confidence: caseData.primary_subject.confidence,
+              role: caseData.primary_subject.role,
+              org: caseData.primary_subject.org,
+              anomaly_flag: true,
+              anomaly_reason:
+                caseData.primary_subject.anomaly_reason ||
+                'High-connectivity investigative lead — requires human verification.',
+            },
+          ]
+        : [];
 
+  const primaryOrg = primarySubjects[0]?.org || caseData?.primary_subject?.org || 'Unknown';
+  const primaryVehicle = caseData?.primary_subject?.vehicle || 'Unknown';
+  const primaryPhone = caseData?.primary_subject?.phone || 'Unknown';
+  const openEditDetails = async () => {
+    try {
+      const c = await api.getCase(caseData?.case_id || caseId);
+      setEditTitle(c.title || '');
+      setEditDescription(c.description || '');
+      setDisplayTitle(c.title || null);
+      setDisplayDescription(c.description || null);
+      setShowEditModal(true);
+    } catch (err: unknown) {
+      toast.error((err as Error)?.message || 'Failed to load case details.');
+    }
+  };
+
+  const handleSaveDetails = async () => {
+    const title = editTitle.trim();
+    if (!title) {
+      toast.error('Title is required.');
+      return;
+    }
+    setIsSavingDetails(true);
+    try {
+      const updated = await api.updateCase(caseData?.case_id || caseId, {
+        title,
+        description: editDescription.trim(),
+      });
+      setDisplayTitle(updated.title);
+      setDisplayDescription(updated.description || '');
+      setShowEditModal(false);
+      toast.success('Case title and description updated. Cases list will show the new values.');
+    } catch (err: unknown) {
+      toast.error((err as Error)?.message || 'Failed to update case.');
+    } finally {
+      setIsSavingDetails(false);
+    }
+  };
+
+  const caseUnit =
+    displayDescription ||
+    caseData?.primary_subject?.case_unit ||
+    caseData?.primary_subject?.jurisdiction ||
+    'Active unit / description not set';
+
+  const openSubjectInGraph = (name: string) => {
+    const q = encodeURIComponent(name);
+    router.push(`/cases/${effectiveId}/graph?q=${q}&mode=NETWORK`);
+  };
   const trendData = [
     { time: 'T-20d', score: 45 },
     { time: 'T-15d', score: 41 },
@@ -62,30 +142,36 @@ export default function ThreatIntelDashboard({ caseData, caseId }: any) {
         title={`${effectiveId} — Active Investigation Dashboard`}
         description="Primary subject dossier, anomaly index, timeline, and topology preview."
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={handleGoToCollaboration} className={cn(surfaceBtnSecondary, "gap-2 border-indigo-500/30 bg-indigo-600/15 text-indigo-300 hover:bg-indigo-600/25")}>
-              <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button type="button" onClick={handleGoToCollaboration} className={cn(surfaceBtnSecondary, "gap-1.5 px-2.5 py-1.5 text-xs border-indigo-500/30 bg-indigo-600/15 text-indigo-300 hover:bg-indigo-600/25")}>
+              <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              Team &amp; Tasks
+              Team
             </button>
-            <button type="button" onClick={handleGoToEvidence} className={cn(surfaceBtnSecondary, "gap-2")}>
-              <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-              Evidence &amp; Ingest
+            <button type="button" onClick={handleGoToEvidence} className={cn(surfaceBtnSecondary, "gap-1.5 px-2.5 py-1.5 text-xs")}>
+              <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              Evidence
             </button>
-            <button type="button" onClick={handleGoToSimple} className={cn(surfaceBtnSecondary, "gap-2")}>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
-              Simple View
+            <button type="button" onClick={handleGoToSimple} className={cn(surfaceBtnSecondary, "gap-1.5 px-2.5 py-1.5 text-xs")}>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+              Simple
             </button>
-            <button type="button" onClick={handleGoToGraph} className={cn(surfaceBtnPrimary, "gap-2")}>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-              Network Graph
+            <button type="button" onClick={handleGoToGraph} className={cn(surfaceBtnPrimary, "gap-1.5 px-2.5 py-1.5 text-xs")}>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+              Graph
             </button>
-            <button type="button" onClick={() => setShowDeleteModal(true)} className={cn(surfaceBtnDanger, "gap-1.5")} title="Delete this case">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button type="button" onClick={openEditDetails} className={cn(surfaceBtnSecondary, "gap-1.5 px-2.5 py-1.5 text-xs")} title="Edit case title and description">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit
+            </button>
+            <button type="button" onClick={() => setShowDeleteModal(true)} className={cn(surfaceBtnDanger, "gap-1.5 px-2.5 py-1.5 text-xs")} title="Delete this case">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
-              Delete Case
+              Delete
             </button>
           </div>
         }
@@ -95,60 +181,129 @@ export default function ThreatIntelDashboard({ caseData, caseId }: any) {
 
       {/* Row 1: Key Subject Summary & Anomaly Risk Sparkline */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Card 1: Key Subject & Case Metadata */}
-        <Card className={cn(surfaceCard, "p-6 flex flex-col justify-between")}>
-          <div>
-            <h2 className="text-white/45 text-xs font-semibold uppercase tracking-wider mb-6">PRIMARY SUBJECT / DOSSIER SUMMARY</h2>
-            <div className="flex items-start gap-5">
-              <div className="w-20 h-20 rounded-full bg-white/[0.05] overflow-hidden relative border border-white/[0.08] shrink-0">
-                <div className="w-full h-full flex items-center justify-center text-white/25 text-3xl">
-                  <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                </div>
-              </div>
-              <div className="pt-1 min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="w-2 h-2 rounded-full bg-[#10b981]"></span>
-                  <span className="text-[#10b981] text-[10px] font-bold uppercase tracking-widest">Active Target</span>
-                </div>
-                <h3 className="text-white text-2xl font-bold tracking-wide break-words" title={primarySubject}>{primarySubject}</h3>
-                <div className="text-white/45 text-xs mt-1 mb-2 font-medium break-words" title={caseData?.primary_subject?.role || "Subject of Interest - Network Key Node"}>
-                  {caseData?.primary_subject?.role || "Subject of Interest - Network Key Node"}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-white/35 text-xs shrink-0">Target ID</span>
-                  <span className="text-white font-mono text-xs sm:text-sm font-semibold break-all">{caseData?.case_id || caseId}</span>
-                </div>
-              </div>
-            </div>
+        {/* Card 1: Ranked primary subjects → graph highlight */}
+        <Card className={cn(surfaceCard, "p-6 flex flex-col")}>
+          <div className="mb-5">
+            <h2 className="text-white/45 text-xs font-semibold uppercase tracking-wider mb-1">
+              Primary Subjects / Connectivity Leads
+            </h2>
+            <p className="text-[11px] text-white/35">
+              Ranked by graph link count (investigative priority only — requires human verification). Click a row to open Network Graph with that person highlighted.
+            </p>
           </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 mt-8">
+
+          <div className="sih-thin-scrollbar flex-1 min-h-0 overflow-y-auto rounded-xl border border-white/[0.08] bg-black/30">
+            <table className="w-full text-left text-sm">
+              <thead className="sticky top-0 z-10 bg-[#0c0c0c] border-b border-white/[0.08]">
+                <tr className="text-[10px] uppercase tracking-wider text-white/40">
+                  <th className="px-3 py-2.5 font-bold">#</th>
+                  <th className="px-3 py-2.5 font-bold">Person</th>
+                  <th className="px-3 py-2.5 font-bold text-right">Links</th>
+                  <th className="px-3 py-2.5 font-bold hidden md:table-cell">Flag</th>
+                  <th className="px-3 py-2.5 font-bold hidden sm:table-cell">Linked org</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.06]">
+                {primarySubjects.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-8 text-center text-xs text-white/35">
+                      No person entities extracted yet.
+                    </td>
+                  </tr>
+                ) : (
+                  primarySubjects.map((s, idx) => (
+                    <tr
+                      key={s.id || `${s.name}-${idx}`}
+                      className="group cursor-pointer transition-colors hover:bg-white/[0.04]"
+                      onClick={() => openSubjectInGraph(s.name)}
+                      title={`Open graph highlighted on ${s.name}`}
+                    >
+                      <td className="px-3 py-3 font-mono text-xs text-white/35">{idx + 1}</td>
+                      <td className="px-3 py-3 min-w-0">
+                        <div className="font-semibold text-white truncate group-hover:text-amber-200">
+                          {s.name}
+                        </div>
+                        <div className="text-[10px] text-white/40 truncate mt-0.5">
+                          {s.role || 'Investigative lead'}
+                          {typeof s.confidence === 'number' ? ` · ${(s.confidence * 100).toFixed(0)}% conf` : ''}
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <span className="inline-flex min-w-[2rem] justify-center rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 font-mono text-xs font-bold text-amber-300">
+                          {s.link_degree}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 hidden md:table-cell">
+                        {s.anomaly_flag ? (
+                          <span
+                            className="relative inline-flex group/anomaly"
+                            title={s.anomaly_reason || 'Connectivity anomaly — requires human verification'}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="rounded-full border border-[#ff3b57]/35 bg-[#ff3b57]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#ff3b57] cursor-help">
+                              Anomaly
+                            </span>
+                            <span
+                              role="tooltip"
+                              className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 w-56 -translate-x-1/2 rounded-lg border border-white/[0.12] bg-[#141414] px-3 py-2 text-[10px] font-normal normal-case tracking-normal text-white/75 opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.55)] transition-opacity duration-150 group-hover/anomaly:opacity-100"
+                            >
+                              {s.anomaly_reason ||
+                                'Connectivity anomaly — investigative prioritization only; requires human verification.'}
+                            </span>
+                          </span>
+                        ) : (
+                          <span
+                            className="text-[9px] uppercase tracking-wider text-white/25 cursor-help"
+                            title={s.anomaly_reason || 'No connectivity anomaly flag'}
+                          >
+                            —
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-xs text-white/55 truncate hidden sm:table-cell max-w-[9rem]">
+                        {s.org || '—'}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 mt-6">
             <div className="flex flex-col border-b border-white/[0.08] pb-2.5 min-w-0">
-              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">Syndicate / Entity</span>
-              <span className="text-white text-sm font-medium break-words leading-relaxed" title={primaryOrg}>{primaryOrg}</span>
+              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">
+                Top linked organization
+              </span>
+              <span className="text-white text-sm font-medium break-words leading-relaxed" title={primaryOrg}>
+                {primaryOrg}
+              </span>
             </div>
             <div className="flex flex-col border-b border-white/[0.08] pb-2.5 min-w-0">
-              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">Jurisdiction</span>
-              <span className="text-white text-sm font-medium break-words leading-relaxed" title={caseData?.primary_subject?.jurisdiction || "Unknown"}>{caseData?.primary_subject?.jurisdiction || "Unknown"}</span>
+              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">
+                Case unit / description
+              </span>
+              <span
+                className="text-white text-sm font-medium break-words leading-relaxed"
+                title={caseUnit}
+              >
+                {caseUnit}
+              </span>
+              <span className="text-[10px] text-white/30 mt-1">
+                Case metadata (not an anomaly score). Usually the investigating unit or case description.
+              </span>
             </div>
             <div className="flex flex-col border-b border-white/[0.08] pb-2.5 min-w-0">
-              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">Primary Vehicle</span>
-              <span className="text-white text-sm font-medium break-words leading-relaxed" title={primaryVehicle}>{primaryVehicle}</span>
+              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">Sample vehicle</span>
+              <span className="text-white text-sm font-medium break-words leading-relaxed" title={primaryVehicle}>
+                {primaryVehicle}
+              </span>
             </div>
             <div className="flex flex-col border-b border-white/[0.08] pb-2.5 min-w-0">
-              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">Primary Contact</span>
-              <span className="text-white text-sm font-medium font-mono break-all leading-relaxed" title={primaryPhone}>{primaryPhone}</span>
-            </div>
-            <div className="flex flex-col border-b border-white/[0.08] pb-2.5 min-w-0">
-              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">Case Status</span>
-              <span className="text-white text-sm font-medium leading-relaxed">ACTIVE INVESTIGATION</span>
-            </div>
-            <div className="flex flex-col border-b border-white/[0.08] pb-2.5 min-w-0">
-              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">Investigative Priority</span>
-              <div className="text-[#ff3b57] text-xs font-bold flex items-center gap-1.5 uppercase tracking-wider">
-                <span className="w-2 h-2 rounded-full bg-[#ff3b57] animate-pulse shrink-0"></span>
-                <span>{caseData?.primary_subject?.priority || "HIGH / ELEVATED"}</span>
-              </div>
+              <span className="text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1">Sample phone</span>
+              <span className="text-white text-sm font-medium font-mono break-all leading-relaxed" title={primaryPhone}>
+                {primaryPhone}
+              </span>
             </div>
           </div>
         </Card>
@@ -162,6 +317,10 @@ export default function ThreatIntelDashboard({ caseData, caseId }: any) {
               <span className="text-2xl text-white/35 font-medium">/ 100</span>
             </div>
             <div className="text-white/45 font-semibold text-sm mt-1">{caseData?.anomaly_index?.status || "Click to Run Anomaly Baseline"}</div>
+            <p className="text-[11px] text-white/35 mt-2 leading-relaxed max-w-md">
+              {caseData?.anomaly_index?.factor_note ||
+                'Anomaly index scales with extracted entity/relationship volume. Not a guilt prediction — human verification required.'}
+            </p>
           </div>
           
           <div className="w-full flex-1 min-h-[170px] my-4">
@@ -283,6 +442,55 @@ export default function ThreatIntelDashboard({ caseData, caseId }: any) {
           </button>
         </Card>
       </div>
+
+      {/* Edit case title / description (updates Cases list cards) */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={cn(surfaceCard, "max-w-lg w-full p-6")}>
+            <h3 className="text-lg font-bold text-white mb-1">Edit case details</h3>
+            <p className="text-xs text-white/45 mb-5">
+              Title and description appear on the Cases list cards. Changes are saved to Postgres.
+            </p>
+            <label className="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5">
+              Title
+            </label>
+            <input
+              className={cn(surfaceInput, "w-full mb-4")}
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              maxLength={255}
+              placeholder="Case title shown on Cases list"
+            />
+            <label className="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5">
+              Description
+            </label>
+            <textarea
+              className={cn(surfaceInput, "w-full min-h-[110px] mb-6 resize-y")}
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              placeholder="Short case overview shown under the title"
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={isSavingDetails}
+                onClick={() => setShowEditModal(false)}
+                className={surfaceBtnSecondary}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSavingDetails}
+                onClick={handleSaveDetails}
+                className={surfaceBtnPrimary}
+              >
+                {isSavingDetails ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Case Deletion Confirmation Modal */}
       {showDeleteModal && (

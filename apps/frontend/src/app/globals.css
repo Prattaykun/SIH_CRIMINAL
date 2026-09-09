@@ -156,6 +156,42 @@ body {
   display: none;
 }
 
+/* Themed thin scrollbar for dark dossier panels */
+.sih-thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) rgba(255, 255, 255, 0.04);
+}
+.sih-thin-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.sih-thin-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+  margin: 4px 0;
+}
+.sih-thin-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.28),
+    rgba(255, 255, 255, 0.14)
+  );
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.sih-thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(96, 165, 250, 0.55),
+    rgba(255, 255, 255, 0.22)
+  );
+  background-clip: padding-box;
+}
+.sih-thin-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

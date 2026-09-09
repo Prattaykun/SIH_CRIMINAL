@@ -28,10 +28,21 @@ function highlightSourceMatch(sourceText: string, needle: string): React.ReactNo
 }
 
 export function EvidenceTable({ entities, relationships, onReview, onRowClick, selectedId }: any) {
+  const unreviewedCount = [...(entities || []), ...(relationships || [])].filter(
+    (x: any) => x.verification_status === 'UNREVIEWED'
+  ).length;
+  // Gemini auto-accepts high-confidence leads — defaulting to UNREVIEWED hides everything
   const [activeTab, setActiveTab] = useState<'entities' | 'relationships'>('entities');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'UNREVIEWED' | 'ACCEPTED' | 'REJECTED'>('UNREVIEWED');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'UNREVIEWED' | 'ACCEPTED' | 'REJECTED'>(
+    unreviewedCount > 0 ? 'UNREVIEWED' : 'ALL'
+  );
   const [search, setSearch] = useState('');
 
+  React.useEffect(() => {
+    if (unreviewedCount === 0 && statusFilter === 'UNREVIEWED') {
+      setStatusFilter('ALL');
+    }
+  }, [unreviewedCount, statusFilter]);
   const filteredEntities = entities.filter((e: any) => {
     const matchesStatus = statusFilter === 'ALL' || e.verification_status === statusFilter;
     const matchesSearch = 

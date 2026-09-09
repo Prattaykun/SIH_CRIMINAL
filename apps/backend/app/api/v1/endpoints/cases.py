@@ -266,13 +266,81 @@ def get_case_intelligence_summary(
         if e.canonical_name and not any(k in e.canonical_name.lower() for k in NON_PERSON_KWS)
         and 3 <= len(e.canonical_name) <= 40
     ]
-    primary_name = valid_persons[0].canonical_name if valid_persons else (persons[0].canonical_name if persons else (entities[0].canonical_name if entities else "Unknown"))
+
+    # Degree = number of relationships touching the entity (investigative hub priority)
+    degree: dict[str, int] = {}
+    for rel in relationships:
+        if rel.source_entity_id:
+            degree[rel.source_entity_id] = degree.get(rel.source_entity_id, 0) + 1
+        if rel.target_entity_id:
+            degree[rel.target_entity_id] = degree.get(rel.target_entity_id, 0) + 1
+
+    def _person_priority(e: ExtractedEntity) -> tuple:
+        # Higher degree first; then confidence; then name for stability
+        conf = float(e.confidence_score or 0.0)
+        return (degree.get(e.id, 0), conf, e.canonical_name or "")
+
+    ranked_persons = sorted(valid_persons or persons, key=_person_priority, reverse=True)
+    primary_person = ranked_persons[0] if ranked_persons else (entities[0] if entities else None)
+    primary_name = (
+        primary_person.canonical_name
+        if primary_person and primary_person.canonical_name
+        else "Unknown"
+    )
+    primary_degree = degree.get(primary_person.id, 0) if primary_person else 0
+
+    # #region agent log
+    try:
+        import json as _json, time as _time
+        from pathlib import Path as _Path
+        _root = _Path(__file__).resolve()
+        while _root.parent != _root and not (_root / "apps").is_dir():
+            _root = _root.parent
+        for _log_path in (_root / ".cursor" / "debug-e250be.log", _root / "debug-e250be.log"):
+            _log_path.parent.mkdir(parents=True, exist_ok=True)
+            with _log_path.open("a", encoding="utf-8") as _lf:
+                _lf.write(_json.dumps({
+                    "sessionId": "e250be",
+                    "runId": "post-fix",
+                    "hypothesisId": "PS1",
+                    "location": "cases.py:get_case_intelligence_summary",
+                    "message": "primary subject selected by degree",
+                    "data": {
+                        "primary_name": primary_name,
+                        "primary_degree": primary_degree,
+                        "top3": [
+                            {
+                                "name": p.canonical_name,
+                                "degree": degree.get(p.id, 0),
+                                "conf": float(p.confidence_score or 0),
+                            }
+                            for p in ranked_persons[:3]
+                        ],
+                    },
+                    "timestamp": int(_time.time() * 1000),
+                }) + "\n")
+    except Exception:
+        pass
+    # #endregion
 
     valid_orgs = [
         e for e in orgs
         if e.canonical_name and len(e.canonical_name) <= 60 and not e.canonical_name.strip().endswith((".", "?", "!"))
     ]
-    primary_org = valid_orgs[0].canonical_name if valid_orgs else (orgs[0].canonical_name[:60] if orgs else "None Identified")
+    # Prefer org linked to primary person when available
+    primary_org = "None Identified"
+    if primary_person:
+        linked_org_ids = set()
+        for rel in relationships:
+            if rel.source_entity_id == primary_person.id:
+                linked_org_ids.add(rel.target_entity_id)
+            if rel.target_entity_id == primary_person.id:
+                linked_org_ids.add(rel.source_entity_id)
+        linked_orgs = [o for o in (valid_orgs or orgs) if o.id in linked_org_ids]
+        if linked_orgs:
+            primary_org = linked_orgs[0].canonical_name[:60]
+    if primary_org == "None Identified":
+        primary_org = valid_orgs[0].canonical_name if valid_orgs else (orgs[0].canonical_name[:60] if orgs else "None Identified")
     primary_vehicle = vehicles[0].canonical_name if vehicles else "None Identified"
     primary_phone = phones[0].canonical_name if phones else "None Identified"
     primary_account = accounts[0].canonical_name if accounts else "None Identified"
@@ -311,24 +379,94 @@ def get_case_intelligence_summary(
     for ph in phones[:2]:
         linked_assets.append({"name": ph.canonical_name[:60], "type": "PHONE", "badge": "COMMUNICATION NODE"})
 
+    if primary_degree >= 4:
+        primary_role = "Investigative lead — high connectivity hub (requires human verification)"
+    elif primary_degree >= 2:
+        primary_role = "Investigative lead — multi-link person node (requires human verification)"
+    else:
+        primary_role = "Investigative lead — limited links in current graph (requires human verification)"
+
+    def _role_for_degree(deg: int) -> str:
+        if deg >= 4:
+            return "High-connectivity hub lead"
+        if deg >= 2:
+            return "Multi-link associate lead"
+        return "Limited-link person lead"
+
+    def _linked_org_for(person: ExtractedEntity) -> str | None:
+        linked_ids = set()
+        for rel in relationships:
+            if rel.source_entity_id == person.id:
+                linked_ids.add(rel.target_entity_id)
+            if rel.target_entity_id == person.id:
+                linked_ids.add(rel.source_entity_id)
+        for o in (valid_orgs or orgs):
+            if o.id in linked_ids and o.canonical_name:
+                return o.canonical_name[:60]
+        return None
+
+    primary_subjects = []
+    person_degrees = [degree.get(x.id, 0) for x in ranked_persons] or [0]
+    median = sorted(person_degrees)[len(person_degrees) // 2]
+    anomaly_threshold = max(3, median + 2)
+
+    for p in ranked_persons[:8]:
+        deg = degree.get(p.id, 0)
+        conf = float(p.confidence_score or 0.0)
+        # Light anomaly flag: degree unusually high vs median person degree
+        anomaly_flag = deg >= anomaly_threshold
+        if anomaly_flag:
+            anomaly_reason = (
+                f"Connectivity anomaly: {deg} extracted links vs median {median} "
+                f"among person nodes (threshold ≥ {anomaly_threshold}). "
+                "Investigative prioritization only — requires human verification; not a guilt score."
+            )
+        else:
+            anomaly_reason = (
+                f"{deg} extracted links (at or below threshold {anomaly_threshold}; "
+                f"median person degree {median}). No connectivity anomaly flag."
+            )
+        primary_subjects.append({
+            "id": p.id,
+            "name": p.canonical_name,
+            "link_degree": deg,
+            "confidence": round(conf, 2),
+            "role": _role_for_degree(deg),
+            "org": _linked_org_for(p),
+            "anomaly_flag": anomaly_flag,
+            "anomaly_reason": anomaly_reason,
+            "verification_status": p.verification_status,
+        })
+
+    case_unit = getattr(case, "description", None) or "Active unit / description not set"
+
     return {
         "case_id": str(case.id),
         "case_number": getattr(case, "case_number", case_id),
         "primary_subject": {
             "name": primary_name,
-            "role": "Subject of Interest - Network Key Node",
+            "role": primary_role,
             "org": primary_org,
             "vehicle": primary_vehicle,
             "phone": primary_phone,
             "account": primary_account,
-            "jurisdiction": getattr(case, "description", None) or "Active Jurisdiction",
-            "priority": getattr(case, "priority", "MEDIUM") + " / ELEVATED"
+            "jurisdiction": case_unit,
+            "case_unit": case_unit,
+            "priority": getattr(case, "priority", "MEDIUM") + " / ELEVATED",
+            "link_degree": primary_degree,
+            "id": primary_person.id if primary_person else None,
         },
+        "primary_subjects": primary_subjects,
         "anomaly_index": {
             "score": anomaly_score,
             "status": "Calculated from Extracted Topology",
             "confidence": "94%",
-            "model_version": "IsolationForest-GraphTopo v2.1"
+            "model_version": "IsolationForest-GraphTopo v2.1",
+            "factor_note": (
+                "Score rises with extracted entity and relationship counts "
+                f"(entities={len(entities)}, relationships={len(relationships)}). "
+                "Not a guilt score — investigative prioritization only."
+            ),
         },
         "topology_preview": {
             "node_count": len(entities),
@@ -341,130 +479,108 @@ def get_case_intelligence_summary(
 
 @router.get(
     "/{case_id}/simple",
-    summary="Get simple layman's case summary",
+    summary="Get persisted plain-language case summary (async-generated)",
 )
 def get_case_simple(
     case_id: str,
+    regenerate: bool = Query(False, description="Force regenerate in background"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
-    import csv
-    import os
-    from collections import Counter
-    
+    from apps.backend.app.services.simple_summary import (
+        STATUS_FAILED,
+        STATUS_GENERATING,
+        STATUS_NONE,
+        STATUS_PENDING,
+        STATUS_READY,
+        get_stored_simple_view,
+        schedule_simple_summary_generation,
+    )
+
+    stored = get_stored_simple_view(db, case_id)
+    if not stored:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    status = stored["status"] or STATUS_NONE
+    payload = stored.get("payload") if isinstance(stored.get("payload"), dict) else None
+
+    if regenerate or status in (STATUS_NONE, STATUS_FAILED, STATUS_PENDING):
+        schedule_simple_summary_generation(stored["case_id"], force=True)
+        status = STATUS_GENERATING
+    elif status == STATUS_GENERATING and not payload:
+        # Ensure a worker is still scheduled if a prior process died mid-run
+        schedule_simple_summary_generation(stored["case_id"], force=True)
+
+    base = {
+        "case_id": stored["case_id"],
+        "case_number": stored["case_number"],
+        "title": stored["title"],
+        "generation_status": status,
+        "generated_at": stored.get("generated_at"),
+        "error": stored.get("error") if status == STATUS_FAILED else None,
+    }
+
+    if status == STATUS_READY and payload:
+        return {
+            **base,
+            **payload,
+            "case_id": stored["case_id"],
+            "case_number": stored.get("case_number") or payload.get("case_number"),
+            "title": stored.get("title") or payload.get("title"),
+            "generation_status": STATUS_READY,
+        }
+
+    # Still generating — return shell so UI can poll
+    return {
+        **base,
+        "case_type": "Criminal Network Investigation",
+        "summary": None,
+        "timeline": [],
+        "key_people": [],
+        "key_locations": [],
+        "ai_insights": [],
+        "message": "Plain-language summary is being generated from case and graph data.",
+    }
+
+
+@router.post(
+    "/{case_id}/simple/generate",
+    summary="Trigger async Simple View generation and persist to Postgres",
+)
+def generate_case_simple(
+    case_id: str,
+    wait: bool = Query(False, description="If true, generate synchronously and return result"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    from apps.backend.app.services.simple_summary import (
+        generate_and_store_simple_summary,
+        schedule_simple_summary_generation,
+        get_stored_simple_view,
+    )
+
     case = db.query(Case).filter((Case.id == case_id) | (Case.case_number == case_id)).first()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
 
-    case_title = getattr(case, "title", "Unknown Case")
-    case_type = getattr(case, "case_type", "investigation")
-    case_status = getattr(case, "status", "under investigation")
-    incident_date = getattr(case, "incident_date", None)
-    fir_date = getattr(case, "fir_date", None)
-    arrest_date = getattr(case, "arrest_date", None)
-    
-    timeline = []
-    if incident_date:
-        timeline.append({"date": str(incident_date), "description": f"Incident reportedly occurred on {incident_date}"})
-    if fir_date:
-        timeline.append({"date": str(fir_date), "description": f"FIR registered on {fir_date}"})
-    if arrest_date:
-        timeline.append({"date": str(arrest_date), "description": f"Accused arrested on {arrest_date}"})
-    
-    timeline.sort(key=lambda x: x["date"] or "")
+    if wait:
+        result = generate_and_store_simple_summary(db, str(case.id), force=True)
+        stored = get_stored_simple_view(db, str(case.id))
+        payload = (stored or {}).get("payload") or {}
+        return {
+            "generation_status": result.get("status"),
+            "generated_at": result.get("generated_at") or (stored or {}).get("generated_at"),
+            "error": result.get("error"),
+            **payload,
+            "case_id": str(case.id),
+            "case_number": case.case_number,
+            "title": case.title,
+        }
 
-    entities = db.query(ExtractedEntity).filter(ExtractedEntity.case_id == case.id).all()
-    entity_names = {e.canonical_name for e in entities if e.canonical_name}
-
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../../"))
-    entities_csv = os.path.join(project_root, "data", "case_type_cyber", "ml", "entity_context_review_completed_v6.csv")
-    anomalies_csv = os.path.join(project_root, "data", "case_type_cyber", "ml", "anomaly_scores_cleaned_v6.csv")
-    
-    key_people = []
-    locations = []
-    ai_insights = []
-    
-    role_map = {
-        "SUSPECT_OR_ACCUSED": "Accused",
-        "VICTIM": "Victim",
-        "COMPLAINANT": "Complainant",
-        "WITNESS": "Witness",
-        "OFFICIAL_OR_INSTITUTION": "Official"
-    }
-
-    seen_people = set()
-    location_counter = Counter()
-
-    try:
-        if os.path.exists(entities_csv):
-            with open(entities_csv, "r", encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    text = row.get("original_entity_text", "")
-                    if text in entity_names:
-                        role = row.get("context_role")
-                        if role in role_map:
-                            mapped = role_map[role]
-                            if (text, mapped) not in seen_people:
-                                key_people.append({"name": text, "role": mapped})
-                                seen_people.add((text, mapped))
-                        
-                        cat = row.get("corrected_semantic_category")
-                        if cat == "LOCATION" or row.get("original_ner_entity_type") == "LOCATION":
-                            location_counter[text] += 1
-    except Exception as e:
-        print(f"Error reading entities CSV: {e}")
-
-    top_locations = [loc for loc, _ in location_counter.most_common(5)]
-    
-    victim_names = [p["name"] for p in key_people if p["role"] == "Victim"][:2]
-    accused_names = [p["name"] for p in key_people if p["role"] == "Accused"][:2]
-    
-    victim_str = ", ".join(victim_names) if victim_names else "unidentified victim(s)"
-    accused_str = ", ".join(accused_names) if accused_names else "The suspect(s)"
-    loc_str = top_locations[0] if top_locations else "an unknown location"
-    date_str = str(incident_date) if incident_date else (str(fir_date) if fir_date else "an unknown date")
-    
-    # [LLM integration point: replace this rule-based summary with an LLM call using the gathered metadata]
-    summary = f"This is a {case_type} case involving {victim_str}. The incident reportedly occurred on/near {date_str} at {loc_str}. {accused_str} is/are currently being investigated. The case is currently {case_status}."
-    
-    try:
-        if os.path.exists(anomalies_csv):
-            with open(anomalies_csv, "r", encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    text = row.get("entity_text", "")
-                    if text in entity_names:
-                        score_str = row.get("anomaly_score", "0")
-                        try:
-                            score = float(score_str)
-                        except ValueError:
-                            score = 0.0
-                        deg_str = row.get("degree", "0")
-                        try:
-                            degree = int(deg_str)
-                        except ValueError:
-                            degree = 0
-                            
-                        if score > 0.1 and len(ai_insights) < 2:
-                            ai_insights.append(f"{text} shows an unusual pattern of connections compared to other entities in this case.")
-                        if degree > 10 and len(ai_insights) < 4:
-                            ai_insights.append(f"{text} is connected to many people and events in this case; it may be a key piece of the puzzle.")
-    except Exception as e:
-        print(f"Error reading anomalies CSV: {e}")
-        
-    if not ai_insights:
-        ai_insights.append("AI insights are not available for this case yet.")
-        
-    key_people = key_people[:10]
-
+    schedule_simple_summary_generation(str(case.id), force=True)
     return {
         "case_id": str(case.id),
-        "title": case_title,
-        "case_type": case_type,
-        "summary": summary,
-        "timeline": timeline,
-        "key_people": key_people,
-        "key_locations": top_locations,
-        "ai_insights": list(set(ai_insights))[:6]
+        "case_number": case.case_number,
+        "generation_status": "GENERATING",
+        "message": "Simple View generation started asynchronously.",
     }

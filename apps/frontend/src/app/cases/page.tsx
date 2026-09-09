@@ -26,10 +26,47 @@ export default function CasesPage() {
   const [error, setError] = useState<string | null>(null);
   const [caseToDelete, setCaseToDelete] = useState<CaseResponse | null>(null);
   const [isDeletingCase, setIsDeletingCase] = useState(false);
+  const [caseToEdit, setCaseToEdit] = useState<CaseResponse | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
+
+  const openEditCase = (c: CaseResponse, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCaseToEdit(c);
+    setEditTitle(c.title || "");
+    setEditDescription(c.description || "");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!caseToEdit) return;
+    const title = editTitle.trim();
+    if (!title) {
+      toast.error("Title is required.");
+      return;
+    }
+    setIsSavingEdit(true);
+    try {
+      const updated = await api.updateCase(caseToEdit.id, {
+        title,
+        description: editDescription.trim(),
+      });
+      setCases((prev) =>
+        prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c))
+      );
+      setCaseToEdit(null);
+      toast.success("Case title and description updated.");
+    } catch (err: unknown) {
+      toast.error((err as Error)?.message || "Failed to update case.");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   const handleDeleteCaseConfirm = async () => {
     if (!caseToDelete) return;
@@ -186,6 +223,26 @@ export default function CasesPage() {
                       Created {new Date(c.created_at).toLocaleDateString()}
                     </span>
                     <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => openEditCase(c, e)}
+                        className="rounded-lg p-1.5 text-white/40 transition hover:bg-blue-500/20 hover:text-blue-300"
+                        title={`Edit title & description for ${c.case_number}`}
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                      </button>
                       <span
                         onClick={(e) => {
                           e.preventDefault();
@@ -233,6 +290,52 @@ export default function CasesPage() {
           </div>
         )}
       </div>
+
+      {caseToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className={cn(surfaceCard, "w-full max-w-lg gap-0 p-6")}>
+            <h3 className="mb-1 text-lg font-bold text-white">Edit case details</h3>
+            <p className="mb-5 text-xs text-white/45">
+              Updates the title and description shown on this card ({caseToEdit.case_number}).
+            </p>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-white/40">
+              Title
+            </label>
+            <input
+              className={cn(surfaceInput, "mb-4 w-full")}
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              maxLength={255}
+            />
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-white/40">
+              Description
+            </label>
+            <textarea
+              className={cn(surfaceInput, "mb-6 min-h-[110px] w-full resize-y")}
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={isSavingEdit}
+                onClick={() => setCaseToEdit(null)}
+                className={surfaceBtnSecondary}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSavingEdit}
+                onClick={handleSaveEdit}
+                className={surfaceBtnPrimary}
+              >
+                {isSavingEdit ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {caseToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">

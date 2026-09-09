@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ReactFlow,
   Background,
@@ -75,6 +75,23 @@ const edgeTypes = {
 
 type ViewMode = 'OVERVIEW' | 'NETWORK' | 'TIMELINE' | 'EVIDENCE';
 
+function entityMatchesSearch(
+  entity: { label?: string; type?: string; subTitle?: string; id?: string },
+  query: string
+): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return false;
+  const hay = [
+    entity.label || '',
+    entity.type || '',
+    entity.subTitle || '',
+    entity.id || '',
+  ]
+    .join(' ')
+    .toLowerCase();
+  return hay.includes(q);
+}
+
 // Dagre Layout computation with ample node separation and accurate dimensions
 const layoutElements = (nodes: Node[], edges: Edge[], direction: 'LR' | 'TB' = 'LR') => {
   const dagreGraph = new dagre.graphlib.Graph();
@@ -131,10 +148,21 @@ const layoutElements = (nodes: Node[], edges: Edge[], direction: 'LR' | 'TB' = '
 export default function CaseGraphPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const caseId = params?.caseId as string;
 
+  const initialQ = (searchParams?.get('q') || searchParams?.get('search') || '').trim();
+  const initialModeRaw = (searchParams?.get('mode') || '').toUpperCase();
+  const initialMode: ViewMode =
+    initialModeRaw === 'OVERVIEW' ||
+    initialModeRaw === 'NETWORK' ||
+    initialModeRaw === 'TIMELINE' ||
+    initialModeRaw === 'EVIDENCE'
+      ? initialModeRaw
+      : 'NETWORK';
+
   // View mode tab state
-  const [viewMode, setViewMode] = useState<ViewMode>('NETWORK');
+  const [viewMode, setViewMode] = useState<ViewMode>(initialMode);
 
   // React Flow state
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -147,13 +175,20 @@ export default function CaseGraphPage() {
   const [expandedClusters, setExpandedClusters] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [caseData, setCaseData] = useState<CaseResponse | null>(null);
+  // Stable Overview positions: collapse hides children in-place (no Dagre reflow)
+  const overviewPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+  const overviewStructureKeyRef = useRef<string>('');
+  const networkPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+  const networkStructureKeyRef = useRef<string>('');
+  const reactFlowRef = useRef<any>(null);
+  const [searchMatchCount, setSearchMatchCount] = useState(0);
 
   // Focus & Hop mode state
   const [focusRootId, setFocusRootId] = useState<string | null>(null);
   const [hopDepth, setHopDepth] = useState<number>(2);
 
-  // Filters state
-  const [searchQuery, setSearchQuery] = useState('');
+  // Filters state — seed from ?q= / ?search= (dossier deep-link)
+  const [searchQuery, setSearchQuery] = useState(initialQ);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [minConfidence, setMinConfidence] = useState(0.5);
   const [filtersCollapsed, setFiltersCollapsed] = useState(false);
@@ -181,6 +216,22 @@ export default function CaseGraphPage() {
 
   const caseLabel = caseData?.case_number || caseId;
   const caseTitle = caseData?.title || 'Select a case';
+
+  // Keep search/mode in sync when navigating from dossier deep-links
+  useEffect(() => {
+    const q = (searchParams?.get('q') || searchParams?.get('search') || '').trim();
+    if (q && q !== searchQuery) setSearchQuery(q);
+    const modeRaw = (searchParams?.get('mode') || '').toUpperCase();
+    if (
+      modeRaw === 'OVERVIEW' ||
+      modeRaw === 'NETWORK' ||
+      modeRaw === 'TIMELINE' ||
+      modeRaw === 'EVIDENCE'
+    ) {
+      setViewMode(modeRaw);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to URL changes
+  }, [searchParams]);
 
   // Fetch initial graph data
   const fetchGraphData = useCallback(async () => {
@@ -214,12 +265,19 @@ export default function CaseGraphPage() {
       setRelationships(normalized.relationships);
       setClusters(normalized.clusters);
 
-      // Default expand all clusters in network mode
+      // Default expand all clusters (Overview sectors stay open until tapped)
       const exp: Record<string, boolean> = {};
       normalized.clusters.forEach((c) => {
         exp[c.key] = true;
       });
       setExpandedClusters(exp);
+      overviewPositionsRef.current = {};
+      overviewStructureKeyRef.current = '';
+      networkPositionsRef.current = {};
+      networkStructureKeyRef.current = '';
+      // #region agent log
+      fetch('http://127.0.0.1:7267/ingest/e2dbf843-7e56-4e83-b0d0-931cc70abd78',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e250be'},body:JSON.stringify({sessionId:'e250be',runId:'post-fix',hypothesisId:'OV1',location:'graph/page.tsx:fetchGraphData',message:'clusters default-expanded',data:{caseId,clusterKeys:normalized.clusters.map((c)=>c.key),allExpanded:true},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
     } catch (err) {
       console.error('Failed to load intelligence graph data:', err);
     } finally {
@@ -308,11 +366,10 @@ export default function CaseGraphPage() {
     if (entities.length === 0) return;
 
     if (viewMode === 'OVERVIEW') {
-      // MODE 1: Case Overview Graph (Case Node -> Cluster Category Nodes -> Top Samples)
+      // MODE 1: Case Overview — always layout as fully expanded; collapse only hides children
       const overviewNodes: Node[] = [];
       const overviewEdges: Edge[] = [];
 
-      // 1. Case Hub Node
       overviewNodes.push({
         id: 'case-root',
         type: 'caseHub',
@@ -325,9 +382,11 @@ export default function CaseGraphPage() {
         position: { x: 0, y: 0 },
       });
 
-      // 2. Cluster Sector Nodes
       clusters.forEach((cluster) => {
         const clusterNodeId = `cluster-node-${cluster.key}`;
+        // Missing keys default to expanded
+        const isExpanded = expandedClusters[cluster.key] !== false;
+
         overviewNodes.push({
           id: clusterNodeId,
           type: 'clusterGroup',
@@ -336,15 +395,20 @@ export default function CaseGraphPage() {
             label: cluster.label,
             description: cluster.description,
             count: cluster.count,
-            isExpanded: !!expandedClusters[cluster.key],
+            isExpanded,
             onToggle: () => {
-              setExpandedClusters((prev) => ({ ...prev, [cluster.key]: !prev[cluster.key] }));
+              setExpandedClusters((prev) => {
+                const currently = prev[cluster.key] !== false;
+                // #region agent log
+                fetch('http://127.0.0.1:7267/ingest/e2dbf843-7e56-4e83-b0d0-931cc70abd78',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e250be'},body:JSON.stringify({sessionId:'e250be',runId:'post-fix',hypothesisId:'OV2',location:'graph/page.tsx:onToggleCluster',message:'cluster expand toggle (no reflow)',data:{clusterKey:cluster.key,wasExpanded:currently,willExpand:!currently},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+                return { ...prev, [cluster.key]: !currently };
+              });
             },
           },
           position: { x: 0, y: 0 },
         });
 
-        // Edge: Case -> Cluster
         overviewEdges.push({
           id: `case-to-${cluster.key}`,
           source: 'case-root',
@@ -355,42 +419,74 @@ export default function CaseGraphPage() {
           markerEnd: { type: MarkerType.ArrowClosed, color: '#3b82f6' },
         });
 
-        // If expanded, render top 3 entities from this cluster
-        if (expandedClusters[cluster.key]) {
-          const clusterEntities = entities
-            .filter((e) => {
-              const k = e.type === 'BANK_ACCOUNT' ? 'ACCOUNT' : (e.type === 'PHONE' ? 'PHONE_NUMBER' : e.type);
-              return k === cluster.key;
-            })
-            .slice(0, 3);
+        // Always reserve layout slots for top samples; hide when collapsed
+        const clusterEntities = entities
+          .filter((e) => {
+            const k = e.type === 'BANK_ACCOUNT' ? 'ACCOUNT' : (e.type === 'PHONE' ? 'PHONE_NUMBER' : e.type);
+            return k === cluster.key;
+          })
+          .slice(0, 3);
 
-          clusterEntities.forEach((ent) => {
-            overviewNodes.push({
-              id: ent.id,
-              type: 'entity',
-              data: {
-                ...ent,
-                label: ent.label,
-                entity_type: ent.type,
-              },
-              position: { x: 0, y: 0 },
-            });
-
-            overviewEdges.push({
-              id: `${clusterNodeId}-to-${ent.id}`,
-              source: clusterNodeId,
-              target: ent.id,
-              type: 'smoothstep',
-              style: { stroke: '#64748b', strokeWidth: 1.5, strokeDasharray: '4,4' },
-              markerEnd: { type: MarkerType.ArrowClosed, color: '#64748b' },
-            });
+        clusterEntities.forEach((ent) => {
+          const isSearchMatch = entityMatchesSearch(ent, searchQuery);
+          const hasSearch = searchQuery.trim().length > 0;
+          overviewNodes.push({
+            id: ent.id,
+            type: 'entity',
+            hidden: !isExpanded,
+            data: {
+              ...ent,
+              label: ent.label,
+              entity_type: ent.type,
+              isSearchMatch,
+              isFaded: hasSearch && !isSearchMatch,
+            },
+            position: { x: 0, y: 0 },
           });
-        }
+
+          overviewEdges.push({
+            id: `${clusterNodeId}-to-${ent.id}`,
+            source: clusterNodeId,
+            target: ent.id,
+            type: 'smoothstep',
+            hidden: !isExpanded,
+            style: {
+              stroke: isSearchMatch ? '#fbbf24' : '#64748b',
+              strokeWidth: isSearchMatch ? 2.2 : 1.5,
+              strokeDasharray: '4,4',
+              opacity: hasSearch && !isSearchMatch ? 0.25 : 0.9,
+            },
+            markerEnd: { type: MarkerType.ArrowClosed, color: isSearchMatch ? '#fbbf24' : '#64748b' },
+          });
+        });
       });
 
-      const layouted = layoutElements(overviewNodes, overviewEdges, 'TB');
-      setNodes(layouted.nodes);
-      setEdges(layouted.edges);
+      const structureKey = `${caseId}|${clusters.map((c) => `${c.key}:${c.count}`).join(',')}|e${entities.length}`;
+      const needsRelayout =
+        structureKey !== overviewStructureKeyRef.current ||
+        Object.keys(overviewPositionsRef.current).length === 0;
+
+      if (needsRelayout) {
+        // Layout with all children visible so space is reserved for collapsed sectors
+        const layoutInput = overviewNodes.map((n) => ({ ...n, hidden: false }));
+        const layouted = layoutElements(layoutInput, overviewEdges, 'TB');
+        overviewStructureKeyRef.current = structureKey;
+        overviewPositionsRef.current = Object.fromEntries(
+          layouted.nodes.map((n) => [n.id, n.position])
+        );
+        // #region agent log
+        fetch('http://127.0.0.1:7267/ingest/e2dbf843-7e56-4e83-b0d0-931cc70abd78',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e250be'},body:JSON.stringify({sessionId:'e250be',runId:'post-fix',hypothesisId:'OV1',location:'graph/page.tsx:overviewLayout',message:'overview dagre layout computed',data:{structureKey,nodeCount:layouted.nodes.length,edgeCount:overviewEdges.length},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+      }
+
+      const positionedNodes = overviewNodes.map((n) => ({
+        ...n,
+        position: overviewPositionsRef.current[n.id] || n.position,
+      }));
+      const overviewMatches = positionedNodes.filter((n) => n.type === 'entity' && n.data?.isSearchMatch).length;
+      setSearchMatchCount(searchQuery.trim() ? overviewMatches : 0);
+      setNodes(positionedNodes);
+      setEdges(overviewEdges);
     } else if (viewMode === 'NETWORK') {
       // MODE 2: Full Progressive Network Graph with Focus Mode & N-Hop Filtering
       let visibleNodeIds = new Set(entities.map((e) => e.id));
@@ -404,33 +500,33 @@ export default function CaseGraphPage() {
         hopMap = focusResult.hopDistances;
       }
 
-      // Filter entities
+      const hasSearch = searchQuery.trim().length > 0;
+
+      // Type filters only — search highlights in place (does not remove nodes)
       const filteredEntities = entities.filter((e) => {
-        // Search query
-        if (searchQuery.trim() && !e.label.toLowerCase().includes(searchQuery.toLowerCase())) {
-          return false;
-        }
-        // Type filter
         const key = e.type === 'BANK_ACCOUNT' ? 'ACCOUNT' : (e.type === 'PHONE' ? 'PHONE_NUMBER' : e.type);
         if (typeFilters[key] === false) return false;
-
         return true;
       });
 
       const filteredNodeIdSet = new Set(filteredEntities.map((e) => e.id));
 
-      // Filter relationships
       const filteredRelationships = relationships.filter((r) => {
         if (verifiedOnly && r.status !== 'ACCEPTED' && r.status !== 'CORRECTED') return false;
         if (r.confidence < minConfidence) return false;
         return filteredNodeIdSet.has(r.source) && filteredNodeIdSet.has(r.target);
       });
 
-      // Map to React Flow nodes with focus state
+      const matchIds = new Set(
+        filteredEntities.filter((e) => entityMatchesSearch(e, searchQuery)).map((e) => e.id)
+      );
+      setSearchMatchCount(hasSearch ? matchIds.size : 0);
+
       const flowNodes: Node[] = filteredEntities.map((e) => {
         const isFocusRoot = e.id === focusRootId;
         const isInHop = focusRootId ? visibleNodeIds.has(e.id) : true;
-        const isFaded = focusRootId ? !isInHop : false;
+        const isSearchMatch = matchIds.has(e.id);
+        const isFaded = (focusRootId ? !isInHop : false) || (hasSearch && !isSearchMatch);
 
         return {
           id: e.id,
@@ -441,6 +537,7 @@ export default function CaseGraphPage() {
             entity_type: e.type,
             isFocusRoot,
             isFaded,
+            isSearchMatch,
             hopDistance: hopMap.get(e.id),
           },
           position: { x: 0, y: 0 },
@@ -454,15 +551,14 @@ export default function CaseGraphPage() {
         targetEdgeCounts[r.target] = (targetEdgeCounts[r.target] || 0) + 1;
       });
 
-      // Map to React Flow edges with visual hierarchy and staggered HTML pill badges
       const flowEdges: Edge[] = filteredRelationships.map((r) => {
         const count = targetEdgeCounts[r.target] || 1;
         const idx = targetEdgeIndex[r.target] || 0;
         targetEdgeIndex[r.target] = idx + 1;
-        // Stagger ratio between 0.35 and 0.65 to ensure labels on parallel lines never collide
         const labelRatio = count === 1 ? 0.5 : 0.35 + (idx / Math.max(1, count - 1)) * 0.3;
 
-        const isFaded = focusRootId ? !visibleEdgeIds.has(r.id) : false;
+        const touchesMatch = matchIds.has(r.source) || matchIds.has(r.target);
+        const isFaded = (focusRootId ? !visibleEdgeIds.has(r.id) : false) || (hasSearch && !touchesMatch);
         const isStrong = r.weight === 'strong';
         const isMedium = r.weight === 'medium';
 
@@ -471,13 +567,18 @@ export default function CaseGraphPage() {
         let isAnimated = false;
         let dashPattern: string | undefined = '4,4';
 
-        if (isStrong) {
-          strokeColor = '#10b981'; // Emerald
+        if (hasSearch && touchesMatch) {
+          strokeColor = '#fbbf24';
+          strokeWidth = 2.4;
+          isAnimated = true;
+          dashPattern = undefined;
+        } else if (isStrong) {
+          strokeColor = '#10b981';
           strokeWidth = 2.4;
           isAnimated = true;
           dashPattern = undefined;
         } else if (isMedium) {
-          strokeColor = '#3b82f6'; // Blue
+          strokeColor = '#3b82f6';
           strokeWidth = 1.8;
           dashPattern = undefined;
         }
@@ -506,9 +607,42 @@ export default function CaseGraphPage() {
         };
       });
 
-      const layouted = layoutElements(flowNodes, flowEdges, 'LR');
-      setNodes(layouted.nodes);
-      setEdges(layouted.edges);
+      const structureKey = [
+        caseId,
+        filteredEntities.map((e) => e.id).join(','),
+        filteredRelationships.map((r) => r.id).join(','),
+        focusRootId || '',
+        hopDepth,
+        verifiedOnly,
+        minConfidence,
+        JSON.stringify(typeFilters),
+      ].join('|');
+
+      const needsRelayout =
+        structureKey !== networkStructureKeyRef.current ||
+        Object.keys(networkPositionsRef.current).length === 0;
+
+      if (needsRelayout) {
+        const layouted = layoutElements(flowNodes, flowEdges, 'LR');
+        networkStructureKeyRef.current = structureKey;
+        networkPositionsRef.current = Object.fromEntries(
+          layouted.nodes.map((n) => [n.id, n.position])
+        );
+      }
+
+      const positioned = flowNodes.map((n) => ({
+        ...n,
+        position: networkPositionsRef.current[n.id] || n.position,
+      }));
+
+      // #region agent log
+      if (hasSearch) {
+        fetch('http://127.0.0.1:7267/ingest/e2dbf843-7e56-4e83-b0d0-931cc70abd78',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e250be'},body:JSON.stringify({sessionId:'e250be',runId:'post-fix',hypothesisId:'SR1',location:'graph/page.tsx:networkSearch',message:'search highlight applied',data:{query:searchQuery.trim().slice(0,40),matchCount:matchIds.size,totalNodes:positioned.length,relayout:needsRelayout},timestamp:Date.now()})}).catch(()=>{});
+      }
+      // #endregion
+
+      setNodes(positioned);
+      setEdges(flowEdges);
     }
   }, [
     entities,
@@ -528,6 +662,23 @@ export default function CaseGraphPage() {
     setNodes,
     setEdges,
   ]);
+
+  // Pinpoint search matches on the canvas (zoom to highlighted nodes)
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q || !reactFlowRef.current) return;
+    const matchNodes = nodes.filter((n) => n.type === 'entity' && n.data?.isSearchMatch && !n.hidden);
+    if (matchNodes.length === 0) return;
+    const t = window.setTimeout(() => {
+      reactFlowRef.current?.fitView({
+        nodes: matchNodes.map((n) => ({ id: n.id })),
+        padding: 0.45,
+        duration: 450,
+        maxZoom: 1.15,
+      });
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [searchQuery, nodes]);
 
   // Handle node selection for Focus Mode
   const onNodeClick = useCallback(
@@ -727,8 +878,20 @@ export default function CaseGraphPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search entity, phone..."
-            className={cn(surfaceInput, 'py-1.5 pl-9 text-xs')}
+            className={cn(surfaceInput, 'py-1.5 pl-9 pr-14 text-xs')}
           />
+          {searchQuery.trim() ? (
+            <span
+              className={cn(
+                'absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold',
+                searchMatchCount > 0
+                  ? 'border border-amber-400/40 bg-amber-500/20 text-amber-300'
+                  : 'border border-white/10 bg-white/5 text-white/40'
+              )}
+            >
+              {searchMatchCount}
+            </span>
+          ) : null}
         </div>
       </header>
 
@@ -745,6 +908,9 @@ export default function CaseGraphPage() {
               onEdgesChange={onEdgesChange}
               onNodeClick={onNodeClick}
               onEdgeClick={onEdgeClick}
+              onInit={(instance) => {
+                reactFlowRef.current = instance;
+              }}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               fitView

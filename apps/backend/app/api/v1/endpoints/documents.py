@@ -320,6 +320,21 @@ def list_documents(
 
     doc_repo = DocumentRepository(db)
     docs, total = doc_repo.list_by_case(case_id=str(case.id), skip=skip, limit=limit)
+
+    # Heal stuck PROCESSING rows that already have extracted candidates
+    from apps.backend.app.models.entity import ExtractedEntity
+    healed = False
+    for d in docs:
+        if d.status != "PROCESSING":
+            continue
+        ent_count = db.query(ExtractedEntity).filter(ExtractedEntity.document_id == d.id).count()
+        if ent_count > 0:
+            d.status = "PROCESSED"
+            d.error_message = None
+            healed = True
+    if healed:
+        db.commit()
+
     return DocumentListResponse(
         total=total,
         documents=[DocumentResponse.model_validate(d) for d in docs],

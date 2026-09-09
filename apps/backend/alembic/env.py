@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 from apps.backend.app.db.base import Base  # noqa: E402
+from apps.backend.app.core.config import settings  # noqa: E402
 
 # Import all models so Alembic's autogenerate can detect them
 from apps.backend.app.models.user import User  # noqa: E402, F401
@@ -28,6 +29,10 @@ from apps.backend.app.models.case_access import CaseAccess  # noqa: E402, F401
 
 config = context.config
 
+# Prefer runtime DATABASE_URL (apps/backend/.env) over alembic.ini sqlite default
+if settings.DATABASE_URL:
+    config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
@@ -36,7 +41,7 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
-    url = config.get_main_option("sqlalchemy.url")
+    url = config.get_main_option("sqlalchemy.url") or settings.DATABASE_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -50,8 +55,10 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
+    configuration = config.get_section(config.config_ini_section, {}) or {}
+    configuration["sqlalchemy.url"] = settings.DATABASE_URL
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

@@ -9,13 +9,16 @@ logger = logging.getLogger(__name__)
 
 # Allow-lists to prevent Cypher injection via dynamic labels/types
 VALID_NODE_LABELS = {
-    "Person", "Phone", "Vehicle", "Location", "Organization", "BankAccount", 
-    "Case", "Document", "Event", "Entity"
+    "Person", "Phone", "Vehicle", "Location", "Organization", "BankAccount",
+    "Case", "Document", "Event", "Entity", "Money",
 }
 
 VALID_RELATIONSHIP_TYPES = {
-    "CALLED", "USED", "OWNS", "VISITED", "TRANSFERRED_TO", "INVOLVED_IN", 
-    "MENTIONED_IN", "CONNECTED_TO", "OCCURRED_AT"
+    "CALLED", "USED", "OWNS", "VISITED", "TRANSFERRED_TO", "INVOLVED_IN",
+    "MENTIONED_IN", "CONNECTED_TO", "OCCURRED_AT",
+    # Extraction / Gemini relation types
+    "COMMUNICATED_WITH", "TRANSFERRED", "OWNS_ACCOUNT", "DIRECTOR_OF",
+    "EMPLOYED_BY", "DRIVES", "RESIDES_AT", "ASSOCIATED_WITH", "LOCATED_AT",
 }
 
 # Mapping of specific labels to their stable ID property names
@@ -29,8 +32,45 @@ STABLE_ID_MAP = {
     "Case": "case_id",
     "Document": "document_id",
     "Event": "event_id",
+    "Money": "money_id",
+    "Entity": "entity_id",
 }
 
+# Extraction entity_type → Neo4j node label (capitalize breaks PHONE_NUMBER → Phone_number)
+ENTITY_TYPE_TO_LABEL = {
+    "PERSON": "Person",
+    "PHONE_NUMBER": "Phone",
+    "PHONE": "Phone",
+    "ACCOUNT": "BankAccount",
+    "BANK_ACCOUNT": "BankAccount",
+    "VEHICLE": "Vehicle",
+    "LOCATION": "Location",
+    "ORGANIZATION": "Organization",
+    "MONEY": "Money",
+    "DATE": "Event",
+}
+
+REL_TYPE_ALIASES = {
+    "TRANSFERRED_FUNDS": "TRANSFERRED",
+    "TRANSFER": "TRANSFERRED",
+    "CALL_MADE": "CALLED",
+    "CALLS": "CALLED",
+    "CONNECTED": "CONNECTED_TO",
+    "ASSOCIATED": "ASSOCIATED_WITH",
+}
+
+
+def map_entity_type_to_label(entity_type: str) -> str:
+    key = (entity_type or "").strip().upper()
+    return ENTITY_TYPE_TO_LABEL.get(key, "Entity")
+
+
+def map_relation_type(relation_type: str) -> str:
+    key = (relation_type or "ASSOCIATED_WITH").strip().upper().replace(" ", "_")
+    key = REL_TYPE_ALIASES.get(key, key)
+    if key not in VALID_RELATIONSHIP_TYPES:
+        return "CONNECTED_TO"
+    return key
 
 class GraphRepository:
     """Encapsulates Neo4j Cypher operations with safe parameterization."""

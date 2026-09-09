@@ -139,17 +139,13 @@ export function AppShell({ children }: AppShellProps) {
         group: "Investigation",
         match: (p) => p === "/evidence" || p.includes("/evidence"),
       },
-      ...(currentCaseId
-        ? [
-            {
-              name: "Team & Tasks",
-              href: `/cases/${currentCaseId}/collaboration`,
-              icon: Users,
-              group: "Investigation",
-              match: (p: string) => p.includes("/collaboration"),
-            },
-          ]
-        : []),
+      {
+        name: "Team & Tasks",
+        href: currentCaseId ? `/cases/${currentCaseId}/collaboration` : "/team",
+        icon: Users,
+        group: "Investigation",
+        match: (p: string) => p === "/team" || p.includes("/collaboration"),
+      },
       {
         name: "Verification",
         href: "/audit",
@@ -208,37 +204,51 @@ export function AppShell({ children }: AppShellProps) {
               collapsed ? "flex-col gap-3" : "gap-3"
             )}
           >
-            <button
-              type="button"
-              onClick={toggle}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.1] bg-white/[0.04] text-white/60 hover:bg-white/[0.08] hover:text-white"
-            >
-              {collapsed ? (
-                <PanelLeftOpen className="h-4 w-4" />
-              ) : (
-                <PanelLeftClose className="h-4 w-4" />
-              )}
-            </button>
-            {!collapsed && (
-              <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
-                <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.12] bg-[#0b101e] shadow-md">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/logo.png"
-                    alt="GoyendaBondhu Logo"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-white">
-                    GoyendaBondhu
-                  </p>
-                  <p className="truncate text-[11px] text-white/40">
-                    Criminal Network Analysis
-                  </p>
-                </div>
-              </Link>
+            {collapsed ? (
+              <button
+                type="button"
+                onClick={toggle}
+                aria-label="Expand sidebar"
+                title="Expand sidebar"
+                className="group relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.12] bg-[#0b101e] shadow-md transition hover:border-blue-500/40 hover:bg-blue-600/15"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo.png"
+                  alt="GoyendaBondhu Logo"
+                  className="h-full w-full object-cover transition-opacity duration-150 group-hover:opacity-0"
+                />
+                <PanelLeftOpen className="pointer-events-none absolute h-4 w-4 text-blue-300 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={toggle}
+                  aria-label="Collapse sidebar"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.1] bg-white/[0.04] text-white/60 hover:bg-white/[0.08] hover:text-white"
+                >
+                  <PanelLeftClose className="h-4 w-4" />
+                </button>
+                <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.12] bg-[#0b101e] shadow-md">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/logo.png"
+                      alt="GoyendaBondhu Logo"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">
+                      GoyendaBondhu
+                    </p>
+                    <p className="truncate text-[11px] text-white/40">
+                      Criminal Network Analysis
+                    </p>
+                  </div>
+                </Link>
+              </>
             )}
           </div>
           {!collapsed && (

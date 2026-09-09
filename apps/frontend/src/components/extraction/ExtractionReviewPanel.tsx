@@ -89,21 +89,26 @@ export default function ExtractionReviewPanel({ documentId, caseId }: Props) {
   };
 
   const handleSync = async () => {
+    const toastId = "neo4j-sync-progress";
     try {
       setSyncStatus(null);
+      toast.loading("Syncing accepted candidates to Neo4j…", { id: toastId });
       const data = await api.syncApprovedCandidates(targetId, targetType);
       const isSuccess = data?.status === "SUCCESS";
-      setSyncStatus({
-        message: isSuccess 
-          ? "Successfully synced approved candidates to graph." 
-          : `Sync status: ${data?.status || 'QUEUED'} (${data?.reason || 'Graph synchronization stored'})`,
-        isSuccess,
-      });
+      const msg = isSuccess
+        ? `Synced to graph${data?.synced_entities != null ? ` — ${data.synced_entities} entities` : ""}${data?.synced_relationships != null ? `, ${data.synced_relationships} links` : ""}.`
+        : `Sync status: ${data?.status || "QUEUED"} (${data?.reason || "Graph synchronization stored"})`;
+      setSyncStatus({ message: msg, isSuccess });
+      if (isSuccess) toast.success(msg, { id: toastId });
+      else toast.error(msg, { id: toastId });
     } catch (err: unknown) {
-      setSyncStatus({
-        message: `Graph synchronization offline: ${err instanceof Error ? err.message : String(err)}`,
-        isSuccess: false,
-      });
+      const raw = err instanceof Error ? err.message : String(err);
+      const timedOut = /timed out|abort/i.test(raw);
+      const message = timedOut
+        ? "Neo4j sync is still running or took too long. Refresh and retry — data may already be partially synced."
+        : `Graph sync failed: ${raw}`;
+      setSyncStatus({ message, isSuccess: false });
+      toast.error(message, { id: toastId });
     }
   };
 

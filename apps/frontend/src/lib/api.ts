@@ -199,9 +199,32 @@ export const api = {
     return handleResponse<any>(response);
   },
 
-  async getCaseSimple(caseId: string): Promise<any> {
-    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/simple`);
+  async getCaseSimple(caseId: string, regenerate = false): Promise<any> {
+    const qs = regenerate ? '?regenerate=true' : '';
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/simple${qs}`);
     return handleResponse<any>(response);
+  },
+
+  async generateCaseSimple(caseId: string, wait = false): Promise<any> {
+    const qs = wait ? '?wait=true' : '';
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/cases/${caseId}/simple/generate${qs}`,
+      { method: 'POST' },
+      wait ? 300000 : 30000
+    );
+    return handleResponse<any>(response);
+  },
+
+  async updateCase(
+    caseId: string,
+    data: { title?: string; description?: string; status?: string; priority?: string }
+  ): Promise<CaseResponse> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<CaseResponse>(response);
   },
 
   async getDashboardStats(caseId?: string, timeRange?: string): Promise<DashboardOverviewStats> {
@@ -472,10 +495,11 @@ export const api = {
       : `${API_BASE_URL}/cases/${docOrCaseId}/sync-approved`;
 
     // #region agent log
-    fetch('http://127.0.0.1:7267/ingest/e2dbf843-7e56-4e83-b0d0-931cc70abd78',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e250be'},body:JSON.stringify({sessionId:'e250be',runId:'post-fix',hypothesisId:'H',location:'api.ts:syncApprovedCandidates',message:'sync route selected',data:{docOrCaseId,scope,isDocument,url},timestamp:Date.now()})}).catch(()=>{});
+    fetch('http://127.0.0.1:7267/ingest/e2dbf843-7e56-4e83-b0d0-931cc70abd78',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e250be'},body:JSON.stringify({sessionId:'e250be',runId:'post-fix',hypothesisId:'S1',location:'api.ts:syncApprovedCandidates',message:'sync route selected',data:{docOrCaseId,scope,isDocument,url,timeoutMs:300000},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
 
-    const response = await fetchWithTimeout(url, { method: "POST" });
+    // Neo4j case sync can take well over 15s for dozens of ACCEPTED candidates
+    const response = await fetchWithTimeout(url, { method: "POST" }, 300000);
     return handleResponse<any>(response);
   },
 
@@ -536,6 +560,39 @@ export const api = {
   async getCaseTeam(caseId: string): Promise<any[]> {
     const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/team`);
     return handleResponse<any[]>(response);
+  },
+  async listCaseOfficers(caseId: string): Promise<any[]> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/officers`);
+    return handleResponse<any[]>(response);
+  },
+  async listAssignableEntities(caseId: string, entityType?: string): Promise<any[]> {
+    const qs = entityType ? `?entity_type=${encodeURIComponent(entityType)}` : '';
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/cases/${caseId}/assignable-entities${qs}`
+    );
+    return handleResponse<any[]>(response);
+  },
+  async listEntityAssignments(caseId: string): Promise<any[]> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/entity-assignments`);
+    return handleResponse<any[]>(response);
+  },
+  async createEntityAssignment(
+    caseId: string,
+    data: { entity_id: string; assigned_to: string; notes?: string }
+  ): Promise<any> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/entity-assignments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(response);
+  },
+  async releaseEntityAssignment(caseId: string, assignmentId: string): Promise<any> {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/cases/${caseId}/entity-assignments/${assignmentId}`,
+      { method: 'DELETE' }
+    );
+    return handleResponse<any>(response);
   },
   async addTeamMember(caseId: string, data: { user_id: string; case_role: string; reason?: string }): Promise<any> {
     const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/team`, {

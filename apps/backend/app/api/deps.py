@@ -175,7 +175,8 @@ CASE_ROLE_PERMISSIONS = {
     },
     CaseRole.INVESTIGATOR: {
         Permission.VIEW_CASE, Permission.UPLOAD_EVIDENCE, Permission.CREATE_NOTES, 
-        Permission.CREATE_COMMENTS, Permission.CREATE_TASKS, Permission.UPDATE_OWN_TASKS, 
+        Permission.CREATE_COMMENTS, Permission.CREATE_TASKS, Permission.ASSIGN_TASKS,
+        Permission.UPDATE_OWN_TASKS, 
         Permission.REVIEW_ASSIGNED_CANDIDATES, Permission.PROPOSE_GRAPH_LINKS, Permission.VIEW_CASE_AUDIT,
     },
     CaseRole.ANALYST: {

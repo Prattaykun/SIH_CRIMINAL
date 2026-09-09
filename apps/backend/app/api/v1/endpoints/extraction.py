@@ -413,39 +413,50 @@ def get_extraction_status(document_id: str, db: Session = Depends(get_db)):
         stage = "failed"
         message = raw_msg or "Extraction failed"
 
-    # Heal stuck PROCESSING when candidates already exist (prior extract finished without status flip)
-    if doc.status == "PROCESSING" and entity_count > 0 and not raw_msg.startswith("STAGE:"):
-        doc.status = "PROCESSED"
-        doc.error_message = None
-        db.commit()
-        stage = "complete"
-        message = "Extraction complete"
-        # #region agent log
-        try:
-            import json as _json, time as _time
-            from pathlib import Path as _Path
-            _root = _Path(__file__).resolve()
-            while _root.parent != _root and not (_root / "apps").is_dir():
-                _root = _root.parent
-            for _log_path in (_root / ".cursor" / "debug-e250be.log", _root / "debug-e250be.log"):
-                _log_path.parent.mkdir(parents=True, exist_ok=True)
-                with _log_path.open("a", encoding="utf-8") as _lf:
-                    _lf.write(_json.dumps({
-                        "sessionId": "e250be",
-                        "runId": "pre-fix",
-                        "hypothesisId": "P2",
-                        "location": "extraction.py:get_extraction_status",
-                        "message": "healed stuck PROCESSING document",
-                        "data": {
-                            "document_id": document_id,
-                            "entity_count": entity_count,
-                            "relationship_count": relationship_count,
-                        },
-                        "timestamp": int(_time.time() * 1000),
-                    }) + "\n")
-        except Exception:
-            pass
-        # #endregion
+    # Heal stuck PROCESSING when candidates already exist (worker/reload killed after writes)
+    if doc.status == "PROCESSING" and entity_count > 0:
+        gemini_ents = db.query(ExtractedEntity).filter(
+            ExtractedEntity.document_id == document_id,
+            ExtractedEntity.extraction_provider.in_(["gemini_refiner", "gemini_timeline"]),
+        ).count()
+        should_heal = (
+            not raw_msg.startswith("STAGE:")
+            or stage in ("neo4j", "complete", "gemini", "hybrid_nlp")
+            or gemini_ents > 0
+        )
+        if should_heal:
+            doc.status = "PROCESSED"
+            doc.error_message = None
+            db.commit()
+            stage = "complete"
+            message = "Extraction complete"
+            # #region agent log
+            try:
+                import json as _json, time as _time
+                from pathlib import Path as _Path
+                _root = _Path(__file__).resolve()
+                while _root.parent != _root and not (_root / "apps").is_dir():
+                    _root = _root.parent
+                for _log_path in (_root / ".cursor" / "debug-e250be.log", _root / "debug-e250be.log"):
+                    _log_path.parent.mkdir(parents=True, exist_ok=True)
+                    with _log_path.open("a", encoding="utf-8") as _lf:
+                        _lf.write(_json.dumps({
+                            "sessionId": "e250be",
+                            "runId": "post-fix",
+                            "hypothesisId": "P2",
+                            "location": "extraction.py:get_extraction_status",
+                            "message": "healed stuck PROCESSING document",
+                            "data": {
+                                "document_id": document_id,
+                                "entity_count": entity_count,
+                                "relationship_count": relationship_count,
+                                "gemini_ents": gemini_ents,
+                            },
+                            "timestamp": int(_time.time() * 1000),
+                        }) + "\n")
+            except Exception:
+                pass
+            # #endregion
 
     return {
         "document_id": document_id,
