@@ -41,13 +41,16 @@ class CaseRepository:
         return case
 
     def get_by_id(self, case_id: str) -> Case | None:
-        """Retrieve a single case by its UUID."""
+        """Retrieve a single case by its UUID or case number."""
         import uuid
         try:
             val = uuid.UUID(case_id)
-            return self.db.query(Case).filter(Case.id == str(val)).first()
+            case = self.db.query(Case).filter(Case.id == str(val)).first()
+            if case is not None:
+                return case
         except ValueError:
-            return None
+            pass
+        return self.get_by_case_number(case_id)
 
     def get_by_case_number(self, case_number: str) -> Case | None:
         """Retrieve a single case by its unique case number."""

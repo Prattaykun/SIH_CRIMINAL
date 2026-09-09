@@ -13,7 +13,6 @@ import {
   Clock,
   ExternalLink,
   ArrowRight,
-  Sparkles,
 } from 'lucide-react';
 
 interface RelationshipEvidenceDrawerProps {

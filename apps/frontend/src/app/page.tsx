@@ -2,35 +2,37 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import {
+  ShieldAlert,
+  Search,
+  RefreshCw,
+  ArrowUpRight,
+  Shield,
+  FileText,
   Activity,
   Network,
-  Share2,
-  Landmark,
-  Radio,
-  FileText,
+  RotateCcw,
+  SlidersHorizontal,
+  ChevronDown,
+  Layers,
   CheckCircle2,
   Clock,
   AlertTriangle,
-  TrendingUp,
-  ArrowUpRight,
-  Search,
-  RefreshCw,
-  Layers,
-  Eye,
-  ShieldCheck,
-  AlertCircle,
   GitMerge,
+  UserCheck,
+  Landmark,
+  Radio,
+  Share2,
+  Plus,
   ExternalLink,
-  Shield,
-  ShieldAlert,
-  BarChart3,
   ChevronRight,
+  TrendingUp,
 } from 'lucide-react';
 import { api, DashboardOverviewStats } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { getStoredToken } from '@/lib/auth';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -57,18 +59,16 @@ const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-    },
+    transition: { staggerChildren: 0.05 },
   },
 };
 
 const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 12 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4 },
+    transition: { duration: 0.35 },
   },
 };
 
@@ -81,12 +81,11 @@ export default function DashboardOverview() {
   // Operational Filters
   const [selectedCaseId, setSelectedCaseId] = useState<string>('all');
   const [timeRange, setTimeRange] = useState<string>('30d');
-  const [activeTelemetryTab, setActiveTelemetryTab] = useState<'topology' | 'velocity' | 'entities'>('topology');
 
-  // Cases Table Sorting & Filter
-  const [sortBy, setSortBy] = useState<'priority' | 'activity'>('priority');
+  // Cases Table Search, Filters & Sorting
   const [tableSearch, setTableSearch] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'HIGH_PRIORITY'>('ALL');
+  const [sortBy, setSortBy] = useState<'priority' | 'activity'>('priority');
 
   // Fetch Dashboard Stats from Backend
   const loadDashboardData = async () => {
@@ -108,10 +107,10 @@ export default function DashboardOverview() {
         const casesList = casesRes.cases || [];
         setStats({
           total_cases: casesList.length,
-          active_investigations: casesList.filter(c => c.status === 'ACTIVE').length,
+          active_investigations: casesList.filter((c) => c.status === 'ACTIVE').length,
           pending_verifications: 32,
           entities_extracted: 28,
-          recent_cases: casesList.slice(0, 5).map(c => ({
+          recent_cases: casesList.slice(0, 5).map((c) => ({
             id: c.id,
             case_number: c.case_number,
             title: c.title,
@@ -121,8 +120,8 @@ export default function DashboardOverview() {
           })),
           active_cases_summary: {
             total: casesList.length,
-            active: casesList.filter(c => c.status === 'ACTIVE').length,
-            high_priority: casesList.filter(c => c.priority === 'HIGH').length,
+            active: casesList.filter((c) => c.status === 'ACTIVE').length,
+            high_priority: casesList.filter((c) => c.priority === 'HIGH').length,
           },
           verification_queue: {
             total_pending: 32,
@@ -162,7 +161,7 @@ export default function DashboardOverview() {
             evidence_references: ['FIR-SYN-2024-001 (Logistics Dossier)', 'CDR-TEL-2024-882 (Telecom Logs)'],
             disclaimer: 'This is an analytical signal, not a finding of guilt. Human verification is required.',
           },
-          cases_table: casesList.map(c => ({
+          cases_table: casesList.map((c) => ({
             id: c.id,
             case_number: c.case_number,
             title: c.title,
@@ -174,7 +173,7 @@ export default function DashboardOverview() {
             pending_verifications: 15,
           })),
         });
-      } catch (fallbackErr) {
+      } catch {
         setError('Unable to load criminal network telemetry. Ensure backend is running.');
       }
     } finally {
@@ -191,21 +190,21 @@ export default function DashboardOverview() {
     return stats?.cases_table || [];
   }, [stats]);
 
-  // Sorted and Filtered Cases Table
+  // Filtered & Sorted Cases Table
   const filteredCases = useMemo(() => {
     let list = [...(stats?.cases_table || [])];
 
     if (tableSearch.trim()) {
       const q = tableSearch.toLowerCase();
       list = list.filter(
-        c => c.case_number.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)
+        (c) => c.case_number.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)
       );
     }
 
     if (statusFilter === 'ACTIVE') {
-      list = list.filter(c => c.status === 'ACTIVE');
+      list = list.filter((c) => c.status === 'ACTIVE');
     } else if (statusFilter === 'HIGH_PRIORITY') {
-      list = list.filter(c => c.priority === 'HIGH');
+      list = list.filter((c) => c.priority === 'HIGH');
     }
 
     if (sortBy === 'priority') {
@@ -222,7 +221,7 @@ export default function DashboardOverview() {
     return list;
   }, [stats, tableSearch, sortBy, statusFilter]);
 
-  // Entity Verification Ratio
+  // Verification Progress Ratio
   const verificationRatio = useMemo(() => {
     const verified = stats?.verified_entities?.verified || 0;
     const total = stats?.verified_entities?.total || 1;
@@ -287,17 +286,15 @@ export default function DashboardOverview() {
       animate="visible"
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
-      {/* 1. Top Environment & Synthetic Ethics Notice (Tactical Banner) */}
+      {/* 1. TOP ENVIRONMENT & SYNTHETIC DATA ETHICS BANNER */}
       <motion.div
         variants={itemVariants}
         className={cn(surfaceCard, "relative overflow-hidden p-4")}
       >
-        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-400 to-amber-600" />
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="size-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
-              <ShieldAlert className="size-5" />
-            </div>
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500" />
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pl-1">
+          <div className="flex items-center gap-3">
+            <Shield className="size-4 text-amber-400 shrink-0" />
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-bold text-white tracking-wide">
@@ -313,35 +310,27 @@ export default function DashboardOverview() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 text-xs font-mono text-emerald-400 shrink-0 self-end md:self-auto px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-            <span className="relative flex size-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
-            </span>
-            <span className="font-medium tracking-tight">Graph Pipeline Online (Neo4j/NetworkX)</span>
+          <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 shrink-0 self-end md:self-auto px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+            <span className="size-2 rounded-full bg-emerald-500"></span>
+            <span className="font-medium tracking-tight">Graph Pipeline Online (Neo4j / NetworkX)</span>
           </div>
         </div>
       </motion.div>
 
-      {/* Error State Banner */}
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center justify-between shadow-lg"
-        >
-          <div className="flex items-center gap-2.5">
-            <AlertTriangle className="size-4 text-red-400 shrink-0" />
-            <span>{error}</span>
-          </div>
-          <Button size="xs" variant="destructive" onClick={loadDashboardData}>
-            Retry
-          </Button>
-        </motion.div>
-      )}
+          {/* Sync Button */}
+          <button
+            onClick={loadDashboardData}
+            title="Sync Graph Pipeline"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#232b3f] bg-[#121622] hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold shadow-xs transition-colors"
+          >
+            <RotateCcw className={`size-3.5 ${loading ? 'animate-spin text-blue-400' : ''}`} />
+            <span>Sync</span>
+          </button>
+        </div>
+      </motion.div>
 
       {/* =========================================================================
-          ROW 1: FOUR MODERN SHADCN OPERATIONAL KPI CARDS
+          ROW 1: PRIMARY OPERATIONAL KPI CARDS
           ========================================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Active Cases */}
@@ -570,7 +559,9 @@ export default function DashboardOverview() {
       </div>
 
       {/* =========================================================================
-          ROW 2: INTERACTIVE GRAPHICAL INTELLIGENCE SECTION
+          ROW 2: TWO CORE INVESTIGATIVE ACTION PANELS
+          - Panel 1: Human Verification Queue (Action Required)
+          - Panel 2: Explainable Pattern Signals & Syndicate Intelligence
           ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left Column: Network Topology Structure (7 cols) */}
@@ -579,12 +570,10 @@ export default function DashboardOverview() {
             <CardHeader className="pb-3 border-b border-white/[0.08]">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 shadow-sm">
-                    <Network className="size-4" />
-                  </div>
+                  <UserCheck className="size-4 text-slate-400" />
                   <div>
-                    <CardTitle className="text-base font-bold text-white tracking-wide">
-                      Topological Network Structure
+                    <CardTitle className="text-sm font-bold text-white tracking-wide">
+                      Human Verification Action Queue
                     </CardTitle>
                     <CardDescription className="text-xs text-white/45 mt-0.5">
                       Graph metrics for {stats?.network_structure?.selected_case || 'All Active Cases'} &bull; Range: {stats?.network_structure?.time_range || '30d'}
@@ -592,14 +581,9 @@ export default function DashboardOverview() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 font-mono text-xs">
-                  <Badge variant="info">
-                    Nodes: {stats?.network_structure?.node_count ?? 28}
-                  </Badge>
-                  <Badge variant="secondary">
-                    Edges: {stats?.network_structure?.edge_count ?? 17}
-                  </Badge>
-                </div>
+                <Badge variant="warning" className="text-[10px] font-mono uppercase">
+                  {stats?.verification_queue?.high_priority_pending_count ?? 16} Urgent
+                </Badge>
               </div>
             </CardHeader>
 
@@ -733,11 +717,9 @@ export default function DashboardOverview() {
             <CardHeader className="pb-3 border-b border-white/[0.08]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 shadow-sm">
-                    <TrendingUp className="size-4" />
-                  </div>
+                  <Network className="size-4 text-slate-400" />
                   <div>
-                    <CardTitle className="text-base font-bold text-white tracking-wide">
+                    <CardTitle className="text-sm font-bold text-white tracking-wide">
                       Explainable Pattern Signals
                     </CardTitle>
                     <CardDescription className="text-xs text-white/45 mt-0.5">
@@ -745,7 +727,10 @@ export default function DashboardOverview() {
                     </CardDescription>
                   </div>
                 </div>
-                <Badge variant="success">ANALYTICAL SIGNAL</Badge>
+
+                <Badge variant="outline" className="text-[10px] font-mono text-purple-400 border-purple-500/30">
+                  GDS ALGORITHM
+                </Badge>
               </div>
             </CardHeader>
 
@@ -778,9 +763,9 @@ export default function DashboardOverview() {
                   <div className="text-xs text-white/80 font-semibold font-mono">Bridge Nodes Pending Verification</div>
                   <div className="text-[11px] text-white/45 mt-0.5">Unreviewed gateway nodes connecting disparate modules</div>
                 </div>
-                <div className="text-xl font-extrabold text-amber-400 font-mono">
-                  {stats?.explainable_pattern_signals?.bridge_nodes_pending ?? 4}
-                </div>
+                <p className="text-slate-400 text-[11px] leading-relaxed">
+                  Cross-border financial routing detected between 3 shell accounts and Marcuz Kowalski syndicate. 4 bridge nodes currently connect the primary logistics ring to peripheral wire accounts.
+                </p>
               </div>
 
               {/* Calculation Source & Evidence */}
@@ -833,18 +818,16 @@ export default function DashboardOverview() {
       </div>
 
       {/* =========================================================================
-          ROW 3: 30-DAY INVESTIGATION ACTIVITY VELOCITY (GRAPHICAL COMPONENT)
+          ROW 3: DEEP INVESTIGATION VELOCITY & TOPOLOGY BREAKDOWN
           ========================================================================= */}
       <motion.div variants={itemVariants}>
         <Card className={surfaceCard}>
           <CardHeader className="pb-3 border-b border-white/[0.08]">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 shadow-sm">
-                  <Activity className="size-4" />
-                </div>
+                <Activity className="size-4 text-slate-400" />
                 <div>
-                  <CardTitle className="text-base font-bold text-white tracking-wide">
+                  <CardTitle className="text-sm font-bold text-white tracking-wide">
                     Multi-Stream Investigation Velocity
                   </CardTitle>
                   <CardDescription className="text-xs text-white/45 mt-0.5">
@@ -874,22 +857,51 @@ export default function DashboardOverview() {
             <InvestigationVelocityChart />
           </CardContent>
         </Card>
+
+        {/* Right (5 cols): Entity Distribution & Centrality Roles */}
+        <Card className="lg:col-span-5 bg-[#111624]/95 border-[#212738] shadow-xl flex flex-col justify-between">
+          <CardHeader className="pb-2 border-b border-[#1e2436]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Layers className="size-4 text-slate-400" />
+                <div>
+                  <CardTitle className="text-sm font-bold text-white tracking-wide">
+                    Extracted Entity Distribution
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-400 mt-0.5">
+                    Breakdown of {stats?.verified_entities?.total ?? 28} nodes by category
+                  </CardDescription>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-[10px] font-mono text-emerald-400 border-emerald-500/30">
+                {verificationRatio}% Verified
+              </Badge>
+            </div>
+          </CardHeader>
+
+          <CardContent className="pt-4">
+            <EntityDistributionChart byType={stats?.verification_queue?.by_entity_type} />
+          </CardContent>
+
+          <CardFooter className="pt-2 pb-3 border-t border-[#1e2436] flex items-center justify-between text-[11px] font-mono text-slate-400">
+            <span>High-Degree Hubs: {stats?.network_structure?.high_degree_nodes ?? 6}</span>
+            <span>Bridge Gateways: {stats?.network_structure?.bridge_nodes ?? 4}</span>
+          </CardFooter>
+        </Card>
       </motion.div>
 
       {/* =========================================================================
-          ROW 4: SHADCN ACTIVE CASES & RECENT ACTIVITY TABLE
+          ROW 4: CONSOLIDATED ACTIVE CASES REGISTRY & SEARCH DIRECTORY
           ========================================================================= */}
       <motion.div variants={itemVariants}>
         <Card className={surfaceCard}>
           <CardHeader className="pb-4 border-b border-white/[0.08]">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 shadow-sm">
-                  <FileText className="size-4" />
-                </div>
+                <FileText className="size-4 text-slate-400" />
                 <div>
                   <CardTitle className="text-base font-bold text-white tracking-wide">
-                    Active Cases &amp; Recent Activity
+                    Active Cases &amp; Recent Investigations
                   </CardTitle>
                   <CardDescription className="text-xs text-white/45 mt-0.5">
                     Consolidated registry of ongoing investigations, evidence volumes, and pending human verifications

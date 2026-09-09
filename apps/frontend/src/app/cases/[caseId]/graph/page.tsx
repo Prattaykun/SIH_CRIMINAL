@@ -22,6 +22,7 @@ import { ClusterGroupNode } from '@/components/graph/ClusterGroupNode';
 import { CaseHubNode } from '@/components/graph/CaseHubNode';
 import { IntelligenceEdge } from '@/components/graph/IntelligenceEdge';
 import { RelationshipEvidenceDrawer } from '@/components/graph/RelationshipEvidenceDrawer';
+import { TimelineEvidenceCalendarMenu } from '@/components/graph/TimelineEvidenceCalendarMenu';
 import {
   normalizeGraphData,
   filterNHopNeighborhood,
@@ -67,7 +68,7 @@ const edgeTypes = {
   intelligence: IntelligenceEdge,
 };
 
-type ViewMode = 'OVERVIEW' | 'NETWORK' | 'TIMELINE' | 'EVIDENCE';
+type ViewMode = 'OVERVIEW' | 'NETWORK';
 
 // Dagre Layout computation with ample node separation and accurate dimensions
 const layoutElements = (nodes: Node[], edges: Edge[], direction: 'LR' | 'TB' = 'LR') => {
@@ -160,6 +161,9 @@ export default function CaseGraphPage() {
 
   // Selected edge/relationship for evidence inspection drawer
   const [selectedRelationship, setSelectedRelationship] = useState<NormalizedRelationship | null>(null);
+
+  // Right-hand popup timeline & evidence calendar menu state
+  const [isCalendarMenuOpen, setIsCalendarMenuOpen] = useState(false);
 
   // Fetch initial graph data
   const fetchGraphData = useCallback(async () => {
@@ -572,9 +576,8 @@ export default function CaseGraphPage() {
 
       {/* Main Content Area */}
       <div className="flex-1 relative overflow-hidden">
-        {/* Render View Mode: OVERVIEW or NETWORK (React Flow) */}
-        {(viewMode === 'OVERVIEW' || viewMode === 'NETWORK') && (
-          <div className="w-full h-full relative">
+        {/* React Flow Intelligence Canvas */}
+        <div className="w-full h-full relative">
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -714,6 +717,20 @@ export default function CaseGraphPage() {
                   className={cn(surfaceBtnPrimary, 'w-full gap-2 active:scale-95')}
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Recompute Hierarchical Layout
+                </button>
+              </Panel>
+
+              {/* Quick Launch Timeline & Evidence Calendar Panel (Top Right) */}
+              <Panel position="top-right" className="mr-3 mt-3">
+                <button
+                  onClick={() => setIsCalendarMenuOpen(true)}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#111420]/95 backdrop-blur-md border border-blue-500/40 text-blue-300 hover:text-white text-xs font-bold transition-all shadow-xl hover:border-blue-400 active:scale-95 group"
+                >
+                  <Calendar className="w-4 h-4 text-blue-400 group-hover:rotate-6 transition-transform" />
+                  <span>Timeline Calendar</span>
+                  <span className="px-1.5 py-0.5 rounded-full bg-blue-500 text-white font-mono text-[10px]">
+                    {timelineEvents.length}
+                  </span>
                 </button>
               </Panel>
             </ReactFlow>

@@ -139,7 +139,12 @@ def require_administrator(
     return current_user
 
 
-from enum import StrEnum
+try:
+    from enum import StrEnum
+except ImportError:
+    from enum import Enum
+    class StrEnum(str, Enum):  # type: ignore[no-redef]
+        pass
 
 class Permission(StrEnum):
     VIEW_CASE = "view_case"

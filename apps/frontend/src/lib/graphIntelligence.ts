@@ -510,15 +510,16 @@ export function extractTimelineEvents(
       category = 'MOVEMENT';
     }
 
-    // Format synthesized timestamp
+    // Format synthesized timestamp across realistic case investigation dates
+    const day = 8 + ((idx * 3) % 20); // Distributed between Oct 08 and Oct 28
     const minute = (baseMinute + idx * 17) % 60;
-    const hour = baseHour + Math.floor((baseMinute + idx * 17) / 60);
-    const timeStr = `2024-10-18 ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00 UTC`;
+    const hour = (baseHour + Math.floor((baseMinute + idx * 17) / 60)) % 24;
+    const timeStr = r.timestamp || `2024-10-${String(day).padStart(2, '0')} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00 UTC`;
 
     events.push({
       id: `timeline-${r.id}`,
       timestamp: timeStr,
-      title: `${srcEntity.label} → ${r.type} → ${tgtEntity.label}`,
+      title: `${srcEntity.label} -> ${r.type} -> ${tgtEntity.label}`,
       description: r.evidenceSnippet || `Verified connection logged between ${srcEntity.label} and ${tgtEntity.label}`,
       category,
       primaryEntityId: srcEntity.id,
@@ -538,17 +539,25 @@ export function extractEvidenceItems(
   entities: NormalizedEntity[],
   relationships: NormalizedRelationship[]
 ): EvidenceItem[] {
+  let baseHour = 11;
+  let baseMinute = 25;
+
   return relationships
     .filter((r) => r.evidenceSnippet && r.evidenceSnippet.trim().length > 0)
     .map((r, idx) => {
       const src = entities.find((e) => e.id === r.source)?.label || 'Entity A';
       const tgt = entities.find((e) => e.id === r.target)?.label || 'Entity B';
+      const day = 8 + ((idx * 3) % 20);
+      const minute = (baseMinute + idx * 19) % 60;
+      const hour = (baseHour + Math.floor((baseMinute + idx * 19) / 60)) % 24;
+      const timeStr = r.timestamp || `2024-10-${String(day).padStart(2, '0')} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00 UTC`;
+
       return {
         id: `ev-${r.id}`,
         title: `${r.type}: ${src} & ${tgt}`,
         type: r.type,
         sourceDoc: `Intelligence Report Document #${idx + 1}`,
-        timestamp: 'Verified Case File Evidence',
+        timestamp: timeStr,
         snippet: r.evidenceSnippet || '',
         reliability: r.confidence,
         linkedEntityIds: [r.source, r.target],
