@@ -127,6 +127,24 @@ class Settings(BaseSettings):
         ),
     )
 
+    # Gemini / Vertex verification pass (post hybrid extraction)
+    VERTEX_API_KEY: Optional[str] = Field(
+        default=None,
+        description="API key for google-genai Client (enterprise/Vertex-compatible).",
+    )
+    GEMINI_MODEL: str = Field(
+        default="gemini-3.8-flash",
+        description="Gemini model id used to verify entities/relationships and timeline events.",
+    )
+    GEMINI_GRAPH_REFINEMENT_ENABLED: bool = Field(
+        default=True,
+        description="When true and VERTEX_API_KEY is set, refine graph candidates with Gemini after hybrid extraction.",
+    )
+    GEMINI_AUTO_ACCEPT_MIN_CONFIDENCE: float = Field(
+        default=0.85,
+        description="Gemini-verified candidates at/above this confidence are marked ACCEPTED for Neo4j sync.",
+    )
+
     # Model artifact storage — server-side only, never exposed to the frontend.
     # Set to a directory on a local volume with restricted permissions.
     MODEL_ARTIFACT_ROOT: str = Field(

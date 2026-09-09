@@ -451,7 +451,8 @@ export const api = {
     fetch('http://127.0.0.1:7267/ingest/e2dbf843-7e56-4e83-b0d0-931cc70abd78',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e250be'},body:JSON.stringify({sessionId:'e250be',runId:'post-fix',hypothesisId:'H',location:'api.ts:runDocumentExtraction',message:'extract route selected',data:{docOrCaseId,scope,isDocument,url},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
 
-    const response = await fetchWithTimeout(url, { method: "POST" });
+    // Gemini refinement can take several minutes — do not abort at the default 15s
+    const response = await fetchWithTimeout(url, { method: "POST" }, 600000);
     return handleResponse<any>(response);
   },
 

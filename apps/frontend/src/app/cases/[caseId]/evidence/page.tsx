@@ -43,15 +43,15 @@ function EvidenceContent() {
   const [docToDelete, setDocToDelete] = useState<DocumentResponse | null>(null);
   const [isDeletingDoc, setIsDeletingDoc] = useState<boolean>(false);
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = async (opts?: { quiet?: boolean }) => {
     try {
-      setLoadingDocs(true);
+      if (!opts?.quiet) setLoadingDocs(true);
       const res = await api.listDocuments(caseId);
       setDocuments(res.documents || []);
     } catch (err) {
       console.error('Failed to load documents:', err);
     } finally {
-      setLoadingDocs(false);
+      if (!opts?.quiet) setLoadingDocs(false);
     }
   };
 
@@ -59,6 +59,60 @@ function EvidenceContent() {
     fetchDocuments();
   }, [caseId]);
 
+  // Live-refresh PROCESSING rows + toast stage changes for already-ingested docs
+  useEffect(() => {
+    const processing = documents.filter(
+      (d) => d.status === 'PROCESSING' || d.status === 'UPLOADED'
+    );
+    if (processing.length === 0) return;
+
+    const toastId = 'doc-table-progress';
+    let lastMsg = '';
+    const id = window.setInterval(async () => {
+      let anyStillProcessing = false;
+      for (const doc of processing) {
+        try {
+          const statusRes = await api.getExtractionStatus(doc.id);
+          const status = (statusRes.status || '').toUpperCase();
+          const message = statusRes.message || status;
+          if (message && message !== lastMsg) {
+            lastMsg = message;
+            if (status === 'PROCESSING' || status === 'UPLOADED') {
+              toast.loading(message, { id: toastId });
+            }
+          }
+          if (status === 'PROCESSED' || status === 'COMPLETED' || status === 'SUCCESS') {
+            toast.success(
+              `${doc.file_name}: extraction complete (${statusRes.entity_count || 0} entities)`,
+              { id: toastId }
+            );
+          } else if (status === 'FAILED' || status === 'ERROR') {
+            toast.error(statusRes.error_message || statusRes.message || 'Extraction failed', {
+              id: toastId,
+            });
+          } else {
+            anyStillProcessing = true;
+          }
+        } catch {
+          anyStillProcessing = true;
+        }
+      }
+      await fetchDocuments({ quiet: true });
+      if (!anyStillProcessing) {
+        window.clearInterval(id);
+      }
+    }, 2500);
+
+    return () => window.clearInterval(id);
+  }, [documents.map((d) => `${d.id}:${d.status}`).join('|')]);
+
+  const docStageLabel = (doc: DocumentResponse) => {
+    const raw = doc.error_message || '';
+    if (raw.startsWith('STAGE:') && raw.includes('|')) {
+      return raw.split('|', 2)[1] || doc.status;
+    }
+    return doc.status || 'PROCESSED';
+  };
   const handleDeleteDocConfirm = async () => {
     if (!docToDelete) return;
     setIsDeletingDoc(true);
@@ -281,9 +335,9 @@ function EvidenceContent() {
                           isProcessing ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse' :
                           isFailed ? 'bg-red-500/10 text-red-400 border-red-500/30' :
                           'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                        }`}>
+                        }`} title={doc.error_message || doc.status || ''}>
                           <span className={`w-1.5 h-1.5 rounded-full ${isProcessing ? 'bg-amber-400' : isFailed ? 'bg-red-400' : 'bg-emerald-400'}`}></span>
-                          {doc.status || 'PROCESSED'}
+                          {isProcessing ? docStageLabel(doc) : (doc.status || 'PROCESSED')}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-white/45">
@@ -562,39 +616,63 @@ function DocumentUploadZone({ caseId, onUploadComplete }: { caseId: string, onUp
   const [reportType, setReportType] = useState('TEXT_REPORT');
 
   const pollExtraction = (documentId: string) => {
-    setUploadStatus('Extracting Entities & Relations via NLP...');
+    setUploadStatus('Queued for extraction pipeline...');
     let attempts = 0;
+    let lastStage = '';
+    const toastId = 'extraction-progress';
+    toast.loading('Queued for extraction pipeline...', { id: toastId });
+
     const pollInterval = setInterval(async () => {
       attempts++;
       try {
         const statusRes = await api.getExtractionStatus(documentId);
         const status = (statusRes.status || '').toUpperCase();
         const count = statusRes.entity_count || 0;
+        const stage = String(statusRes.stage || '');
+        const message =
+          statusRes.message ||
+          (status === 'PROCESSING' ? 'Extraction pipeline running...' : status);
         setCandidateCount(count);
+        setUploadStatus(message);
+
+        if (stage && stage !== lastStage) {
+          lastStage = stage;
+          toast.loading(message, { id: toastId });
+          // #region agent log
+          fetch('http://127.0.0.1:7267/ingest/e2dbf843-7e56-4e83-b0d0-931cc70abd78',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e250be'},body:JSON.stringify({sessionId:'e250be',runId:'pre-fix',hypothesisId:'P4',location:'evidence/page.tsx:pollExtraction',message:'extraction stage toast',data:{documentId,stage,status,count,attempts},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+        }
 
         if (status === 'PROCESSED' || status === 'COMPLETED' || status === 'SUCCESS') {
           clearInterval(pollInterval);
           setIsUploading(false);
           setUploadStatus('Complete');
-          toast.success(`Extraction complete! Found ${count} entities.`);
+          toast.success(
+            `Extraction complete — ${count} entities, ${statusRes.relationship_count || 0} links.`,
+            { id: toastId }
+          );
           if (onUploadComplete) onUploadComplete(documentId);
         } else if (status === 'FAILED' || status === 'ERROR') {
           clearInterval(pollInterval);
           setIsUploading(false);
-          toast.error(statusRes.error_message || 'NLP extraction pipeline failed.');
-        } else if (attempts >= 20) {
+          toast.error(statusRes.error_message || statusRes.message || 'NLP extraction pipeline failed.', {
+            id: toastId,
+          });
+        } else if (attempts >= 180) {
+          // ~6 minutes at 2s interval — Gemini may still finish; keep UI honest
           clearInterval(pollInterval);
           setIsUploading(false);
-          toast.success('Extraction processed. Refreshing candidates.');
+          toast.error('Extraction is taking longer than expected. Use Refresh Records.', { id: toastId });
           if (onUploadComplete) onUploadComplete(documentId);
         }
       } catch {
-        if (attempts >= 10) {
+        if (attempts >= 20) {
           clearInterval(pollInterval);
           setIsUploading(false);
+          toast.error('Lost connection while polling extraction status.', { id: toastId });
         }
       }
-    }, 1500);
+    }, 2000);
   };
 
   const handleFile = async (file: File) => {

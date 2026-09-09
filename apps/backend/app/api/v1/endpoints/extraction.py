@@ -62,12 +62,23 @@ def extract_document(document_id: str, db: Session = Depends(get_db)):
         db.commit()
     svc = DocumentExtractionService(db)
     try:
+        doc.status = "PROCESSING"
+        doc.error_message = "STAGE:queued|Queued for extraction pipeline"
+        db.commit()
         res = svc.process_document(document_id, extract_relationships=True, force=True)
-        return res
+        # process_document sets PROCESSED; refresh for response
+        db.refresh(doc)
+        return {**res, "document_status": doc.status}
     except ValueError as e:
+        doc.status = "FAILED"
+        doc.error_message = str(e)
+        db.commit()
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        return {"status": "FAILED", "error": str(e)}
+        doc.status = "FAILED"
+        doc.error_message = str(e)[:500]
+        db.commit()
+        return {"status": "FAILED", "error": str(e), "document_status": "FAILED"}
 
 
 @router.get("/cases/{case_id}/candidates")
@@ -165,6 +176,7 @@ def get_case_extraction_candidates(
                 "extraction_provider": r.extraction_provider,
                 "extraction_version": r.extraction_version,
                 "relationship_rule_version": r.relationship_rule_version,
+                "event_timestamp": r.event_timestamp.isoformat() if getattr(r, "event_timestamp", None) else None,
             }
             for r in relationships
         ],
@@ -211,6 +223,7 @@ def get_extraction_candidates(document_id: str, db: Session = Depends(get_db)):
                 "verification_status": r.verification_status,
                 "extraction_provider": r.extraction_provider,
                 "extraction_version": r.extraction_version,
+                "event_timestamp": r.event_timestamp.isoformat() if getattr(r, "event_timestamp", None) else None,
             }
             for r in relationships
         ],
@@ -370,12 +383,12 @@ def get_extraction_status(document_id: str, db: Session = Depends(get_db)):
         return {
             "document_id": document_id,
             "status": "NOT_FOUND",
+            "stage": None,
+            "message": "Document not found.",
             "entity_count": 0,
             "relationship_count": 0,
             "error_message": "Document not found."
         }
-
-    doc_status = doc.status
 
     entity_count = db.query(ExtractedEntity).filter(
         ExtractedEntity.document_id == document_id
@@ -385,12 +398,63 @@ def get_extraction_status(document_id: str, db: Session = Depends(get_db)):
         ExtractedRelationship.document_id == document_id
     ).count()
 
+    raw_msg = getattr(doc, "error_message", None) or ""
+    stage = None
+    message = None
+    if raw_msg.startswith("STAGE:") and "|" in raw_msg:
+        stage, message = raw_msg[6:].split("|", 1)
+    elif doc.status == "PROCESSING":
+        stage = "hybrid_nlp"
+        message = "Extraction pipeline running..."
+    elif doc.status == "PROCESSED":
+        stage = "complete"
+        message = "Extraction complete"
+    elif doc.status == "FAILED":
+        stage = "failed"
+        message = raw_msg or "Extraction failed"
+
+    # Heal stuck PROCESSING when candidates already exist (prior extract finished without status flip)
+    if doc.status == "PROCESSING" and entity_count > 0 and not raw_msg.startswith("STAGE:"):
+        doc.status = "PROCESSED"
+        doc.error_message = None
+        db.commit()
+        stage = "complete"
+        message = "Extraction complete"
+        # #region agent log
+        try:
+            import json as _json, time as _time
+            from pathlib import Path as _Path
+            _root = _Path(__file__).resolve()
+            while _root.parent != _root and not (_root / "apps").is_dir():
+                _root = _root.parent
+            for _log_path in (_root / ".cursor" / "debug-e250be.log", _root / "debug-e250be.log"):
+                _log_path.parent.mkdir(parents=True, exist_ok=True)
+                with _log_path.open("a", encoding="utf-8") as _lf:
+                    _lf.write(_json.dumps({
+                        "sessionId": "e250be",
+                        "runId": "pre-fix",
+                        "hypothesisId": "P2",
+                        "location": "extraction.py:get_extraction_status",
+                        "message": "healed stuck PROCESSING document",
+                        "data": {
+                            "document_id": document_id,
+                            "entity_count": entity_count,
+                            "relationship_count": relationship_count,
+                        },
+                        "timestamp": int(_time.time() * 1000),
+                    }) + "\n")
+        except Exception:
+            pass
+        # #endregion
+
     return {
         "document_id": document_id,
-        "status": doc_status,
+        "status": doc.status,
+        "stage": stage,
+        "message": message,
         "entity_count": entity_count,
         "relationship_count": relationship_count,
-        "error_message": getattr(doc, 'error_message', None)
+        "error_message": None if (doc.error_message or "").startswith("STAGE:") else doc.error_message,
     }
 
 

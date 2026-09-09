@@ -60,59 +60,77 @@ def create_document(
 
 
 def _dispatch_extraction(doc_id: str, background_tasks: BackgroundTasks) -> None:
-    """Dispatch document extraction via Celery if available, or fallback to BackgroundTasks."""
-    from apps.backend.app.tasks.extraction import async_extract_document
+    """Dispatch document extraction via Celery only when a worker is alive; else BackgroundTasks."""
+    use_celery = False
     try:
         import redis
         from apps.backend.app.core.config import settings
-        r = redis.Redis.from_url(settings.REDIS_URL, socket_connect_timeout=1)
+        from apps.backend.app.worker import celery_app
+        from apps.backend.app.tasks.extraction import async_extract_document
+
+        r = redis.Redis.from_url(settings.REDIS_URL, socket_connect_timeout=0.5, socket_timeout=0.5)
         r.ping()
-        async_extract_document.delay(doc_id)
+        inspector = celery_app.control.inspect(timeout=0.5)
+        pinged = inspector.ping() if inspector else None
+        use_celery = bool(pinged)
+        if use_celery:
+            async_extract_document.delay(doc_id)
+            return
     except Exception:
-        def run_sync_extraction(target_id: str):
-            from apps.backend.app.db.session import SessionLocal, get_db
-            from apps.backend.app.main import app
-            from apps.backend.app.models.document import Document
-            from apps.backend.app.services.document_parser import extract_text_from_file
-            from apps.backend.app.extraction.service import DocumentExtractionService
-            
-            if get_db in app.dependency_overrides:
-                gen = app.dependency_overrides[get_db]()
-                session = next(gen)
-            else:
-                session = SessionLocal()
-                
-            try:
-                doc_obj = session.query(Document).filter(Document.id == target_id).first()
-                if not doc_obj:
-                    return
-                doc_obj.status = "PROCESSING"
-                session.commit()
+        use_celery = False
 
-                if not doc_obj.raw_content or len(doc_obj.raw_content.strip()) == 0:
-                    if doc_obj.file_path:
-                        raw_text = extract_text_from_file(doc_obj.file_path, doc_obj.mime_type)
-                        doc_obj.raw_content = raw_text
-                        session.commit()
-
-                service = DocumentExtractionService(session)
-                res = service.process_document(target_id, extract_relationships=True, force=True)
-                if res.get("status") == "FAILED":
-                    doc_obj.status = "FAILED"
-                    doc_obj.error_message = res.get("error", "Extraction failed")
-                else:
-                    doc_obj.status = "PROCESSED"
-                session.commit()
-            except Exception as exc:
-                session.rollback()
-                if doc_obj:
-                    doc_obj.status = "FAILED"
-                    doc_obj.error_message = str(exc)
-                    session.commit()
-            finally:
-                session.close()
+    def run_sync_extraction(target_id: str):
+        from apps.backend.app.db.session import SessionLocal, get_db
+        from apps.backend.app.main import app
+        from apps.backend.app.models.document import Document
+        from apps.backend.app.services.document_parser import extract_text_from_file
+        from apps.backend.app.extraction.service import DocumentExtractionService
         
-        background_tasks.add_task(run_sync_extraction, doc_id)
+        if get_db in app.dependency_overrides:
+            gen = app.dependency_overrides[get_db]()
+            session = next(gen)
+        else:
+            session = SessionLocal()
+            
+        doc_obj = None
+        try:
+            doc_obj = session.query(Document).filter(Document.id == target_id).first()
+            if not doc_obj:
+                return
+            doc_obj.status = "PROCESSING"
+            doc_obj.error_message = "STAGE:queued|Queued for extraction pipeline"
+            session.commit()
+
+            if not doc_obj.raw_content or len(doc_obj.raw_content.strip()) == 0:
+                if doc_obj.file_path:
+                    raw_text = extract_text_from_file(doc_obj.file_path, doc_obj.mime_type)
+                    doc_obj.raw_content = raw_text
+                    session.commit()
+
+            service = DocumentExtractionService(session)
+            res = service.process_document(target_id, extract_relationships=True, force=True)
+            # Re-load to avoid detached/stale instance after service commits
+            doc_obj = session.query(Document).filter(Document.id == target_id).first()
+            if not doc_obj:
+                return
+            if res.get("status") == "FAILED":
+                doc_obj.status = "FAILED"
+                doc_obj.error_message = res.get("error", "Extraction failed")
+            else:
+                doc_obj.status = "PROCESSED"
+                doc_obj.error_message = None
+            session.commit()
+        except Exception as exc:
+            session.rollback()
+            doc_obj = session.query(Document).filter(Document.id == target_id).first()
+            if doc_obj:
+                doc_obj.status = "FAILED"
+                doc_obj.error_message = str(exc)[:500]
+                session.commit()
+        finally:
+            session.close()
+    
+    background_tasks.add_task(run_sync_extraction, doc_id)
 
 
 @router.post(

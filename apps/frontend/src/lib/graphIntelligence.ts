@@ -257,6 +257,7 @@ export function normalizeGraphData(
     snippets: string[];
     rawRels: any[];
     rawRelIds: string[];
+    timestamp?: string;
   }> = {};
 
   rawRelationships.forEach((r) => {
@@ -267,12 +268,14 @@ export function normalizeGraphData(
 
     if (!cSrc || !cTgt || cSrc === cTgt) return;
 
-    const relKey = `${cSrc}->${cTgt}`;
     const rType = String(r.relationship_type || r.relation_type || 'CONNECTED').toUpperCase();
+    // Keep distinct relation types as separate edges so the network stays connected/readable
+    const relKey = `${cSrc}->${cTgt}::${rType}`;
     const status = (r.verification_status || r.status || 'UNREVIEWED') as NormalizedRelationship['status'];
     const conf = typeof r.confidence_score === 'number' ? r.confidence_score : (typeof r.confidence === 'number' ? r.confidence : 0.8);
     const snippet = r.source_text || r.source_text_snippet || r.source_snippet || '';
     const rId = String(r.id);
+    const ts = r.event_timestamp || r.timestamp || undefined;
 
     if (!consolidatedRels[relKey]) {
       consolidatedRels[relKey] = {
@@ -285,12 +288,10 @@ export function normalizeGraphData(
         snippets: snippet ? [snippet] : [],
         rawRels: [r],
         rawRelIds: [rId],
+        timestamp: ts,
       };
     } else {
       const relEntry = consolidatedRels[relKey];
-      if (!relEntry.types.includes(rType)) {
-        relEntry.types.push(rType);
-      }
       if (conf > relEntry.highestConfidence) {
         relEntry.highestConfidence = conf;
       }
@@ -299,6 +300,9 @@ export function normalizeGraphData(
       }
       if (snippet && !relEntry.snippets.includes(snippet)) {
         relEntry.snippets.push(snippet);
+      }
+      if (ts && !relEntry.timestamp) {
+        relEntry.timestamp = ts;
       }
       relEntry.rawRels.push(r);
       relEntry.rawRelIds.push(rId);
@@ -398,6 +402,7 @@ export function normalizeGraphData(
       modelProvenance: firstRaw.extraction_provider
         ? `${firstRaw.extraction_provider} v${firstRaw.extraction_version || '1.0'}`
         : 'NLP Hybrid Engine v2.1',
+      timestamp: r.timestamp || firstRaw.event_timestamp || firstRaw.timestamp,
       raw: firstRaw,
       rawRelIds: r.rawRelIds,
     };
@@ -491,8 +496,6 @@ export function extractTimelineEvents(
   caseNumber: string
 ): TimelineEvent[] {
   const events: TimelineEvent[] = [];
-  let baseHour = 14;
-  let baseMinute = 10;
 
   relationships.forEach((r, idx) => {
     const srcEntity = entities.find((e) => e.id === r.source);
@@ -510,11 +513,16 @@ export function extractTimelineEvents(
       category = 'MOVEMENT';
     }
 
-    // Format synthesized timestamp across realistic case investigation dates
-    const day = 8 + ((idx * 3) % 20); // Distributed between Oct 08 and Oct 28
-    const minute = (baseMinute + idx * 17) % 60;
-    const hour = (baseHour + Math.floor((baseMinute + idx * 17) / 60)) % 24;
-    const timeStr = r.timestamp || `2024-10-${String(day).padStart(2, '0')} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00 UTC`;
+    // Prefer evidence-backed timestamps from Gemini/API; only synthesize when missing
+    let timeStr = r.timestamp;
+    if (!timeStr) {
+      const day = 8 + ((idx * 3) % 20);
+      const minute = (10 + idx * 17) % 60;
+      const hour = (14 + Math.floor((10 + idx * 17) / 60)) % 24;
+      timeStr = `2024-10-${String(day).padStart(2, '0')} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00 UTC`;
+    } else if (timeStr.includes('T')) {
+      timeStr = timeStr.replace('T', ' ').replace(/\.\d+/, '');
+    }
 
     events.push({
       id: `timeline-${r.id}`,
@@ -529,7 +537,13 @@ export function extractTimelineEvents(
     });
   });
 
-  return events.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  // Timeline/calendar priority: dated evidence first
+  return events.sort((a, b) => {
+    const aReal = /\d{4}-\d{2}-\d{2}/.test(a.timestamp) ? 0 : 1;
+    const bReal = /\d{4}-\d{2}-\d{2}/.test(b.timestamp) ? 0 : 1;
+    if (aReal !== bReal) return aReal - bReal;
+    return a.timestamp.localeCompare(b.timestamp);
+  });
 }
 
 /**

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import toast from "react-hot-toast";
 import ExtractionCandidateCard, { EntityCandidate, VerificationStatus } from "./ExtractionCandidateCard";
 import RelationshipCandidateCard, { RelationshipCandidate } from "./RelationshipCandidateCard";
 
@@ -107,12 +108,49 @@ export default function ExtractionReviewPanel({ documentId, caseId }: Props) {
   };
 
   const handleExtract = async () => {
+    const toastId = "manual-extraction-progress";
+    let pollId: number | null = null;
     try {
       setLoading(true);
       setError(null);
-      await api.runDocumentExtraction(targetId, targetType);
+      toast.loading("Starting extraction pipeline...", { id: toastId });
+
+      let stopPoll = false;
+      let lastStage = "";
+      if (targetType === "document") {
+        pollId = window.setInterval(async () => {
+          if (stopPoll) return;
+          try {
+            const statusRes = await api.getExtractionStatus(targetId);
+            const stage = String(statusRes.stage || "");
+            const message = statusRes.message || "Extraction running...";
+            if (stage && stage !== lastStage) {
+              lastStage = stage;
+              toast.loading(message, { id: toastId });
+            }
+          } catch {
+            /* ignore transient poll errors while extract request runs */
+          }
+        }, 2000);
+      }
+
+      const result = await api.runDocumentExtraction(targetId, targetType);
+      stopPoll = true;
+      if (pollId) window.clearInterval(pollId);
+
+      const ents = result?.entities ?? result?.entity_count;
+      const rels = result?.relationships ?? result?.relationship_count;
+      toast.success(
+        `Extraction complete${ents != null ? ` — ${ents} entities` : ""}${rels != null ? `, ${rels} links` : ""}.`,
+        { id: toastId }
+      );
       await fetchCandidates();
     } catch (err: unknown) {
+      if (pollId) window.clearInterval(pollId);
+      toast.error(
+        `Extraction notice: ${err instanceof Error ? err.message : String(err)}`,
+        { id: toastId }
+      );
       setError(`Extraction notice: ${err instanceof Error ? err.message : String(err)}`);
       setLoading(false);
     }

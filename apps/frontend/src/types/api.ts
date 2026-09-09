@@ -166,6 +166,7 @@ export interface DocumentResponse {
   mime_type?: string | null;
   raw_content?: string | null;
   status: string;
+  error_message?: string | null;
   uploaded_by: string | null;
   created_at: string;
   updated_at: string;

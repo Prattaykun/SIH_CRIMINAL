@@ -198,25 +198,16 @@ body {
   );
 }
 
-/* React Flow controls — dark theme polish */
-.react-flow.dark .sih-rf-controls,
-.sih-rf-controls {
-  --xy-controls-button-background-color: transparent;
-  --xy-controls-button-background-color-hover: rgba(255, 255, 255, 0.08);
-  --xy-controls-button-color: rgba(255, 255, 255, 0.82);
-  --xy-controls-button-color-hover: #ffffff;
-  --xy-controls-button-border-color: rgba(255, 255, 255, 0.1);
-  --xy-controls-box-shadow: none;
+/* React Flow: neutralize default light control fill if any remain */
+.react-flow__controls-button {
+  background: #0c0c0c !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
 }
-
-.sih-rf-controls .react-flow__controls-button {
-  width: 2rem;
-  height: 2rem;
-  border-bottom-color: rgba(255, 255, 255, 0.1);
+.react-flow__controls-button:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
 }
-
-.sih-rf-controls .react-flow__controls-button svg {
-  fill: currentColor;
-  max-width: 14px;
-  max-height: 14px;
+.react-flow__controls-button svg {
+  fill: currentColor !important;
 }

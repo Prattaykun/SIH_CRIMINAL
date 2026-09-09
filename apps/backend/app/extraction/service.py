@@ -18,6 +18,43 @@ from apps.backend.app.graph.service import GraphService, GraphServiceUnavailable
 from apps.backend.app.core.config import settings
 from apps.backend.app.extraction.local_ner_provider import SpacyNERProvider
 
+
+def _agent_debug_log(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+    # #region agent log
+    try:
+        import time as _time
+        from pathlib import Path as _Path
+        _root = _Path(__file__).resolve()
+        while _root.parent != _root and not (_root / "apps").is_dir():
+            _root = _root.parent
+        payload = {
+            "sessionId": "e250be",
+            "runId": "pre-fix",
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "message": message,
+            "data": data,
+            "timestamp": int(_time.time() * 1000),
+        }
+        for _log_path in (_root / ".cursor" / "debug-e250be.log", _root / "debug-e250be.log"):
+            _log_path.parent.mkdir(parents=True, exist_ok=True)
+            with _log_path.open("a", encoding="utf-8") as _lf:
+                _lf.write(json.dumps(payload) + "\n")
+    except Exception:
+        pass
+    # #endregion
+
+
+STAGE_MESSAGES = {
+    "queued": "Queued for extraction pipeline",
+    "parsing": "Parsing evidence document text",
+    "hybrid_nlp": "Running hybrid NLP entity & relationship extraction",
+    "gemini": "Verifying graph with Gemini (timeline priority)",
+    "neo4j": "Syncing accepted candidates to Neo4j",
+    "complete": "Extraction complete",
+    "failed": "Extraction failed",
+}
+
 def compute_entity_confidence(entity_type: str, value: str, context: str) -> float:
     """Calculates realistic dynamic confidence scores based on pattern precision and contextual evidence."""
     val = value.strip()
@@ -84,6 +121,42 @@ class DocumentExtractionService:
             self.extractor = MockExtractor()
         self.graph_service = GraphService()
 
+    def _set_doc_progress(
+        self,
+        doc: Document,
+        *,
+        status: str | None = None,
+        stage: str | None = None,
+        message: str | None = None,
+    ) -> None:
+        """Persist document status + human-readable stage for UI toasts/polling."""
+        if status:
+            doc.status = status
+        stage_key = stage or ""
+        msg = message or STAGE_MESSAGES.get(stage_key) or stage_key or None
+        if stage_key and msg:
+            doc.error_message = f"STAGE:{stage_key}|{msg}"
+        elif message is not None:
+            doc.error_message = message
+        if status in ("PROCESSED", "FAILED") and stage_key in ("complete", "failed", ""):
+            # Keep final failure reason; clear progress marker on success
+            if status == "PROCESSED":
+                doc.error_message = None
+            elif status == "FAILED" and message:
+                doc.error_message = message
+        self.db.commit()
+        _agent_debug_log(
+            "P2",
+            "extraction/service.py:_set_doc_progress",
+            "document progress updated",
+            {
+                "document_id": str(doc.id),
+                "status": doc.status,
+                "stage": stage_key or None,
+                "message": (doc.error_message or "")[:160],
+            },
+        )
+
     def process_document(self, document_id: str, extract_relationships: bool = False, force: bool = False) -> Dict[str, Any]:
         """Extract candidates from document and persist as UNREVIEWED."""
         from apps.backend.app.models.extraction_run import ExtractionRun
@@ -94,6 +167,8 @@ class DocumentExtractionService:
         doc = self.db.query(Document).filter(Document.id == document_id).first()
         if not doc:
             raise ValueError(f"Document {document_id} not found")
+
+        self._set_doc_progress(doc, status="PROCESSING", stage="parsing")
         
         # 1. Resolve Provider Identity
         provider_name = self.extractor.provider_name
@@ -109,6 +184,7 @@ class DocumentExtractionService:
         
         run = self.db.query(ExtractionRun).filter(ExtractionRun.extraction_run_id == extraction_run_id).first()
         if run and run.status == "COMPLETED" and run.entity_candidate_count > 0 and not force:
+            self._set_doc_progress(doc, status="PROCESSED", stage="complete")
             return {
                 "status": "success",
                 "extraction_run_id": run.extraction_run_id,
@@ -162,6 +238,7 @@ class DocumentExtractionService:
             except Exception:
                 pass
 
+        self._set_doc_progress(doc, status="PROCESSING", stage="hybrid_nlp")
         extracted_entities_data = []
 
         # ACCOUNT before PHONE in intent; phone must not steal ACCT- digit spans.
@@ -480,12 +557,270 @@ class DocumentExtractionService:
         run.completed_at = datetime.now(timezone.utc)
         
         self.db.commit()
+
+        self._set_doc_progress(doc, status="PROCESSING", stage="gemini")
+        gemini_meta = self._apply_gemini_refinement(
+            document_id=document_id,
+            case_id=str(doc.case_id),
+            text=text,
+            extraction_run_id=extraction_run_id,
+        )
+
+        # Refresh counts after possible Gemini rewrite
+        ent_count = self.db.query(ExtractedEntity).filter(
+            ExtractedEntity.document_id == document_id
+        ).count()
+        rel_count_final = self.db.query(ExtractedRelationship).filter(
+            ExtractedRelationship.document_id == document_id
+        ).count()
+        run.entity_candidate_count = ent_count
+        run.relationship_candidate_count = rel_count_final
+        self.db.commit()
+
+        # Push high-confidence Gemini-accepted candidates to Neo4j when available
+        sync_result = None
+        if gemini_meta.get("applied"):
+            self._set_doc_progress(doc, status="PROCESSING", stage="neo4j")
+            try:
+                sync_result = self.sync_approved_to_graph(document_id)
+            except Exception as sync_exc:
+                sync_result = {"status": "RETRYABLE_FAILURE", "reason": str(sync_exc)}
+
+        # Always flip document out of PROCESSING when pipeline finishes
+        self.db.refresh(doc)
+        self._set_doc_progress(doc, status="PROCESSED", stage="complete")
+
         return {
-            "status": "success", 
-            "extraction_run_id": run.extraction_run_id, 
-            "entities": run.entity_candidate_count, 
-            "relationships": run.relationship_candidate_count
+            "status": "success",
+            "extraction_run_id": run.extraction_run_id,
+            "entities": ent_count,
+            "relationships": rel_count_final,
+            "gemini": gemini_meta,
+            "neo4j_sync": sync_result,
         }
+
+    def _apply_gemini_refinement(
+        self,
+        document_id: str,
+        case_id: str,
+        text: str,
+        extraction_run_id: str,
+    ) -> Dict[str, Any]:
+        """Verify/repair candidates with Gemini; prioritize dated timeline edges."""
+        from apps.backend.app.extraction.gemini_refiner import GeminiGraphRefiner
+        from dateutil import parser as date_parser
+
+        refiner = GeminiGraphRefiner()
+        if not refiner.enabled:
+            return {"applied": False, "reason": "disabled_or_missing_key"}
+
+        existing_ents = self.db.query(ExtractedEntity).filter(
+            ExtractedEntity.document_id == document_id
+        ).all()
+        existing_rels = self.db.query(ExtractedRelationship).filter(
+            ExtractedRelationship.document_id == document_id
+        ).all()
+
+        seed_entities = [
+            {
+                "value": e.canonical_name or e.original_value,
+                "entity_type": e.entity_type,
+                "confidence": float(e.confidence_score or 0.7),
+            }
+            for e in existing_ents
+        ]
+        id_to_val = {e.id: (e.canonical_name or e.original_value or "") for e in existing_ents}
+        seed_relationships = [
+            {
+                "source_value": id_to_val.get(r.source_entity_id, ""),
+                "target_value": id_to_val.get(r.target_entity_id, ""),
+                "relation_type": r.relation_type,
+                "confidence": float(r.confidence_score or 0.7),
+            }
+            for r in existing_rels
+        ]
+
+        result = refiner.refine(text, seed_entities, seed_relationships)
+
+        # #region agent log
+        try:
+            import json as _json, time as _time
+            from pathlib import Path as _Path
+            _root = _Path(__file__).resolve()
+            while _root.parent != _root and not (_root / "apps").is_dir():
+                _root = _root.parent
+            for _log_path in (_root / ".cursor" / "debug-e250be.log", _root / "debug-e250be.log"):
+                _log_path.parent.mkdir(parents=True, exist_ok=True)
+                with _log_path.open("a", encoding="utf-8") as _lf:
+                    _lf.write(_json.dumps({
+                        "sessionId": "e250be",
+                        "runId": "pre-fix",
+                        "hypothesisId": "G1,G3",
+                        "location": "extraction/service.py:_apply_gemini_refinement",
+                        "message": "gemini refine result",
+                        "data": {
+                            "document_id": document_id,
+                            "error": result.raw_error,
+                            "model": result.model,
+                            "entity_count": len(result.entities),
+                            "rel_count": len(result.relationships),
+                            "timeline_count": len(result.timeline_events),
+                            "sample_ents": [
+                                {"type": e.entity_type, "value": e.value, "conf": e.confidence}
+                                for e in result.entities[:12]
+                            ],
+                            "sample_rels": [
+                                {
+                                    "type": r.relation_type,
+                                    "src": r.source_value,
+                                    "tgt": r.target_value,
+                                    "ts": r.event_timestamp,
+                                }
+                                for r in result.relationships[:12]
+                            ],
+                        },
+                        "timestamp": int(_time.time() * 1000),
+                    }) + "\n")
+        except Exception:
+            pass
+        # #endregion
+
+        if result.raw_error or (not result.entities and not result.relationships):
+            return {
+                "applied": False,
+                "reason": result.raw_error or "empty_result",
+                "model": result.model,
+            }
+
+        # Replace hybrid candidates with Gemini-verified set for this document
+        self.db.query(ExtractedRelationship).filter(
+            ExtractedRelationship.document_id == document_id
+        ).delete(synchronize_session=False)
+        self.db.query(ExtractedEntity).filter(
+            ExtractedEntity.document_id == document_id
+        ).delete(synchronize_session=False)
+        self.db.flush()
+
+        min_accept = float(settings.GEMINI_AUTO_ACCEPT_MIN_CONFIDENCE)
+        value_to_entity: Dict[str, ExtractedEntity] = {}
+
+        for ent in result.entities:
+            key = ent.value.strip().lower()
+            if key in value_to_entity:
+                continue
+            status = "ACCEPTED" if ent.confidence >= min_accept else "UNREVIEWED"
+            db_ent = ExtractedEntity(
+                extraction_run_id=extraction_run_id,
+                case_id=case_id,
+                document_id=document_id,
+                entity_type=ent.entity_type,
+                original_value=ent.value,
+                canonical_name=ent.value,
+                source_text=ent.source_snippet or ent.value,
+                confidence_score=ent.confidence,
+                verification_status=status,
+                extraction_provider="gemini_refiner",
+                extraction_version=result.model or "1.0",
+                attributes=json.dumps({"gemini_verified": True}),
+            )
+            self.db.add(db_ent)
+            self.db.flush()
+            value_to_entity[key] = db_ent
+
+        def _resolve_entity(label: str) -> ExtractedEntity | None:
+            if not label:
+                return None
+            key = label.strip().lower()
+            if key in value_to_entity:
+                return value_to_entity[key]
+            # fuzzy contains match
+            for k, ent in value_to_entity.items():
+                if key in k or k in key:
+                    return ent
+            return None
+
+        rel_added = 0
+        for rel in result.relationships:
+            src = _resolve_entity(rel.source_value)
+            tgt = _resolve_entity(rel.target_value)
+            if not src or not tgt or src.id == tgt.id:
+                continue
+            event_ts = None
+            if rel.event_timestamp:
+                try:
+                    event_ts = date_parser.parse(rel.event_timestamp)
+                except Exception:
+                    event_ts = None
+            status = "ACCEPTED" if rel.confidence >= min_accept else "UNREVIEWED"
+            db_rel = ExtractedRelationship(
+                extraction_run_id=extraction_run_id,
+                case_id=case_id,
+                document_id=document_id,
+                source_entity_id=src.id,
+                target_entity_id=tgt.id,
+                relation_type=rel.relation_type,
+                source_text_snippet=rel.source_snippet or "",
+                event_timestamp=event_ts,
+                confidence_score=rel.confidence,
+                verification_status=status,
+                extraction_provider="gemini_refiner",
+                extraction_version=result.model or "1.0",
+                attributes=json.dumps({
+                    "gemini_verified": True,
+                    "timeline_priority": bool(event_ts),
+                }),
+            )
+            self.db.add(db_rel)
+            rel_added += 1
+
+        # Persist timeline events on a case-level JSON attribute via first accepted entity attrs merge
+        # and also as dated ASSOCIATED_WITH stubs when entities exist but edge missing
+        for te in result.timeline_events:
+            primary = _resolve_entity(te.primary_entity or "")
+            secondary = _resolve_entity(te.secondary_entity or "")
+            if primary and secondary:
+                exists = self.db.query(ExtractedRelationship).filter(
+                    ExtractedRelationship.document_id == document_id,
+                    ExtractedRelationship.source_entity_id == primary.id,
+                    ExtractedRelationship.target_entity_id == secondary.id,
+                ).first()
+                if not exists:
+                    try:
+                        event_ts = date_parser.parse(te.timestamp)
+                    except Exception:
+                        event_ts = None
+                    self.db.add(
+                        ExtractedRelationship(
+                            extraction_run_id=extraction_run_id,
+                            case_id=case_id,
+                            document_id=document_id,
+                            source_entity_id=primary.id,
+                            target_entity_id=secondary.id,
+                            relation_type="ASSOCIATED_WITH",
+                            source_text_snippet=te.description or te.title,
+                            event_timestamp=event_ts,
+                            confidence_score=te.confidence,
+                            verification_status="ACCEPTED" if te.confidence >= min_accept else "UNREVIEWED",
+                            extraction_provider="gemini_timeline",
+                            extraction_version=result.model or "1.0",
+                            attributes=json.dumps({
+                                "timeline_event": True,
+                                "title": te.title,
+                                "category": te.category,
+                            }),
+                        )
+                    )
+                    rel_added += 1
+
+        self.db.commit()
+        return {
+            "applied": True,
+            "model": result.model,
+            "entities": len(value_to_entity),
+            "relationships": rel_added,
+            "timeline_events": len(result.timeline_events),
+        }
+
 
 
     def review_entity(self, entity_id: str, decision: ReviewDecision, reviewer_id: str):
@@ -552,25 +887,27 @@ class DocumentExtractionService:
             _root = _Path(__file__).resolve()
             while _root.parent != _root and not (_root / "apps").is_dir():
                 _root = _root.parent
-            _log_path = _root / "debug-e250be.log"
-            with _log_path.open("a", encoding="utf-8") as _lf:
-                _lf.write(_json.dumps({
-                    "sessionId": "e250be",
-                    "runId": "post-fix",
-                    "hypothesisId": "F",
-                    "location": "extraction/service.py:sync_approved_to_graph",
-                    "message": "neo4j sync availability check",
-                    "data": {
-                        "document_id": document_id,
-                        "neo4j_ok": neo4j_ok,
-                        "driver_present": neo4j_manager._driver is not None,
-                        "uri_scheme": (_settings.NEO4J_URI or "").split("://", 1)[0],
-                        "database": _settings.NEO4J_DATABASE,
-                        "entity_count": len(entities),
-                        "relationship_count": len(relationships),
-                    },
-                    "timestamp": int(_time.time() * 1000),
-                }) + "\n")
+            for _log_path in (_root / ".cursor" / "debug-e250be.log", _root / "debug-e250be.log"):
+                _log_path.parent.mkdir(parents=True, exist_ok=True)
+                with _log_path.open("a", encoding="utf-8") as _lf:
+                    _lf.write(_json.dumps({
+                        "sessionId": "e250be",
+                        "runId": "pre-fix",
+                        "hypothesisId": "G5",
+                        "location": "extraction/service.py:sync_approved_to_graph",
+                        "message": "neo4j sync availability check",
+                        "data": {
+                            "document_id": document_id,
+                            "neo4j_ok": neo4j_ok,
+                            "driver_present": neo4j_manager._driver is not None,
+                            "uri_scheme": (_settings.NEO4J_URI or "").split("://", 1)[0],
+                            "database": _settings.NEO4J_DATABASE,
+                            "entity_count": len(entities),
+                            "relationship_count": len(relationships),
+                            "dated_rels": sum(1 for r in relationships if getattr(r, "event_timestamp", None)),
+                        },
+                        "timestamp": int(_time.time() * 1000),
+                    }) + "\n")
         except Exception:
             pass
         # #endregion
@@ -603,7 +940,12 @@ class DocumentExtractionService:
                     tgt = self.db.query(ExtractedEntity).filter(ExtractedEntity.id == r.target_entity_id).first()
                     
                     if src.graph_sync_status == "SYNCED" and tgt.graph_sync_status == "SYNCED":
-                        props = {"confidence": r.confidence_score, "verified_by": r.verified_by}
+                        props = {
+                            "confidence": float(r.confidence_score or 0),
+                            "verified_by": r.verified_by,
+                            "event_timestamp": r.event_timestamp.isoformat() if getattr(r, "event_timestamp", None) else None,
+                            "source_snippet": (r.source_text_snippet or "")[:500],
+                        }
                         repo.create_or_merge_relationship(
                             src.entity_type.capitalize(), src.id, 
                             tgt.entity_type.capitalize(), tgt.id, 

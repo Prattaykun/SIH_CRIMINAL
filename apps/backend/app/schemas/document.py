@@ -69,6 +69,7 @@ class DocumentResponse(BaseModel):
     file_type: str
     file_hash: str | None = None
     status: str
+    error_message: str | None = None
     uploaded_by: str | None = None
     created_at: datetime
     updated_at: datetime
