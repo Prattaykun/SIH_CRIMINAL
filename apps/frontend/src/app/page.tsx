@@ -16,7 +16,6 @@ import {
   SlidersHorizontal,
   ChevronDown,
   Layers,
-  Sparkles,
   CheckCircle2,
   Clock,
   AlertTriangle,
@@ -228,18 +227,16 @@ export default function DashboardOverview() {
       {/* 1. TOP ENVIRONMENT & SYNTHETIC DATA ETHICS BANNER */}
       <motion.div
         variants={itemVariants}
-        className="relative overflow-hidden rounded-2xl border border-[#212738] bg-gradient-to-r from-[#121622] via-[#10141f] to-[#121622] p-4 shadow-xl backdrop-blur-md"
+        className="relative overflow-hidden rounded-2xl border border-[#212738] bg-[#111624] p-4 shadow-md"
       >
-        <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-amber-400 to-amber-600" />
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500" />
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pl-1">
-          <div className="flex items-center gap-3.5">
-            <div className="size-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
-              <ShieldAlert className="size-5" />
-            </div>
+          <div className="flex items-center gap-3">
+            <Shield className="size-4 text-amber-400 shrink-0" />
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-bold text-slate-100 tracking-wide">
-                  Prototype Mode &bull; Synthetic Benchmark Data Only
+                  Prototype Mode — Synthetic Benchmark Data Only
                 </span>
                 <Badge variant="warning" className="text-[10px] tracking-wider uppercase font-mono">
                   Authorized Verification Required
@@ -251,11 +248,8 @@ export default function DashboardOverview() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 text-xs font-mono text-emerald-400 shrink-0 self-end md:self-auto px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-            <span className="relative flex size-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
-            </span>
+          <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 shrink-0 self-end md:self-auto px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+            <span className="size-2 rounded-full bg-emerald-500"></span>
             <span className="font-medium tracking-tight">Graph Pipeline Online (Neo4j / NetworkX)</span>
           </div>
         </div>
@@ -347,9 +341,7 @@ export default function DashboardOverview() {
               <span className="text-xs font-semibold text-slate-400 font-mono uppercase tracking-wider">
                 Active Cases
               </span>
-              <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
-                <FileText className="size-4" />
-              </div>
+              <FileText className="size-4 text-slate-500" />
             </div>
           </CardHeader>
           <CardContent className="pb-2">
@@ -369,8 +361,7 @@ export default function DashboardOverview() {
               />
             </div>
             <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
-              <span className="flex items-center gap-1 text-rose-400 font-mono text-[11px]">
-                <AlertTriangle className="size-3" />
+              <span className="text-rose-400 font-mono text-[11px] font-semibold">
                 {stats?.active_cases_summary?.high_priority ?? 3} High Priority
               </span>
               <Link href="/cases" className="text-blue-400 hover:underline text-[11px] font-medium flex items-center gap-0.5">
@@ -387,9 +378,7 @@ export default function DashboardOverview() {
               <span className="text-xs font-semibold text-slate-400 font-mono uppercase tracking-wider">
                 Verification Queue
               </span>
-              <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                <CheckCircle2 className="size-4" />
-              </div>
+              <CheckCircle2 className="size-4 text-slate-500" />
             </div>
           </CardHeader>
           <CardContent className="pb-2">
@@ -408,7 +397,7 @@ export default function DashboardOverview() {
             </div>
             <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
               <span className="text-slate-400 text-[11px] font-mono">
-                {stats?.verification_queue?.pending_entities ?? 20} Entities &bull; {stats?.verification_queue?.pending_relationships ?? 12} Links
+                {stats?.verification_queue?.pending_entities ?? 20} Entities / {stats?.verification_queue?.pending_relationships ?? 12} Links
               </span>
               <Link href="/audit" className="text-amber-400 hover:underline text-[11px] font-medium flex items-center gap-0.5">
                 Review <ChevronRight className="size-3" />
@@ -424,9 +413,7 @@ export default function DashboardOverview() {
               <span className="text-xs font-semibold text-slate-400 font-mono uppercase tracking-wider">
                 Extracted Entities
               </span>
-              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                <Layers className="size-4" />
-              </div>
+              <Layers className="size-4 text-slate-500" />
             </div>
           </CardHeader>
           <CardContent className="pb-2">
@@ -460,9 +447,7 @@ export default function DashboardOverview() {
               <span className="text-xs font-semibold text-slate-400 font-mono uppercase tracking-wider">
                 Graph Network Links
               </span>
-              <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
-                <GitMerge className="size-4" />
-              </div>
+              <GitMerge className="size-4 text-slate-500" />
             </div>
           </CardHeader>
           <CardContent className="pb-2">
@@ -481,7 +466,7 @@ export default function DashboardOverview() {
             </div>
             <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
               <span className="text-slate-400 text-[11px] font-mono">
-                {stats?.network_structure?.high_degree_nodes ?? 6} Hubs &bull; {stats?.network_structure?.edge_count ?? 17} Links
+                {stats?.network_structure?.high_degree_nodes ?? 6} Hubs / {stats?.network_structure?.edge_count ?? 17} Links
               </span>
               <Link href="/graph" className="text-purple-400 hover:underline text-[11px] font-medium flex items-center gap-0.5">
                 Visualizer <ChevronRight className="size-3" />
@@ -503,9 +488,7 @@ export default function DashboardOverview() {
             <CardHeader className="pb-3 border-b border-[#1e2436]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
-                    <UserCheck className="size-4" />
-                  </div>
+                  <UserCheck className="size-4 text-slate-400" />
                   <div>
                     <CardTitle className="text-sm font-bold text-white tracking-wide">
                       Human Verification Action Queue
@@ -524,21 +507,18 @@ export default function DashboardOverview() {
 
             <CardContent className="pt-4 space-y-4">
               {/* Oldest Pending Item Alert Banner */}
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex items-start gap-3 text-xs">
-                <Clock className="size-4 text-amber-400 shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="font-semibold text-slate-200 truncate">
-                      Oldest Unverified Item: {stats?.verification_queue?.oldest_pending_item?.name || '123 Fake Street, Springfield'}
-                    </span>
-                    <Badge variant="outline" className="text-[9px] font-mono text-amber-400 border-amber-500/40">
-                      {stats?.verification_queue?.oldest_pending_item?.type || 'LOCATION'}
-                    </Badge>
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Extracted from case dossier &bull; Requires investigator confirmation or rejection.
-                  </p>
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="font-semibold text-slate-200 truncate">
+                    Oldest Unverified Item: {stats?.verification_queue?.oldest_pending_item?.name || '123 Fake Street, Springfield'}
+                  </span>
+                  <Badge variant="outline" className="text-[9px] font-mono text-amber-400 border-amber-500/40">
+                    {stats?.verification_queue?.oldest_pending_item?.type || 'LOCATION'}
+                  </Badge>
                 </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Extracted from case dossier — Requires investigator confirmation or rejection.
+                </p>
               </div>
 
               {/* Pending Queue by Entity Type Breakdown */}
@@ -591,9 +571,7 @@ export default function DashboardOverview() {
             <CardHeader className="pb-3 border-b border-[#1e2436]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400">
-                    <Sparkles className="size-4" />
-                  </div>
+                  <Network className="size-4 text-slate-400" />
                   <div>
                     <CardTitle className="text-sm font-bold text-white tracking-wide">
                       Explainable Pattern Signals
@@ -622,8 +600,7 @@ export default function DashboardOverview() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="inline-flex items-center gap-1 text-emerald-400 font-mono font-bold text-xs px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
-                    <TrendingUp className="size-3" />
+                  <span className="inline-flex items-center text-emerald-400 font-mono font-bold text-xs px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
                     {stats?.explainable_pattern_signals?.baseline_delta ?? '+15%'}
                   </span>
                   <div className="text-[10px] text-slate-500 mt-0.5 font-mono">vs Baseline</div>
@@ -683,9 +660,7 @@ export default function DashboardOverview() {
           <CardHeader className="pb-2 border-b border-[#1e2436]">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400">
-                  <Activity className="size-4" />
-                </div>
+                <Activity className="size-4 text-slate-400" />
                 <div>
                   <CardTitle className="text-sm font-bold text-white tracking-wide">
                     Multi-Stream Investigation Velocity
@@ -723,9 +698,7 @@ export default function DashboardOverview() {
           <CardHeader className="pb-2 border-b border-[#1e2436]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-                  <Layers className="size-4" />
-                </div>
+                <Layers className="size-4 text-slate-400" />
                 <div>
                   <CardTitle className="text-sm font-bold text-white tracking-wide">
                     Extracted Entity Distribution
@@ -760,9 +733,7 @@ export default function DashboardOverview() {
           <CardHeader className="pb-4 border-b border-[#1e2436]">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 shadow-sm">
-                  <FileText className="size-4" />
-                </div>
+                <FileText className="size-4 text-slate-400" />
                 <div>
                   <CardTitle className="text-base font-bold text-white tracking-wide">
                     Active Cases &amp; Recent Investigations

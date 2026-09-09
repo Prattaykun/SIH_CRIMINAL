@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { Shield } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 export function Header() {
@@ -40,10 +41,8 @@ export function Header() {
       {/* Left: Branding & Logo */}
       <div className="flex items-center gap-4 shrink-0">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 font-bold text-sm group-hover:scale-105 transition-transform">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+          <div className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-blue-400 font-bold text-sm shadow-sm group-hover:border-slate-600 transition-colors">
+            <Shield className="w-4 h-4 text-blue-400" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
@@ -61,7 +60,7 @@ export function Header() {
         </Link>
 
         <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-[10px] font-mono text-amber-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
           <span>SYNTHETIC DATA ONLY</span>
         </div>
       </div>
