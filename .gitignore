@@ -63,3 +63,22 @@ yarn-error.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Ignore raw PDF dataset to prevent committing binary blobs
+data/**/*.pdf
+
+# Cyber dataset local artifacts, raw extractions, reports, splits, and annotations
+data/case_type_cyber/raw/
+data/case_type_cyber/duplicates/
+data/case_type_cyber/extracted/
+data/case_type_cyber/reports/
+data/case_type_cyber/splits/
+data/case_type_cyber/processed/
+data/case_type_cyber/features/
+data/case_type_cyber/annotations/ner/*.jsonl
+data/case_type_cyber/annotations/ner/*.csv
+data/case_type_cyber/annotations/ner/invalid_mock_artifacts/
+apps/backend/app/ml/artifacts/
+*_dump.sql
+postgres_dump.sql
+sqlite_dump.sql
