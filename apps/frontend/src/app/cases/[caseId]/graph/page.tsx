@@ -541,23 +541,6 @@ export default function CaseGraphPage() {
             className="w-full bg-[#141724] border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
           />
         </div>
-
-        {/* Right-hand side Timeline Calendar & Evidence trigger */}
-        <button
-          onClick={() => setIsCalendarMenuOpen((prev) => !prev)}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
-            isCalendarMenuOpen
-              ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/20'
-              : 'bg-blue-600/15 hover:bg-blue-600/25 border-blue-500/40 text-blue-300 hover:text-white'
-          }`}
-          title="Open Timeline Calendar & Evidence Stream"
-        >
-          <Calendar className="w-3.5 h-3.5 text-blue-400" />
-          <span>Calendar & Evidence</span>
-          <span className="px-1.5 py-0.2 rounded-full bg-blue-500 text-white font-mono text-[10px]">
-            {timelineEvents.length + evidenceItems.length}
-          </span>
-        </button>
       </header>
 
       {/* Main Content Area */}
