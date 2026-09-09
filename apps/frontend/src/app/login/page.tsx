@@ -32,7 +32,7 @@ const DEMO_ACCOUNTS = [
 ] as const;
 
 export default function LoginPage() {
-  const { login, user, token } = useAuth();
+  const { login, user, token, loginSplashPending } = useAuth();
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -40,10 +40,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user && token) {
+    // Only bounce already-authenticated sessions — wait for splash after a fresh login.
+    if (user && token && !loginSplashPending) {
       router.replace("/cases");
     }
-  }, [user, token, router]);
+  }, [user, token, loginSplashPending, router]);
 
   const fillDemoAccount = (demoUsername: string) => {
     setUsername(demoUsername);
@@ -59,6 +60,7 @@ export default function LoginPage() {
     try {
       const response = await api.login(username, password);
       login(response.access_token, response.user);
+      // Splash overlay plays first; navigate once it is showing so the app is ready underneath.
       router.push("/cases");
     } catch (err: unknown) {
       setError(

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { LoginSplashOverlay } from '@/components/auth/LoginSplashOverlay';
 import { usePathname, useRouter } from 'next/navigation';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -19,10 +20,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       router.push('/login');
     }
   }, [user, mounted, router, pathname]);
-
-  // Set up API error interceptor globally or in api.ts
-  // For session expiry, if API returns 401, we logout. 
-  // We can hook window.addEventListener('unauthorized', logout) in a global way if we want.
 
   useEffect(() => {
     const handleUnauthorized = () => {
@@ -42,6 +39,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 export const Providers = ({ children }: { children: React.ReactNode }) => {
   return (
     <AuthProvider>
+      <LoginSplashOverlay />
       <ProtectedRoute>
         {children}
       </ProtectedRoute>
