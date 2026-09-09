@@ -56,13 +56,13 @@ export default function SimpleViewPage() {
         const title = caseRes?.title || `${effectiveNumber} Intelligence Dossier`;
         const primarySub = summaryRes?.primary_subject?.name || 'Primary Subject';
 
-        // Role classification helper
+        // Role classification helper with concise tags
         const classifyPersonRole = (name: string, isPrimary: boolean) => {
-          if (/magistrate|judge|court|justice/i.test(name)) return 'Judicial Authority';
-          if (/inspector|officer|sub-inspector|sho|constable|dsp|sp|investigat/i.test(name)) return 'Investigating Officer';
-          if (/department|wing|offences|police|bureau|agency|authority/i.test(name)) return 'Law Enforcement Agency';
-          if (isPrimary) return 'Primary Subject of Interest';
-          return 'Involved Person / Witness';
+          if (/magistrate|judge|court|justice/i.test(name)) return 'Judiciary';
+          if (/inspector|officer|sub-inspector|sho|constable|dsp|sp|investigat/i.test(name)) return 'Officer';
+          if (/department|wing|offences|police|bureau|agency|authority|station/i.test(name)) return 'Police / LEA';
+          if (isPrimary) return 'Key Subject';
+          return 'Involved';
         };
 
         // Extract key people with accurate role classification
@@ -140,7 +140,7 @@ export default function SimpleViewPage() {
           insights.push(`Suspicious network patterns were detected (score: ${score}/100) that warrant closer review by investigators.`);
         }
 
-        const suspects = peopleList.filter(p => p.role_tag === 'Primary Subject of Interest' || p.role_tag === 'Involved Person / Witness');
+        const suspects = peopleList.filter(p => p.role_tag === 'Key Subject' || p.role_tag === 'Involved' || p.role_tag === 'Primary Subject of Interest');
         if (suspects.length > 1) {
           insights.push(`The investigation links ${suspects[0].name} and ${suspects.length - 1} other individuals, indicating a coordinated network.`);
         } else if (suspects.length === 1) {
@@ -584,25 +584,31 @@ export default function SimpleViewPage() {
                 <p className="text-xs text-white/35 italic">No key people or organizations have been identified yet.</p>
               ) : (
                 data.key_entities.map((entity: any, idx: number) => {
-                  let roleColor = "bg-white/10 text-white/60 border-white/[0.05]";
+                  let roleColor = "bg-white/10 text-white/60 border border-white/[0.05]";
                   const roleTag = (entity.role_tag || '').toLowerCase();
-                  if (roleTag.includes('suspect') || roleTag.includes('accused')) {
+                  if (roleTag.includes('suspect') || roleTag.includes('accused') || roleTag.includes('key subject') || roleTag.includes('primary')) {
                     roleColor = "bg-red-500/10 text-red-400 border border-red-500/20";
                   } else if (roleTag.includes('victim')) {
                     roleColor = "bg-blue-500/10 text-blue-400 border border-blue-500/20";
+                  } else if (roleTag.includes('police') || roleTag.includes('lea') || roleTag.includes('officer') || roleTag.includes('agency')) {
+                    roleColor = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                  } else if (roleTag.includes('judiciary') || roleTag.includes('court') || roleTag.includes('judicial')) {
+                    roleColor = "bg-amber-500/10 text-amber-400 border border-amber-500/20";
                   } else if (roleTag.includes('organization')) {
                     roleColor = "bg-purple-500/10 text-purple-400 border border-purple-500/20";
                   }
                   
                   return (
-                    <div key={idx} className="flex items-center justify-between pb-3 border-b border-white/[0.05] last:border-0 last:pb-0">
-                      <div className="flex items-center gap-4">
-                        <div className="w-9 h-9 rounded-full bg-white/[0.05] flex items-center justify-center shrink-0 border border-white/[0.05]">
-                          {entity.type === 'Organization' ? <Building className="w-4 h-4 text-purple-400" /> : <User className="w-4 h-4 text-blue-400" />}
+                    <div key={idx} className="flex items-center justify-between gap-3 pb-3 border-b border-white/[0.05] last:border-0 last:pb-0">
+                      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-white/[0.05] flex items-center justify-center shrink-0 border border-white/[0.05]">
+                          {entity.type === 'Organization' ? <Building className="w-3.5 h-3.5 text-purple-400" /> : <User className="w-3.5 h-3.5 text-blue-400" />}
                         </div>
-                        <span className="text-sm font-semibold text-white/90 truncate max-w-[120px] sm:max-w-[150px]">{entity.name}</span>
+                        <span className="text-sm font-semibold text-white/90 truncate block" title={entity.name}>
+                          {entity.name}
+                        </span>
                       </div>
-                      <span className={cn("text-[9px] px-2.5 py-1 rounded font-bold uppercase tracking-widest", roleColor)}>
+                      <span className={cn("text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider shrink-0 whitespace-nowrap", roleColor)}>
                         {entity.role_tag}
                       </span>
                     </div>
