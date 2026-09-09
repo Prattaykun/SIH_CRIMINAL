@@ -222,8 +222,13 @@ export function AppShell({ children }: AppShellProps) {
             </button>
             {!collapsed && (
               <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.1] bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500">
-                  <Zap className="h-4 w-4 text-white" strokeWidth={2.2} />
+                <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.12] bg-[#0b101e] shadow-md">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/logo.png"
+                    alt="GoyendaBondhu Logo"
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-white">

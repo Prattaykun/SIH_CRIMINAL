@@ -38,11 +38,15 @@ export function Header() {
 
   return (
     <header className="h-16 bg-[#0c0f17]/90 backdrop-blur-md border-b border-[#1f2536] px-6 lg:px-8 flex items-center justify-between sticky top-0 z-40 transition-colors">
-      {/* Left: Branding & Logo */}
       <div className="flex items-center gap-4 shrink-0">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-blue-400 font-bold text-sm shadow-sm group-hover:border-slate-600 transition-colors">
-            <Shield className="w-4 h-4 text-blue-400" />
+          <div className="relative w-8 h-8 rounded-xl border border-white/[0.12] bg-[#0b101e] overflow-hidden shrink-0 flex items-center justify-center shadow-md group-hover:border-white/20 transition-colors">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt="GoyendaBondhu Logo"
+              className="h-full w-full object-cover"
+            />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
