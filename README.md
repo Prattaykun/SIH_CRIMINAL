@@ -178,3 +178,14 @@ The platform supports optionally fine-tuning a custom spaCy NER model on the syn
 2. Convert data via `python scripts/prepare_spacy_ner_data.py`.
 3. Train via `python scripts/train_spacy_ner.py`.
 4. Check the frontend "Model Registry" page to see registered models.
+
+
+## Simple View
+
+The **Simple View** is a non-technical case summary dashboard intended for laymen, managers, and non-technical officers. It displays case proceedings, key events, and key people without complex network graphs or technical ML jargon.
+
+- **Current State (Rule-Based):** The summary and AI insights are currently rule-based and derived statically from structured ML artifacts (entity_context_review_completed_v6.csv, nomaly_scores_cleaned_v6.csv) and database metadata. No external LLM calls are made.
+- **Where Logic Lives:**
+  - Backend: pps/backend/app/api/v1/endpoints/cases.py (Endpoint: GET /api/v1/cases/{case_id}/simple)
+  - Frontend: pps/frontend/src/app/cases/[caseId]/simple/page.tsx
+- **Future Enhancements (LLM Integration):** A real LLM can be easily plugged into the backend endpoint to replace the rule-based strings with richer, generative summaries using the gathered case context. Look for the [LLM integration point] comment in cases.py to substitute the rule-based templating with an LLM call.

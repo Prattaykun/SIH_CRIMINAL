@@ -199,6 +199,11 @@ export const api = {
     return handleResponse<any>(response);
   },
 
+  async getCaseSimple(caseId: string): Promise<any> {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/cases/${caseId}/simple`);
+    return handleResponse<any>(response);
+  },
+
   async getDashboardStats(caseId?: string, timeRange?: string): Promise<DashboardOverviewStats> {
     const params = new URLSearchParams();
     if (caseId && caseId !== 'all') params.append('case_id', caseId);
