@@ -2,18 +2,19 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Build context MUST be the repository root (leave Render Root Directory empty).
-COPY apps/backend/requirements.txt .
+# Render Root Directory must be: apps/backend
+# (build context = this folder, not the repo root)
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY apps/backend/ /app/apps/backend/
-COPY packages/shared/ /app/packages/shared/
+# Keep import path used by main.py: apps.backend.app.main:app
+RUN mkdir -p /app/apps && touch /app/apps/__init__.py
+COPY . /app/apps/backend/
+RUN touch /app/apps/backend/__init__.py
 
 ENV PYTHONPATH=/app
-# Render injects PORT; local Docker defaults to 8000.
 ENV PORT=8000
 
 EXPOSE 8000
 
-# Matches apps.backend.app.main:app (FastAPI instance in main.py)
 CMD ["sh", "-c", "uvicorn apps.backend.app.main:app --host 0.0.0.0 --port ${PORT}"]
