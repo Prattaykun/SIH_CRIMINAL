@@ -385,15 +385,15 @@ export function TimelineEvidenceCalendarMenu({
                     </Button>
                     <Button
                       variant="outline"
-                      size="icon-xs"
+                      size="xs"
                       onClick={() => {
                         setCurrentYear(2024);
                         setCurrentMonth(9);
                       }}
-                      className="border-white/10 bg-slate-800/80 hover:bg-slate-700 text-slate-300 px-1.5 text-[10px] font-mono"
+                      className="h-6 shrink-0 border-white/10 bg-slate-800/80 px-2 text-[10px] font-mono leading-none text-slate-300 hover:bg-slate-700"
                       title="Current Case Month (Oct 2024)"
                     >
-                      Oct '24
+                      Oct&nbsp;&apos;24
                     </Button>
                     <Button
                       variant="outline"

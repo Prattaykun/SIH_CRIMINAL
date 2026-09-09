@@ -1054,6 +1054,18 @@ export default function CaseGraphPage() {
             </div>
           </div>
         )}
+
+        <TimelineEvidenceCalendarMenu
+          isOpen={isCalendarMenuOpen}
+          onClose={() => setIsCalendarMenuOpen(false)}
+          timelineEvents={timelineEvents}
+          evidenceItems={evidenceItems}
+          onFocusEntity={(entityId) => {
+            setFocusRootId(entityId);
+            setViewMode('NETWORK');
+            setIsCalendarMenuOpen(false);
+          }}
+        />
       </div>
     </div>
   );

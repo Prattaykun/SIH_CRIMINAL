@@ -53,6 +53,7 @@ import {
   TopologyRolesChart,
   InvestigationVelocityChart,
 } from '@/components/dashboard/DashboardCharts';
+import { DashboardCasePicker } from '@/components/dashboard/DashboardCasePicker';
 
 // Animation Variants
 const containerVariants: Variants = {
@@ -238,19 +239,11 @@ export default function DashboardOverview() {
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="flex items-center gap-2">
               <span className="font-mono text-[11px] uppercase tracking-wider text-white/35">Case:</span>
-              <select
-                aria-label="Filter by case"
+              <DashboardCasePicker
                 value={selectedCaseId}
-                onChange={(e) => setSelectedCaseId(e.target.value)}
-                className={cn(surfaceSelect, "cursor-pointer py-1.5 text-xs")}
-              >
-                <option value="all">All Cases</option>
-                {availableCases.map((c) => (
-                  <option key={c.id} value={c.case_number}>
-                    {c.case_number} — {c.title}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedCaseId}
+                cases={availableCases}
+              />
             </div>
             <div className="flex items-center gap-2">
               <span className="font-mono text-[11px] uppercase tracking-wider text-white/35">Range:</span>
@@ -790,12 +783,20 @@ export default function DashboardOverview() {
           {/* Card: Entity Type Breakdown Donut Chart */}
           <Card className={cn(surfaceCard, "transition-all")}>
             <CardHeader className="pb-2 border-b border-white/[0.08]">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <CardTitle className="text-sm font-bold text-white font-mono uppercase tracking-wider flex items-center gap-2">
                   <Layers className="size-4 text-purple-400" />
                   Entity Type Distribution
                 </CardTitle>
-                <Badge variant="purple">EXTRACTED</Badge>
+                <div className="flex items-center gap-2">
+                  <DashboardCasePicker
+                    compact
+                    value={selectedCaseId}
+                    onChange={setSelectedCaseId}
+                    cases={availableCases}
+                  />
+                  <Badge variant="purple">EXTRACTED</Badge>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="pt-3">
@@ -824,18 +825,26 @@ export default function DashboardOverview() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 text-xs font-mono">
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-blue-500" />
-                  <span className="text-white/70">Graph Links</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-amber-500" />
-                  <span className="text-white/70">Human Audits</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-emerald-500" />
-                  <span className="text-white/70">Evidence Streams</span>
+              <div className="flex flex-wrap items-center gap-3">
+                <DashboardCasePicker
+                  compact
+                  value={selectedCaseId}
+                  onChange={setSelectedCaseId}
+                  cases={availableCases}
+                />
+                <div className="flex items-center gap-3 text-xs font-mono">
+                  <div className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-blue-500" />
+                    <span className="text-white/70">Graph Links</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-amber-500" />
+                    <span className="text-white/70">Human Audits</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-emerald-500" />
+                    <span className="text-white/70">Evidence Streams</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -849,10 +858,10 @@ export default function DashboardOverview() {
         {/* Right (5 cols): Entity Distribution & Centrality Roles */}
         <Card className="lg:col-span-5 bg-[#111624]/95 border-[#212738] shadow-xl flex flex-col justify-between">
           <CardHeader className="pb-2 border-b border-[#1e2436]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Layers className="size-4 text-slate-400" />
-                <div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Layers className="size-4 shrink-0 text-slate-400" />
+                <div className="min-w-0">
                   <CardTitle className="text-sm font-bold text-white tracking-wide">
                     Extracted Entity Distribution
                   </CardTitle>
@@ -861,9 +870,17 @@ export default function DashboardOverview() {
                   </CardDescription>
                 </div>
               </div>
-              <Badge variant="outline" className="text-[10px] font-mono text-emerald-400 border-emerald-500/30">
-                {verificationRatio}% Verified
-              </Badge>
+              <div className="flex shrink-0 items-center gap-2">
+                <DashboardCasePicker
+                  compact
+                  value={selectedCaseId}
+                  onChange={setSelectedCaseId}
+                  cases={availableCases}
+                />
+                <Badge variant="outline" className="text-[10px] font-mono text-emerald-400 border-emerald-500/30">
+                  {verificationRatio}% Verified
+                </Badge>
+              </div>
             </div>
           </CardHeader>
 
