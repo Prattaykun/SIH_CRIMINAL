@@ -65,6 +65,7 @@ export default function SimpleViewPage() {
         const classifyPersonRole = (name: string, isPrimary: boolean) => {
           if (/magistrate|judge|court|justice/i.test(name)) return 'Judicial Authority';
           if (/inspector|officer|sub-inspector|sho|constable|dsp|sp|investigat/i.test(name)) return 'Investigating Officer / Official';
+          if (/department|wing|offences|police|bureau|agency|authority/i.test(name)) return 'Law Enforcement / Agency';
           if (isPrimary) return 'Primary Subject of Interest';
           return 'Involved Person / Witness';
         };
@@ -120,34 +121,59 @@ export default function SimpleViewPage() {
           }
         });
 
-        // AI Insights
+        // Dynamic, data-driven AI Insights
         const insights: string[] = [];
         const score = summaryRes?.anomaly_index?.score || 0;
         
+        // 1. Score-based insight
         if (score >= 90) {
-          insights.push(`The system flagged this case as highly suspicious (score: ${score}/100) because the people involved are interacting in hidden or unusual patterns.`);
+          insights.push(`The system flagged this case as highly suspicious (score: ${score}/100) due to complex, hidden interactions between the involved parties.`);
         } else if (score >= 70) {
-          insights.push(`There are suspicious activity patterns in this case (score: ${score}/100) that usually warrant a closer look by investigators.`);
+          insights.push(`There are suspicious network patterns here (score: ${score}/100) that typically require a closer look by investigators.`);
         }
 
-        if (summaryRes?.primary_subject?.name) {
-          const subName = summaryRes.primary_subject.name;
-          const roleLabel = classifyPersonRole(subName, true);
-          if (roleLabel !== 'Judicial Authority' && roleLabel !== 'Investigating Officer / Official') {
-            insights.push(`The evidence suggests ${subName} is the central figure coordinating these activities.`);
+        // 2. People-based insight
+        const suspects = peopleList.filter(p => p.role === 'Primary Subject of Interest' || p.role === 'Involved Person / Witness');
+        if (suspects.length > 0) {
+          if (suspects.length === 1) {
+             insights.push(`The evidence strongly points to ${suspects[0].name} acting as the sole coordinator of these activities.`);
+          } else {
+             insights.push(`The investigation links ${suspects[0].name} and ${suspects.length - 1} other individuals, suggesting an organized network.`);
           }
         }
 
-        if (summaryRes?.linked_assets && summaryRes.linked_assets.length > 0) {
-          insights.push(`The suspects are using multiple different phone numbers and accounts, which is a common tactic in organized crime.`);
+        // 3. Location / Scope insight
+        const locations = Array.from(locSet);
+        if (locations.length > 1) {
+          insights.push(`Activities are spread across ${locations.length} distinct locations (including ${locations[0]}), indicating a wide geographic footprint.`);
+        } else if (locations.length === 1) {
+          insights.push(`The suspicious activities are heavily localized around ${locations[0]}.`);
         }
 
-        if (timelineList.length >= 4) {
-          insights.push(`There is a rapid sequence of events recorded, indicating highly coordinated or pre-planned actions.`);
+        // 4. Asset / Communications insight
+        const assets = summaryRes?.linked_assets || [];
+        const phoneAssets = assets.filter((a: any) => a.type?.toLowerCase().includes('phone') || a.name?.includes('+91'));
+        const financialAssets = assets.filter((a: any) => a.type?.toLowerCase().includes('bank') || a.type?.toLowerCase().includes('account'));
+        
+        if (phoneAssets.length > 0 && financialAssets.length > 0) {
+          insights.push(`Investigators have identified both communication channels (${phoneAssets.length} phones) and financial nodes (${financialAssets.length} accounts) tied to the suspects.`);
+        } else if (phoneAssets.length > 1) {
+          insights.push(`The group appears to be rotating through ${phoneAssets.length} different phone numbers to avoid detection.`);
+        }
+
+        // 5. Timeline insight
+        if (timelineList.length >= 3) {
+          const firstDate = timelineList[timelineList.length - 1]?.date;
+          const lastDate = timelineList[0]?.date;
+          if (firstDate && lastDate && firstDate !== lastDate) {
+            insights.push(`Events escalated over a period from ${firstDate} to ${lastDate}, showing sustained, pre-planned action.`);
+          } else {
+             insights.push(`A rapid burst of ${timelineList.length} distinct events was logged, pointing to a highly coordinated operation.`);
+          }
         }
 
         if (insights.length === 0) {
-          insights.push('The system is still gathering enough evidence to form concrete insights.');
+          insights.push('The system is analyzing newly ingested documents to uncover hidden connections.');
         }
 
         // Clean natural summary
