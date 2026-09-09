@@ -17,27 +17,34 @@ import {
   ChevronDown,
   Layers,
   Sparkles,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  GitMerge,
+  UserCheck,
+  Landmark,
+  Radio,
+  Share2,
+  Plus,
+  ExternalLink,
+  ChevronRight,
+  TrendingUp,
 } from 'lucide-react';
 import { api, DashboardOverviewStats } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { getStoredToken } from '@/lib/auth';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import {
-  InvestigationVelocityChart,
-  TopologyRolesChart,
+  MicroSparkline,
   EntityDistributionChart,
+  TopologyRolesChart,
+  InvestigationVelocityChart,
 } from '@/components/dashboard/DashboardCharts';
-import { InvestigationRadarMap } from '@/components/dashboard/InvestigationRadarMap';
-import {
-  InvestigationMetricCard,
-  InvestigationPatternCard,
-  TaskForceDispatchCard,
-  InvestigationKeyMetrics,
-} from '@/components/dashboard/KemetraWidgets';
 
-// Framer Motion Animation Variants
+// Animation Variants
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
@@ -60,9 +67,6 @@ export default function DashboardOverview() {
   const [stats, setStats] = useState<DashboardOverviewStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Active View Tab ('radar' | 'velocity' | 'topology')
-  const [activeTab, setActiveTab] = useState<'radar' | 'velocity' | 'topology'>('radar');
 
   // Operational Filters
   const [selectedCaseId, setSelectedCaseId] = useState<string>('all');
@@ -207,12 +211,19 @@ export default function DashboardOverview() {
     return list;
   }, [stats, tableSearch, sortBy, statusFilter]);
 
+  // Verification Progress Ratio
+  const verificationRatio = useMemo(() => {
+    const verified = stats?.verified_entities?.verified || 0;
+    const total = stats?.verified_entities?.total || 1;
+    return Math.round((verified / total) * 100);
+  }, [stats]);
+
   return (
     <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6 max-w-[1600px] mx-auto pb-12"
+      className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* 1. TOP ENVIRONMENT & SYNTHETIC DATA ETHICS BANNER */}
       <motion.div
@@ -235,7 +246,7 @@ export default function DashboardOverview() {
                 </Badge>
               </div>
               <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
-                Outputs are investigation-support decision aids. Graph signals, entity links, and pattern alerts require authorized human verification before operational action.
+                Outputs are decision aids. Graph signals, entity links, and pattern alerts require authorized human verification before operational action.
               </p>
             </div>
           </div>
@@ -250,7 +261,7 @@ export default function DashboardOverview() {
         </div>
       </motion.div>
 
-      {/* 2. OPERATIONAL CONTROL HEADER & VIEW SELECTOR */}
+      {/* 2. OPERATIONAL CONTROL HEADER */}
       <motion.div
         variants={itemVariants}
         className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-[#212738]"
@@ -258,53 +269,19 @@ export default function DashboardOverview() {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-extrabold text-white tracking-tight">
-              Investigation Intelligence Overview
+              Investigation Command Dashboard
             </h1>
-            <Badge variant="outline" className="text-[10px] font-mono border-emerald-500/30 text-emerald-400 bg-emerald-500/10">
-              LIVE TELEMETRY
+            <Badge variant="outline" className="text-[10px] font-mono border-blue-500/30 text-blue-400 bg-blue-500/10">
+              OPERATIONAL
             </Badge>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Operational dashboard for active criminal syndicate investigations, spatial radar, and verified graph topology.
+            Real-time criminal network analysis, link predictions, and human-in-the-loop verification pipeline.
           </p>
         </div>
 
-        {/* Filters & View Tabs */}
+        {/* Operational Filter Controls */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Segmented View Switcher */}
-          <div className="flex items-center p-1 rounded-xl border border-[#232b3f] bg-[#121622] text-xs font-medium">
-            <button
-              onClick={() => setActiveTab('radar')}
-              className={`px-3.5 py-1.5 rounded-lg transition-all ${
-                activeTab === 'radar'
-                  ? 'bg-[#5db329] text-white font-semibold shadow-xs'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Intelligence Radar
-            </button>
-            <button
-              onClick={() => setActiveTab('velocity')}
-              className={`px-3.5 py-1.5 rounded-lg transition-all ${
-                activeTab === 'velocity'
-                  ? 'bg-[#5db329] text-white font-semibold shadow-xs'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Velocity Ingestion
-            </button>
-            <button
-              onClick={() => setActiveTab('topology')}
-              className={`px-3.5 py-1.5 rounded-lg transition-all ${
-                activeTab === 'topology'
-                  ? 'bg-[#5db329] text-white font-semibold shadow-xs'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Topology &amp; Roles
-            </button>
-          </div>
-
           {/* Case Filter Selector */}
           <div className="flex items-center gap-2 bg-[#121622] border border-[#212738] rounded-xl px-3 py-1.5 text-xs text-slate-300 shadow-inner hover:border-slate-700 transition-colors">
             <span className="text-slate-500 font-mono text-[11px] uppercase tracking-wider">Case:</span>
@@ -339,180 +316,444 @@ export default function DashboardOverview() {
             </select>
           </div>
 
+          {/* New Case Button */}
+          <Link href="/cases/new">
+            <Button size="sm" className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs gap-1.5 shadow-md shadow-blue-600/20">
+              <Plus className="size-3.5" />
+              <span>New Case</span>
+            </Button>
+          </Link>
+
           {/* Sync Button */}
           <button
             onClick={loadDashboardData}
             title="Sync Graph Pipeline"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#5db329] hover:bg-[#529e24] text-white text-xs font-semibold shadow-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#232b3f] bg-[#121622] hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold shadow-xs transition-colors"
           >
-            <RotateCcw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Sync Graph</span>
+            <RotateCcw className={`size-3.5 ${loading ? 'animate-spin text-blue-400' : ''}`} />
+            <span>Sync</span>
           </button>
         </div>
       </motion.div>
 
       {/* =========================================================================
-          VIEW 1: INTELLIGENCE RADAR & HIGH-IMPACT METRICS (Kemetra-Inspired Split Grid)
+          ROW 1: PRIMARY OPERATIONAL KPI CARDS
           ========================================================================= */}
-      {activeTab === 'radar' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* LEFT SUB-COLUMN (~35% width / 5 cols): Spatial Radar Map */}
-          <motion.div variants={itemVariants} className="lg:col-span-5 space-y-4">
-            <InvestigationRadarMap
-              selectedCase={selectedCaseId === 'all' ? undefined : selectedCaseId}
-            />
-
-            {/* Quick Sector Details Card */}
-            <div className="rounded-2xl border border-[#212738] bg-[#111624] p-4 text-xs shadow-lg text-slate-300">
-              <div className="flex items-center justify-between font-bold text-white pb-2 border-b border-[#1e2436]">
-                <span>Surveillance Perimeter</span>
-                <Badge variant="outline" className="text-[10px] font-mono text-[#5db329] border-[#5db329]/30">
-                  SECTOR CR-7C2
-                </Badge>
+      <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* KPI 1: Active Investigations */}
+        <Card className="bg-[#111624]/95 border-[#212738] shadow-lg hover:border-slate-700 transition-colors">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 font-mono uppercase tracking-wider">
+                Active Cases
+              </span>
+              <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                <FileText className="size-4" />
               </div>
-              <p className="mt-2 text-[11px] text-slate-400 leading-relaxed">
-                Automated spatial sweep active over freight cargo corridor. 28 entities cross-referenced across Hawala micro-routing logs and CDR relays.
-              </p>
             </div>
-          </motion.div>
-
-          {/* RIGHT SUB-COLUMN (~65% width / 7 cols): Metric Trends, Pattern Alert, Task Force */}
-          <motion.div variants={itemVariants} className="lg:col-span-7 space-y-5">
-            {/* ROW 1: 2 Top Metric Cards (Entities Extracted & Risk Index) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Card 1: Entities Extracted */}
-              <InvestigationMetricCard
-                title="Entities Extracted"
-                count={stats?.entities_extracted ? `${stats.entities_extracted}` : '137'}
-                unit="NODES"
-                lastUpdate="Live Graph Pipeline"
-                average={28}
-                minVal={20}
-                maxVal={40}
-                gradientId="entitiesGrad"
-                type="count"
-              />
-
-              {/* Card 2: Cluster Cohesion & Risk Index */}
-              <InvestigationMetricCard
-                title="Network Risk & Cohesion"
-                count={stats?.explainable_pattern_signals?.cluster_cohesion_index ? '87' : '35'}
-                unit="RISK"
-                lastUpdate="Live Graph Pipeline"
-                average={25}
-                minVal={20}
-                maxVal={40}
-                gradientId="riskGrad"
-                type="speed"
+          </CardHeader>
+          <CardContent className="pb-2">
+            <div className="flex items-baseline justify-between">
+              <div>
+                <span className="text-3xl font-extrabold text-white tracking-tight">
+                  {stats?.active_cases_summary?.active ?? 5}
+                </span>
+                <span className="text-xs text-slate-400 font-mono ml-1.5">
+                  / {stats?.active_cases_summary?.total ?? 8} Total
+                </span>
+              </div>
+              <MicroSparkline
+                data={[2, 3, 3, 4, 4, 5, 5]}
+                color="#3b82f6"
+                gradientId="sparkCases"
               />
             </div>
+            <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
+              <span className="flex items-center gap-1 text-rose-400 font-mono text-[11px]">
+                <AlertTriangle className="size-3" />
+                {stats?.active_cases_summary?.high_priority ?? 3} High Priority
+              </span>
+              <Link href="/cases" className="text-blue-400 hover:underline text-[11px] font-medium flex items-center gap-0.5">
+                Directory <ChevronRight className="size-3" />
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* ROW 2: 2 Operational Cards (Pattern Alert & Inter-Agency Dispatch) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <InvestigationPatternCard
-                caseNumber={selectedCaseId === 'all' ? 'SYN-2024-922' : selectedCaseId}
-              />
-              <TaskForceDispatchCard
-                caseNumber={selectedCaseId === 'all' ? 'SYN-2024-922' : selectedCaseId}
+        {/* KPI 2: Pending Human Verifications (Critical Investigator Workload) */}
+        <Card className="bg-[#111624]/95 border-[#212738] shadow-lg hover:border-slate-700 transition-colors">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 font-mono uppercase tracking-wider">
+                Verification Queue
+              </span>
+              <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                <CheckCircle2 className="size-4" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pb-2">
+            <div className="flex items-baseline justify-between">
+              <div>
+                <span className="text-3xl font-extrabold text-amber-400 tracking-tight">
+                  {stats?.verification_queue?.total_pending ?? 32}
+                </span>
+                <span className="text-xs text-slate-400 font-mono ml-1.5">Pending</span>
+              </div>
+              <MicroSparkline
+                data={[12, 18, 22, 25, 29, 30, 32]}
+                color="#f59e0b"
+                gradientId="sparkQueue"
               />
             </div>
+            <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
+              <span className="text-slate-400 text-[11px] font-mono">
+                {stats?.verification_queue?.pending_entities ?? 20} Entities &bull; {stats?.verification_queue?.pending_relationships ?? 12} Links
+              </span>
+              <Link href="/audit" className="text-amber-400 hover:underline text-[11px] font-medium flex items-center gap-0.5">
+                Review <ChevronRight className="size-3" />
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* ROW 3: Key Metrics Grid (6 Compact Cards) */}
-            <InvestigationKeyMetrics stats={stats} />
-          </motion.div>
-        </div>
-      )}
+        {/* KPI 3: Extracted Criminal Entities */}
+        <Card className="bg-[#111624]/95 border-[#212738] shadow-lg hover:border-slate-700 transition-colors">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 font-mono uppercase tracking-wider">
+                Extracted Entities
+              </span>
+              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                <Layers className="size-4" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pb-2">
+            <div className="flex items-baseline justify-between">
+              <div>
+                <span className="text-3xl font-extrabold text-white tracking-tight">
+                  {stats?.entities_extracted ?? 28}
+                </span>
+                <span className="text-xs text-slate-400 font-mono ml-1.5">Nodes</span>
+              </div>
+              <MicroSparkline
+                data={[10, 14, 18, 20, 24, 26, 28]}
+                color="#10b981"
+                gradientId="sparkEntities"
+              />
+            </div>
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                <span>Verified Ratio</span>
+                <span className="text-emerald-400 font-bold">{verificationRatio}%</span>
+              </div>
+              <Progress value={verificationRatio} className="h-1 bg-slate-800" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KPI 4: Graph Topology & Critical Brokers */}
+        <Card className="bg-[#111624]/95 border-[#212738] shadow-lg hover:border-slate-700 transition-colors">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 font-mono uppercase tracking-wider">
+                Graph Network Links
+              </span>
+              <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                <GitMerge className="size-4" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pb-2">
+            <div className="flex items-baseline justify-between">
+              <div>
+                <span className="text-3xl font-extrabold text-white tracking-tight">
+                  {stats?.network_structure?.bridge_nodes ?? 4}
+                </span>
+                <span className="text-xs text-purple-400 font-mono ml-1.5">Bridge Gateways</span>
+              </div>
+              <MicroSparkline
+                data={[2, 2, 3, 3, 4, 4, 4]}
+                color="#a855f7"
+                gradientId="sparkBridges"
+              />
+            </div>
+            <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
+              <span className="text-slate-400 text-[11px] font-mono">
+                {stats?.network_structure?.high_degree_nodes ?? 6} Hubs &bull; {stats?.network_structure?.edge_count ?? 17} Links
+              </span>
+              <Link href="/graph" className="text-purple-400 hover:underline text-[11px] font-medium flex items-center gap-0.5">
+                Visualizer <ChevronRight className="size-3" />
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* =========================================================================
-          VIEW 2: VELOCITY INGESTION TAB (Multi-Stream Velocity Progressions)
+          ROW 2: TWO CORE INVESTIGATIVE ACTION PANELS
+          - Panel 1: Human Verification Queue (Action Required)
+          - Panel 2: Explainable Pattern Signals & Syndicate Intelligence
           ========================================================================= */}
-      {activeTab === 'velocity' && (
-        <motion.div variants={itemVariants} className="space-y-6">
-          <Card className="bg-[#111624]/95 border-[#212738] shadow-2xl backdrop-blur-md">
-            <CardHeader className="pb-2 border-b border-[#1e2436]">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* PANEL 1 (7 cols): Human Verification Action Queue */}
+        <Card className="lg:col-span-7 bg-[#111624]/95 border-[#212738] shadow-xl flex flex-col justify-between">
+          <div>
+            <CardHeader className="pb-3 border-b border-[#1e2436]">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400">
-                    <Activity className="size-4" />
+                  <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                    <UserCheck className="size-4" />
                   </div>
                   <div>
-                    <CardTitle className="text-base font-bold text-white tracking-wide">
-                      Multi-Stream Investigation Velocity
+                    <CardTitle className="text-sm font-bold text-white tracking-wide">
+                      Human Verification Action Queue
                     </CardTitle>
                     <CardDescription className="text-xs text-slate-400 mt-0.5">
-                      30-Day ingestion trends for Graph Links, Evidence Dossiers, and Human Audits
+                      Pending AI extractions requiring authorized sign-off before case evidentiary filing
                     </CardDescription>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 text-xs font-mono">
-                  <div className="flex items-center gap-1.5">
-                    <span className="size-2 rounded-full bg-blue-500" />
-                    <span className="text-slate-300">Graph Links</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="size-2 rounded-full bg-amber-500" />
-                    <span className="text-slate-300">Human Audits</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="size-2 rounded-full bg-emerald-500" />
-                    <span className="text-slate-300">Evidence Streams</span>
-                  </div>
-                </div>
+                <Badge variant="warning" className="text-[10px] font-mono uppercase">
+                  {stats?.verification_queue?.high_priority_pending_count ?? 16} Urgent
+                </Badge>
               </div>
             </CardHeader>
 
-            <CardContent className="pt-4">
-              <InvestigationVelocityChart />
+            <CardContent className="pt-4 space-y-4">
+              {/* Oldest Pending Item Alert Banner */}
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex items-start gap-3 text-xs">
+                <Clock className="size-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="font-semibold text-slate-200 truncate">
+                      Oldest Unverified Item: {stats?.verification_queue?.oldest_pending_item?.name || '123 Fake Street, Springfield'}
+                    </span>
+                    <Badge variant="outline" className="text-[9px] font-mono text-amber-400 border-amber-500/40">
+                      {stats?.verification_queue?.oldest_pending_item?.type || 'LOCATION'}
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Extracted from case dossier &bull; Requires investigator confirmation or rejection.
+                  </p>
+                </div>
+              </div>
+
+              {/* Pending Queue by Entity Type Breakdown */}
+              <div>
+                <div className="text-xs font-semibold text-slate-300 mb-2 font-mono uppercase tracking-wider">
+                  Pending By Entity Category
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {Object.entries(
+                    stats?.verification_queue?.by_entity_type || {
+                      PERSON: 7,
+                      LOCATION: 3,
+                      ORGANIZATION: 2,
+                      PHONE: 3,
+                      ACCOUNT: 3,
+                      VEHICLE: 2,
+                    }
+                  ).map(([type, count]) => (
+                    <div
+                      key={type}
+                      className="rounded-xl border border-[#232b3f] bg-[#151b2a] p-2.5 flex items-center justify-between text-xs"
+                    >
+                      <span className="text-slate-400 font-mono text-[11px]">{type}</span>
+                      <span className="font-bold text-white font-mono px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700">
+                        {count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
-      {/* =========================================================================
-          VIEW 3: TOPOLOGY & ROLES TAB (Graph Centrality Roles & Entity Distribution)
-          ========================================================================= */}
-      {activeTab === 'topology' && (
-        <motion.div variants={itemVariants} className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <div className="lg:col-span-7 rounded-2xl border border-[#212738] bg-[#111624] p-5 shadow-lg">
-              <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#1e2436]">
-                <h3 className="text-sm font-extrabold text-white">
-                  Graph Topology &amp; Centrality Roles
-                </h3>
-                <Badge variant="outline" className="text-[10px] font-mono text-blue-400 border-blue-500/30">
-                  Louvain + Betweenness
-                </Badge>
-              </div>
-              <TopologyRolesChart
-                roles={{
-                  high_degree: stats?.network_structure?.high_degree_nodes || 6,
-                  bridge: stats?.network_structure?.bridge_nodes || 4,
-                  financial: stats?.network_structure?.financial_nodes || 3,
-                  communication: stats?.network_structure?.communication_nodes || 5,
-                  peripheral: stats?.network_structure?.peripheral_nodes || 14,
-                }}
-              />
-            </div>
-
-            <div className="lg:col-span-5 rounded-2xl border border-[#212738] bg-[#111624] p-5 shadow-lg">
-              <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#1e2436]">
-                <h3 className="text-sm font-extrabold text-white">
-                  Entity Type Breakdown
-                </h3>
-                <Badge variant="outline" className="text-[10px] font-mono text-emerald-400 border-emerald-500/30">
-                  {stats?.verified_entities?.total || 28} Total Nodes
-                </Badge>
-              </div>
-              <EntityDistributionChart byType={stats?.verification_queue?.by_entity_type} />
-            </div>
           </div>
-        </motion.div>
-      )}
+
+          <CardFooter className="pt-2 pb-4 border-t border-[#1e2436] flex items-center justify-between">
+            <span className="text-[11px] text-slate-400 font-mono">
+              Audit Rule: No unverified node can trigger enforcement orders
+            </span>
+            <Link href="/audit">
+              <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs gap-1.5 shadow-md shadow-amber-500/20">
+                <span>Open Verification Queue</span>
+                <ArrowUpRight className="size-3.5" />
+              </Button>
+            </Link>
+          </CardFooter>
+        </Card>
+
+        {/* PANEL 2 (5 cols): Explainable Pattern Signals & Syndicate Intelligence */}
+        <Card className="lg:col-span-5 bg-[#111624]/95 border-[#212738] shadow-xl flex flex-col justify-between">
+          <div>
+            <CardHeader className="pb-3 border-b border-[#1e2436]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400">
+                    <Sparkles className="size-4" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-bold text-white tracking-wide">
+                      Explainable Pattern Signals
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-400 mt-0.5">
+                      Louvain community clustering and betweenness bridge metrics
+                    </CardDescription>
+                  </div>
+                </div>
+
+                <Badge variant="outline" className="text-[10px] font-mono text-purple-400 border-purple-500/30">
+                  GDS ALGORITHM
+                </Badge>
+              </div>
+            </CardHeader>
+
+            <CardContent className="pt-4 space-y-3.5 text-xs">
+              {/* Cohesion Score Metric */}
+              <div className="rounded-xl border border-[#232b3f] bg-[#151b2a] p-3 flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] text-slate-400 font-mono uppercase">
+                    Cluster Cohesion Index
+                  </div>
+                  <div className="text-xl font-extrabold text-white font-mono mt-0.5">
+                    {stats?.explainable_pattern_signals?.cluster_cohesion_index ?? 0.75}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="inline-flex items-center gap-1 text-emerald-400 font-mono font-bold text-xs px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                    <TrendingUp className="size-3" />
+                    {stats?.explainable_pattern_signals?.baseline_delta ?? '+15%'}
+                  </span>
+                  <div className="text-[10px] text-slate-500 mt-0.5 font-mono">vs Baseline</div>
+                </div>
+              </div>
+
+              {/* Analytical Briefing Text */}
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-semibold text-slate-300 font-mono">
+                  Isolated Community Syndicate Leads:
+                </div>
+                <p className="text-slate-400 text-[11px] leading-relaxed">
+                  Cross-border financial routing detected between 3 shell accounts and Marcuz Kowalski syndicate. 4 bridge nodes currently connect the primary logistics ring to peripheral wire accounts.
+                </p>
+              </div>
+
+              {/* Evidence References */}
+              <div className="space-y-1 text-[11px]">
+                <span className="text-slate-400 font-mono text-[10px] uppercase">
+                  Evidence Provenance:
+                </span>
+                <div className="space-y-1">
+                  {(
+                    stats?.explainable_pattern_signals?.evidence_references || [
+                      'FIR-SYN-2024-001 (Logistics Dossier)',
+                      'CDR-TEL-2024-882 (Telecom Logs)',
+                    ]
+                  ).map((ref, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 text-slate-300 font-mono text-[10px] px-2 py-1 rounded bg-[#131825] border border-[#212738]"
+                    >
+                      <span className="size-1.5 rounded-full bg-purple-400" />
+                      <span className="truncate">{ref}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </div>
+
+          <CardFooter className="pt-2 pb-4 border-t border-[#1e2436]">
+            <p className="text-[10px] text-slate-500 leading-tight italic">
+              {stats?.explainable_pattern_signals?.disclaimer ||
+                'This is an analytical signal, not a finding of guilt. Human verification is required.'}
+            </p>
+          </CardFooter>
+        </Card>
+      </motion.div>
 
       {/* =========================================================================
-          ACTIVE CASES & RECENT ACTIVITY TABLE
-          (Fully Preserved with Search, Status Filters, Priority Sorting, and Actions)
+          ROW 3: DEEP INVESTIGATION VELOCITY & TOPOLOGY BREAKDOWN
+          ========================================================================= */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Left (7 cols): Multi-Stream Ingestion Velocity */}
+        <Card className="lg:col-span-7 bg-[#111624]/95 border-[#212738] shadow-xl">
+          <CardHeader className="pb-2 border-b border-[#1e2436]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400">
+                  <Activity className="size-4" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-bold text-white tracking-wide">
+                    Multi-Stream Investigation Velocity
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-400 mt-0.5">
+                    30-Day ingestion trends for Graph Links, Evidence Dossiers, and Human Audits
+                  </CardDescription>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 text-xs font-mono">
+                <div className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-blue-500" />
+                  <span className="text-slate-300">Graph Links</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-amber-500" />
+                  <span className="text-slate-300">Human Audits</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-emerald-500" />
+                  <span className="text-slate-300">Evidence Streams</span>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="pt-4">
+            <InvestigationVelocityChart />
+          </CardContent>
+        </Card>
+
+        {/* Right (5 cols): Entity Distribution & Centrality Roles */}
+        <Card className="lg:col-span-5 bg-[#111624]/95 border-[#212738] shadow-xl flex flex-col justify-between">
+          <CardHeader className="pb-2 border-b border-[#1e2436]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                  <Layers className="size-4" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-bold text-white tracking-wide">
+                    Extracted Entity Distribution
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-400 mt-0.5">
+                    Breakdown of {stats?.verified_entities?.total ?? 28} nodes by category
+                  </CardDescription>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-[10px] font-mono text-emerald-400 border-emerald-500/30">
+                {verificationRatio}% Verified
+              </Badge>
+            </div>
+          </CardHeader>
+
+          <CardContent className="pt-4">
+            <EntityDistributionChart byType={stats?.verification_queue?.by_entity_type} />
+          </CardContent>
+
+          <CardFooter className="pt-2 pb-3 border-t border-[#1e2436] flex items-center justify-between text-[11px] font-mono text-slate-400">
+            <span>High-Degree Hubs: {stats?.network_structure?.high_degree_nodes ?? 6}</span>
+            <span>Bridge Gateways: {stats?.network_structure?.bridge_nodes ?? 4}</span>
+          </CardFooter>
+        </Card>
+      </motion.div>
+
+      {/* =========================================================================
+          ROW 4: CONSOLIDATED ACTIVE CASES REGISTRY & SEARCH DIRECTORY
           ========================================================================= */}
       <motion.div variants={itemVariants} className="pt-2">
         <Card className="bg-[#111624]/95 border-[#212738] shadow-2xl backdrop-blur-md">
@@ -627,7 +868,7 @@ export default function DashboardOverview() {
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-slate-500">
                       <div className="flex items-center justify-center gap-2">
-                        <RefreshCw className="size-4 animate-spin text-emerald-500" />
+                        <RefreshCw className="size-4 animate-spin text-blue-500" />
                         <span className="font-mono text-xs">Loading active investigation records...</span>
                       </div>
                     </td>
