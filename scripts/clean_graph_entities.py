@@ -35,12 +35,20 @@ def clean_node(node):
     return node
 
 def main():
-    nodes_path = os.path.join("data", "case_type_cyber", "graphs", "ner_nodes_full_v4.json")
-    edges_path = os.path.join("data", "case_type_cyber", "graphs", "ner_edges_full_v4.json")
+    import sys
     
-    out_nodes_path = os.path.join("data", "case_type_cyber", "graphs", "ner_nodes_cleaned.json")
-    out_edges_path = os.path.join("data", "case_type_cyber", "graphs", "ner_edges_cleaned.json")
-    
+    if len(sys.argv) >= 5:
+        nodes_path = sys.argv[1]
+        edges_path = sys.argv[2]
+        out_nodes_path = sys.argv[3]
+        out_edges_path = sys.argv[4]
+    else:
+        nodes_path = os.path.join("data", "case_type_cyber", "graphs", "ner_nodes_full_v5.json")
+        edges_path = os.path.join("data", "case_type_cyber", "graphs", "ner_edges_full_v5.json")
+        
+        out_nodes_path = os.path.join("data", "case_type_cyber", "graphs", "ner_nodes_cleaned_v5.json")
+        out_edges_path = os.path.join("data", "case_type_cyber", "graphs", "ner_edges_cleaned_v5.json")
+        
     with open(nodes_path, "r", encoding="utf-8") as f:
         nodes = json.load(f)
         

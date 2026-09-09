@@ -26,8 +26,8 @@ from pydantic import BaseModel
 # Configuration
 # ---------------------------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-NER_MODEL_PATH = os.path.join(BASE_DIR, "models", "ner_v4", "model-best")
-RF_MODEL_PATH = os.path.join(BASE_DIR, "models", "random_forest_context_proxy_v1.pkl")
+NER_MODEL_PATH = os.path.join(BASE_DIR, "models", "ner_v5", "model-best")
+RF_MODEL_PATH = os.path.join(BASE_DIR, "models", "random_forest_context_proxy_v2.pkl")
 
 # ---------------------------------------------------------------------------
 # App state — holds the loaded model
@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     if not os.path.exists(NER_MODEL_PATH):
         raise RuntimeError(
             f"spaCy model not found at '{NER_MODEL_PATH}'. "
-            "Train it first: python -m spacy train config.cfg --output ./models/ner_v4"
+            "Train it first: python -m spacy train config.cfg --output ./models/ner_v5"
         )
     print(f"Loading NER model from {NER_MODEL_PATH} ...")
     _state["nlp"] = spacy.load(NER_MODEL_PATH)
@@ -106,7 +106,7 @@ def get_health_data() -> dict[str, str]:
         "status": "ok",
         "service": "sih-criminal-ner",
         "api_version": "v1",
-        "ner_model_version": "ner_v4",
+        "ner_model_version": "ner_v5",
         "rf_status": "experimental_proxy_not_for_enforcement",
         "release": "58ff435"
     }

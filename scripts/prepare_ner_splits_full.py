@@ -3,7 +3,7 @@ import json
 import random
 
 def main():
-    in_path = os.path.join("data", "case_type_cyber", "annotations", "ner", "doccano_all_labeled_full.jsonl")
+    in_path = os.path.join("data", "ner", "doccano_all_labeled_unified.jsonl")
     
     with open(in_path, "r", encoding="utf-8") as f:
         records = [json.loads(line) for line in f if line.strip()]

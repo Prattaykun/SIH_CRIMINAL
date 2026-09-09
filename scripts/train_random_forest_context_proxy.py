@@ -13,8 +13,9 @@ warnings.filterwarnings('ignore')
 def main():
     print("WARNING: Random Forest trained on automatically generated textual proxy labels. Do not use for verified suspect classification.\n")
     
-    label_path = os.path.join("data", "case_type_cyber", "ml", "entity_context_review_completed.csv")
-    feat_path = os.path.join("data", "case_type_cyber", "ml", "graph_features_rich_cleaned.csv")
+    import sys
+    label_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join("data", "case_type_cyber", "ml", "entity_context_review_completed_v5.csv")
+    feat_path = sys.argv[2] if len(sys.argv) > 2 else os.path.join("data", "case_type_cyber", "ml", "graph_features_rich_cleaned_v5.csv")
     
     df_labels = pd.read_csv(label_path, escapechar="\\")
     df_feat = pd.read_csv(feat_path, escapechar="\\")
@@ -138,11 +139,11 @@ def main():
     print("\n--- Top Feature Importances ---")
     print(imp_df.head(5).to_string(index=False))
     
-    out_model = os.path.join("models", "random_forest_context_proxy_v1.pkl")
-    out_feat = os.path.join("models", "random_forest_context_proxy_v1_features.json")
-    out_pred = os.path.join("data", "case_type_cyber", "ml", "context_proxy_predictions.csv")
-    out_metrics = os.path.join("data", "case_type_cyber", "ml", "random_forest_context_proxy_metrics.json")
-    out_limit = os.path.join("data", "case_type_cyber", "ml", "CONTEXT_PROXY_LIMITATIONS.md")
+    out_model = os.path.join("models", "random_forest_context_proxy_v2.pkl")
+    out_feat = os.path.join("models", "random_forest_context_proxy_v2_features.json")
+    out_pred = os.path.join("data", "case_type_cyber", "ml", "context_proxy_predictions_v2.csv")
+    out_metrics = os.path.join("data", "case_type_cyber", "ml", "random_forest_context_proxy_v2_metrics.json")
+    out_limit = os.path.join("data", "case_type_cyber", "ml", "CONTEXT_PROXY_LIMITATIONS_v2.md")
     
     os.makedirs("models", exist_ok=True)
     with open(out_model, "wb") as f:

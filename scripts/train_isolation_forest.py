@@ -6,7 +6,8 @@ from sklearn.ensemble import IsolationForest
 import pickle
 
 def main():
-    csv_path = os.path.join("data", "case_type_cyber", "ml", "graph_features_rich_cleaned.csv")
+    import sys
+    csv_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join("data", "case_type_cyber", "ml", "graph_features_rich_cleaned_v5.csv")
     if not os.path.exists(csv_path):
         print(f"ERROR: {csv_path} not found.")
         return
@@ -65,7 +66,7 @@ def main():
     with open(os.path.join("models", "isolation_forest_v2_features.json"), "w") as f:
         json.dump({"features": feature_cols}, f)
         
-    out_csv = os.path.join("data", "case_type_cyber", "ml", "anomaly_scores_cleaned.csv")
+    out_csv = sys.argv[2] if len(sys.argv) > 2 else os.path.join("data", "case_type_cyber", "ml", "anomaly_scores_cleaned_v5.csv")
     df.to_csv(out_csv, index=False)
     
     anomaly_count = df['is_anomaly'].sum()
@@ -78,7 +79,7 @@ def main():
     print(f"Total entities: {len(df)}")
     print(f"Anomaly count: {anomaly_count}")
     print(f"Anomaly percentage: {anomaly_pct:.2f}%")
-    print(f"Saved model to: models\\isolation_forest_v1.pkl")
+    print(f"Saved model to: models\\isolation_forest_v2.pkl")
     print(f"Saved scores to: {out_csv}")
     
     print("\nTop 10 most anomalous entities:")

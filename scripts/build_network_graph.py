@@ -24,14 +24,16 @@ from itertools import combinations
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
+import sys
+
 INPUT_PATH = os.path.join(
-    "data", "case_type_cyber", "annotations", "ner", "doccano_all_labeled_full.jsonl"
+    "data", "ner", "doccano_all_labeled_unified.jsonl"
 )
 GRAPH_DIR = os.path.join("data", "case_type_cyber", "graphs")
-NODES_PATH = os.path.join(GRAPH_DIR, "ner_nodes_full_v4.json")
-EDGES_PATH = os.path.join(GRAPH_DIR, "ner_edges_full_v4.json")
+NODES_PATH = os.path.join(GRAPH_DIR, "ner_nodes_full_v5.json")
+EDGES_PATH = os.path.join(GRAPH_DIR, "ner_edges_full_v5.json")
 
-MODEL_PATH = os.path.join("models", "ner_v4", "model-best")
+MODEL_PATH = os.path.join("models", "ner_v5", "model-best")
 
 # Minimum edge weight to include in output (keeps the graph clean for demo)
 MIN_EDGE_WEIGHT = 1

@@ -14,7 +14,7 @@ from collections import defaultdict
 
 import spacy
 
-MODEL_PATH = os.path.join("models", "ner_v4", "model-best")
+MODEL_PATH = os.path.join("models", "ner_v5", "model-best")
 TEST_PATH  = os.path.join("data", "ner", "test.jsonl")
 
 

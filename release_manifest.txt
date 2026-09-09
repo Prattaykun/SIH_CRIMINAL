@@ -1,4 +1,4 @@
-NER model: ner_v4
-Graph model: cleaned graph features
-Random Forest: context proxy v1
+NER model: ner_v5
+Graph model: cleaned graph features v5
+Random Forest: context proxy v2
 Random Forest status: experimental, automatically labeled
