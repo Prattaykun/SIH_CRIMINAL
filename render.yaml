@@ -1,0 +1,15 @@
+# Synthetic-demo deploy config for Render.
+# Frontend must use runtime: node so Render runs npm install before build.
+services:
+  - type: web
+    name: sih-criminal-frontend
+    runtime: node
+    rootDir: apps/frontend
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"

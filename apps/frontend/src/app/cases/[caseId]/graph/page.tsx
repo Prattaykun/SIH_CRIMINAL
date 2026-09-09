@@ -4,7 +4,6 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ReactFlow,
-  MiniMap,
   Controls,
   Background,
   useNodesState,
@@ -47,6 +46,11 @@ import {
   Focus,
   Clock,
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Check,
+  Briefcase,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -57,6 +61,7 @@ import {
   surfaceInput,
   surfacePanel,
 } from '@/components/layout/surface';
+import type { CaseResponse } from '@/types/api';
 
 const nodeTypes = {
   entity: EntityNode,
@@ -141,6 +146,7 @@ export default function CaseGraphPage() {
   const [clusters, setClusters] = useState<ClusterGroup[]>([]);
   const [expandedClusters, setExpandedClusters] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
+  const [caseData, setCaseData] = useState<CaseResponse | null>(null);
 
   // Focus & Hop mode state
   const [focusRootId, setFocusRootId] = useState<string | null>(null);
@@ -150,6 +156,7 @@ export default function CaseGraphPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [minConfidence, setMinConfidence] = useState(0.5);
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
   const [typeFilters, setTypeFilters] = useState<Record<string, boolean>>({
     PERSON: true,
     ORGANIZATION: true,
@@ -165,12 +172,26 @@ export default function CaseGraphPage() {
   // Right-hand popup timeline & evidence calendar menu state
   const [isCalendarMenuOpen, setIsCalendarMenuOpen] = useState(false);
 
+  // GCP-style case picker
+  const [availableCases, setAvailableCases] = useState<CaseResponse[]>([]);
+  const [casePickerOpen, setCasePickerOpen] = useState(false);
+  const [casePickerQuery, setCasePickerQuery] = useState('');
+  const [casesLoading, setCasesLoading] = useState(false);
+  const casePickerRef = React.useRef<HTMLDivElement>(null);
+
+  const caseLabel = caseData?.case_number || caseId;
+  const caseTitle = caseData?.title || 'Select a case';
+
   // Fetch initial graph data
   const fetchGraphData = useCallback(async () => {
     setLoading(true);
+    setFocusRootId(null);
+    setSelectedRelationship(null);
     try {
       let rawEntities: any[] = [];
       let rawRels: any[] = [];
+
+      const casePromise = api.getCase(caseId).catch(() => null);
 
       if (typeof api.getExtractionCandidates === 'function') {
         const res = await api.getExtractionCandidates(caseId, 'case');
@@ -181,6 +202,9 @@ export default function CaseGraphPage() {
         rawEntities = res?.data?.entities || res?.entities || [];
         rawRels = res?.data?.relationships || res?.relationships || [];
       }
+
+      const caseRes = await casePromise;
+      if (caseRes) setCaseData(caseRes);
 
       const normalized = normalizeGraphData(rawEntities, rawRels);
       setEntities(normalized.entities);
@@ -203,6 +227,69 @@ export default function CaseGraphPage() {
   useEffect(() => {
     fetchGraphData();
   }, [fetchGraphData]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCases() {
+      setCasesLoading(true);
+      try {
+        const res = await api.listCases(0, 100);
+        if (!cancelled) setAvailableCases(res.cases || []);
+      } catch (err) {
+        console.error('Failed to load cases for picker:', err);
+      } finally {
+        if (!cancelled) setCasesLoading(false);
+      }
+    }
+    loadCases();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!casePickerOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!casePickerRef.current?.contains(event.target as globalThis.Node)) {
+        setCasePickerOpen(false);
+        setCasePickerQuery('');
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setCasePickerOpen(false);
+        setCasePickerQuery('');
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [casePickerOpen]);
+
+  const filteredPickerCases = useMemo(() => {
+    const q = casePickerQuery.trim().toLowerCase();
+    if (!q) return availableCases;
+    return availableCases.filter(
+      (c) =>
+        c.case_number.toLowerCase().includes(q) ||
+        c.title.toLowerCase().includes(q) ||
+        (c.status || '').toLowerCase().includes(q)
+    );
+  }, [availableCases, casePickerQuery]);
+
+  const handleSelectCase = (nextCase: CaseResponse) => {
+    if (nextCase.id === caseId) {
+      setCasePickerOpen(false);
+      setCasePickerQuery('');
+      return;
+    }
+    setCasePickerOpen(false);
+    setCasePickerQuery('');
+    router.push(`/cases/${nextCase.id}/graph`);
+  };
 
   // Derived timeline events and evidence directory
   const timelineEvents = useMemo(() => {
@@ -227,8 +314,8 @@ export default function CaseGraphPage() {
         id: 'case-root',
         type: 'caseHub',
         data: {
-          caseNumber: caseId,
-          title: 'Organized Syndicate & Criminal Network Analysis',
+          caseNumber: caseLabel,
+          title: caseTitle,
           totalClusters: clusters.length,
           totalEntities: entities.length,
         },
@@ -433,6 +520,8 @@ export default function CaseGraphPage() {
     minConfidence,
     typeFilters,
     caseId,
+    caseLabel,
+    caseTitle,
     setNodes,
     setEdges,
   ]);
@@ -504,71 +593,137 @@ export default function CaseGraphPage() {
 
   return (
     <div className="-m-5 flex h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden text-white select-none sm:-m-6 lg:-m-8">
-      {/* Top Bar: Case Identity, Visualization Mode Tabs, & Search */}
-      <header className={cn(surfaceHeader, 'z-30 flex h-14 shrink-0 items-center justify-between px-6')}>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono font-bold text-red-400 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded">
-              SIH-26189
-            </span>
-            <h1 className="text-sm font-black text-white tracking-wide font-mono">{caseId}</h1>
+      {/* Top Bar: Case picker, Visualization Mode Tabs, & Search */}
+      <header className={cn(surfaceHeader, 'z-30 flex min-h-14 shrink-0 items-center gap-3 px-4 !py-2 md:gap-4 md:px-6')}>
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          <span className="shrink-0 rounded border border-red-500/30 bg-red-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-red-400">
+            SIH-26189
+          </span>
+
+          {/* GCP-style case selector */}
+          <div className="relative min-w-0 max-w-md" ref={casePickerRef}>
+            <button
+              type="button"
+              onClick={() => setCasePickerOpen((open) => !open)}
+              className={cn(
+                'flex w-full max-w-md items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left transition',
+                casePickerOpen
+                  ? 'border-blue-500/50 bg-blue-600/10'
+                  : 'border-white/[0.1] bg-white/[0.03] hover:border-white/[0.18] hover:bg-white/[0.06]'
+              )}
+              aria-expanded={casePickerOpen}
+              aria-haspopup="listbox"
+            >
+              <Briefcase className="h-3.5 w-3.5 shrink-0 text-blue-400" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-mono text-xs font-bold text-white">{caseLabel}</div>
+                <div className="truncate text-[10px] text-white/45">{caseTitle}</div>
+              </div>
+              <ChevronDown
+                className={cn(
+                  'h-3.5 w-3.5 shrink-0 text-white/40 transition-transform',
+                  casePickerOpen && 'rotate-180'
+                )}
+              />
+            </button>
+
+            {casePickerOpen && (
+              <div className={cn(surfaceCard, 'absolute left-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-6rem))] overflow-hidden p-0')}>
+                <div className="border-b border-white/[0.08] p-2.5">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/35" />
+                    <input
+                      autoFocus
+                      type="text"
+                      value={casePickerQuery}
+                      onChange={(e) => setCasePickerQuery(e.target.value)}
+                      placeholder="Search cases..."
+                      className={cn(surfaceInput, 'py-1.5 pl-8 text-xs')}
+                    />
+                  </div>
+                </div>
+                <div className="max-h-72 overflow-y-auto p-1.5" role="listbox">
+                  {casesLoading ? (
+                    <div className="px-3 py-6 text-center text-xs text-white/40">Loading cases…</div>
+                  ) : filteredPickerCases.length === 0 ? (
+                    <div className="px-3 py-6 text-center text-xs text-white/40">No cases found</div>
+                  ) : (
+                    filteredPickerCases.map((c) => {
+                      const selected = c.id === caseId;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          role="option"
+                          aria-selected={selected}
+                          onClick={() => handleSelectCase(c)}
+                          className={cn(
+                            'flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left transition',
+                            selected ? 'bg-blue-600/15' : 'hover:bg-white/[0.06]'
+                          )}
+                        >
+                          <Briefcase
+                            className={cn(
+                              'mt-0.5 h-3.5 w-3.5 shrink-0',
+                              selected ? 'text-blue-400' : 'text-white/35'
+                            )}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate font-mono text-xs font-bold text-white">
+                                {c.case_number}
+                              </span>
+                              <span className="shrink-0 rounded border border-white/[0.08] px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-white/40">
+                                {c.status}
+                              </span>
+                            </div>
+                            <div className="truncate text-[11px] text-white/45">{c.title}</div>
+                          </div>
+                          {selected ? <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-400" /> : null}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-          <span className="text-white/20">|</span>
-          <span className="text-xs font-medium text-white/45">Criminal Intelligence Network Platform</span>
         </div>
 
         {/* Mode Selector Tabs */}
-        <div className={cn(surfacePanel, 'flex items-center gap-1 p-1')}>
-          <button
-            type="button"
-            onClick={() => setViewMode('OVERVIEW')}
-            className={cn(
-              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
-              viewMode === 'OVERVIEW' ? 'bg-blue-600 text-white shadow-md' : 'text-white/45 hover:text-white'
-            )}
-          >
-            <Layers className="w-3.5 h-3.5" /> Overview
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('NETWORK')}
-            className={cn(
-              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
-              viewMode === 'NETWORK' ? 'bg-blue-600 text-white shadow-md' : 'text-white/45 hover:text-white'
-            )}
-          >
-            <Network className="w-3.5 h-3.5" /> Network
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('TIMELINE')}
-            className={cn(
-              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
-              viewMode === 'TIMELINE' ? 'bg-blue-600 text-white shadow-md' : 'text-white/45 hover:text-white'
-            )}
-          >
-            <Calendar className="w-3.5 h-3.5" /> Timeline
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('EVIDENCE')}
-            className={cn(
-              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
-              viewMode === 'EVIDENCE' ? 'bg-blue-600 text-white shadow-md' : 'text-white/45 hover:text-white'
-            )}
-          >
-            <FileText className="w-3.5 h-3.5" /> Evidence
-          </button>
+        <div className={cn(surfacePanel, 'flex shrink-0 items-center gap-0.5 p-1')}>
+          {(
+            [
+              { mode: 'OVERVIEW' as const, icon: Layers, label: 'Overview' },
+              { mode: 'NETWORK' as const, icon: Network, label: 'Network' },
+              { mode: 'TIMELINE' as const, icon: Calendar, label: 'Timeline' },
+              { mode: 'EVIDENCE' as const, icon: FileText, label: 'Evidence' },
+            ] as const
+          ).map(({ mode, icon: Icon, label }) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setViewMode(mode)}
+              title={label}
+              className={cn(
+                'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all md:px-3',
+                viewMode === mode ? 'bg-blue-600 text-white shadow-md' : 'text-white/45 hover:text-white'
+              )}
+            >
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden lg:inline">{label}</span>
+            </button>
+          ))}
         </div>
 
         {/* Quick Search Input */}
-        <div className="relative w-64">
+        <div className="relative hidden w-44 shrink-0 md:block lg:w-52 xl:w-64">
           <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search entity, phone, vehicle..."
+            placeholder="Search entity, phone..."
             className={cn(surfaceInput, 'py-1.5 pl-9 text-xs')}
           />
         </div>
@@ -595,13 +750,6 @@ export default function CaseGraphPage() {
             >
               <Background color="#1a1a1a" gap={28} size={1} />
               <Controls className={cn(surfaceCard, 'overflow-hidden p-0 text-white')} />
-              <MiniMap
-                nodeColor={(n: any) =>
-                  n.type === 'caseHub' ? '#ef4444' : n.type === 'clusterGroup' ? '#3b82f6' : '#10b981'
-                }
-                className={cn(surfaceCard, 'overflow-hidden p-0 shadow-2xl')}
-                maskColor="rgba(0, 0, 0, 0.8)"
-              />
 
               {/* Focus Mode Banner (if an entity is selected) */}
               {currentFocusEntity && viewMode === 'NETWORK' && (
@@ -648,77 +796,111 @@ export default function CaseGraphPage() {
               )}
 
               {/* Filter Panel (Left) */}
-              <Panel position="top-left" className={cn(surfaceCard, 'w-72 space-y-4 p-4 backdrop-blur-md')}>
-                <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white">
+              <Panel
+                position="top-left"
+                className={cn(
+                  surfaceCard,
+                  'backdrop-blur-md transition-all',
+                  filtersCollapsed ? 'w-auto p-1.5' : 'w-72 space-y-4 p-4'
+                )}
+              >
+                {filtersCollapsed ? (
+                  <button
+                    type="button"
+                    onClick={() => setFiltersCollapsed(false)}
+                    className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold text-white/80 transition hover:bg-white/[0.06] hover:text-white"
+                    title="Expand investigation filters"
+                  >
                     <Filter className="h-3.5 w-3.5 text-blue-400" />
-                    <span>Investigation Filters</span>
-                  </div>
-                  <span className="rounded border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 font-mono text-[10px] text-white/45">
-                    {nodes.length}N • {edges.length}E
-                  </span>
-                </div>
+                    <span className="font-mono text-[10px] text-white/45">
+                      {nodes.length}N · {edges.length}E
+                    </span>
+                    <ChevronRight className="h-3.5 w-3.5 text-white/40" />
+                  </button>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5">
+                      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white">
+                        <Filter className="h-3.5 w-3.5 text-blue-400" />
+                        <span>Investigation Filters</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="rounded border border-white/[0.08] bg-white/[0.05] px-2 py-0.5 font-mono text-[10px] text-white/45">
+                          {nodes.length}N · {edges.length}E
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setFiltersCollapsed(true)}
+                          className="flex h-6 w-6 items-center justify-center rounded-lg text-white/45 transition hover:bg-white/[0.08] hover:text-white"
+                          title="Collapse filters"
+                        >
+                          <ChevronLeft className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
 
-                {/* Relationship Status Filter */}
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-bold text-white/70">Relationship Hierarchy</label>
-                  <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-white/70">
-                    <input
-                      type="checkbox"
-                      checked={verifiedOnly}
-                      onChange={(e) => setVerifiedOnly(e.target.checked)}
-                      className="rounded border-white/[0.12] bg-black/50 text-emerald-500 focus:ring-0"
-                    />
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <span>Verified / Confirmed Only</span>
-                  </label>
-                </div>
-
-                {/* Entity Category Toggles */}
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-bold text-white/70">Entity Clusters</label>
-                  <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                    {Object.keys(typeFilters).map((typeKey) => (
-                      <label key={typeKey} className="flex cursor-pointer select-none items-center gap-1.5 text-white/70">
+                    {/* Relationship Status Filter */}
+                    <div className="space-y-2">
+                      <label className="block text-[11px] font-bold text-white/70">Relationship Hierarchy</label>
+                      <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-white/70">
                         <input
                           type="checkbox"
-                          checked={typeFilters[typeKey]}
-                          onChange={(e) =>
-                            setTypeFilters((prev) => ({ ...prev, [typeKey]: e.target.checked }))
-                          }
-                          className="rounded border-white/[0.12] bg-black/50 text-blue-500 focus:ring-0"
+                          checked={verifiedOnly}
+                          onChange={(e) => setVerifiedOnly(e.target.checked)}
+                          className="rounded border-white/[0.12] bg-black/50 text-emerald-500 focus:ring-0"
                         />
-                        <span className="capitalize">{typeKey.toLowerCase().replace('_', ' ')}</span>
+                        <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                        <span>Verified / Confirmed Only</span>
                       </label>
-                    ))}
-                  </div>
-                </div>
+                    </div>
 
-                {/* Minimum Confidence Slider */}
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-white/45">Min Score</span>
-                    <span className="font-mono text-emerald-400 font-bold">{Math.round(minConfidence * 100)}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={minConfidence}
-                    onChange={(e) => setMinConfidence(parseFloat(e.target.value))}
-                    className="h-1.5 w-full cursor-pointer rounded-lg bg-white/[0.08] accent-blue-500"
-                  />
-                </div>
+                    {/* Entity Category Toggles */}
+                    <div className="space-y-2">
+                      <label className="block text-[11px] font-bold text-white/70">Entity Clusters</label>
+                      <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                        {Object.keys(typeFilters).map((typeKey) => (
+                          <label key={typeKey} className="flex cursor-pointer select-none items-center gap-1.5 text-white/70">
+                            <input
+                              type="checkbox"
+                              checked={typeFilters[typeKey]}
+                              onChange={(e) =>
+                                setTypeFilters((prev) => ({ ...prev, [typeKey]: e.target.checked }))
+                              }
+                              className="rounded border-white/[0.12] bg-black/50 text-blue-500 focus:ring-0"
+                            />
+                            <span className="capitalize">{typeKey.toLowerCase().replace('_', ' ')}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
 
-                {/* Refresh / Re-layout Button */}
-                <button
-                  type="button"
-                  onClick={fetchGraphData}
-                  className={cn(surfaceBtnPrimary, 'w-full gap-2 active:scale-95')}
-                >
-                  <RefreshCw className="w-3.5 h-3.5" /> Recompute Hierarchical Layout
-                </button>
+                    {/* Minimum Confidence Slider */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-white/45">Min Score</span>
+                        <span className="font-mono font-bold text-emerald-400">{Math.round(minConfidence * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={minConfidence}
+                        onChange={(e) => setMinConfidence(parseFloat(e.target.value))}
+                        className="h-1.5 w-full cursor-pointer rounded-lg bg-white/[0.08] accent-blue-500"
+                      />
+                    </div>
+
+                    {/* Refresh / Re-layout Button */}
+                    <button
+                      type="button"
+                      onClick={fetchGraphData}
+                      className={cn(surfaceBtnPrimary, 'w-full gap-2 active:scale-95')}
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" /> Recompute Hierarchical Layout
+                    </button>
+                  </>
+                )}
               </Panel>
 
               {/* Quick Launch Timeline & Evidence Calendar Panel (Top Right) */}

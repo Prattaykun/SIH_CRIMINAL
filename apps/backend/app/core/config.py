@@ -51,6 +51,7 @@ class Settings(BaseSettings):
         "https://sih-criminal.onrender.com",
         "https://sih-criminal-frontend.onrender.com",
         "https://frontend-phi-amber-54.vercel.app",
+        "https://sih-criminal.vercel.app",
     ]
 
     # Password Policy
