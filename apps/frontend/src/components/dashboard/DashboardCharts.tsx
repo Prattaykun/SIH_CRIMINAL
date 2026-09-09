@@ -1,0 +1,328 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { motion } from "framer-motion";
+
+// Custom Cyber Dark Tooltip
+function CustomChartTooltip({ active, payload, label }: any) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-lg bg-[#0b0f19]/95 border border-slate-700/80 px-3 py-2 shadow-2xl backdrop-blur-md text-xs font-mono text-slate-200">
+        {label && <div className="text-slate-400 font-bold mb-1">{label}</div>}
+        {payload.map((entry: any, index: number) => (
+          <div key={`item-${index}`} className="flex items-center gap-2">
+            <span
+              className="size-2 rounded-full"
+              style={{ backgroundColor: entry.color || entry.payload?.fill || "#3b82f6" }}
+            />
+            <span className="text-slate-300 font-sans">{entry.name}:</span>
+            <span className="font-bold text-white">{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+}
+
+// 1. KPI Micro Sparkline Component
+interface MicroSparklineProps {
+  data: number[];
+  color?: string;
+  gradientId: string;
+}
+
+export function MicroSparkline({ data, color = "#3b82f6", gradientId }: MicroSparklineProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) {
+    return <div className="h-10 w-24 bg-slate-800/20 rounded animate-pulse" />;
+  }
+
+  const chartData = data.map((val, idx) => ({ idx, val }));
+
+  return (
+    <div className="h-10 w-24 shrink-0">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+              <stop offset="100%" stopColor={color} stopOpacity={0.0} />
+            </linearGradient>
+          </defs>
+          <Area
+            type="monotone"
+            dataKey="val"
+            stroke={color}
+            strokeWidth={1.8}
+            fill={`url(#${gradientId})`}
+            dot={false}
+            isAnimationActive={true}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// 2. Entity Type Distribution Donut Chart
+interface EntityTypeItem {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface EntityDistributionChartProps {
+  byType?: Record<string, number>;
+}
+
+export function EntityDistributionChart({ byType }: EntityDistributionChartProps) {
+  const [mounted, setMounted] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  useEffect(() => setMounted(true), []);
+
+  const defaultTypes: Record<string, number> = {
+    PERSON: 7,
+    LOCATION: 3,
+    ORGANIZATION: 2,
+    PHONE: 3,
+    ACCOUNT: 3,
+    VEHICLE: 2,
+  };
+
+  const dataMap = byType && Object.keys(byType).length > 0 ? byType : defaultTypes;
+
+  const colorPalette: Record<string, string> = {
+    PERSON: "#3b82f6", // blue
+    LOCATION: "#f59e0b", // amber
+    ORGANIZATION: "#a855f7", // purple
+    PHONE: "#06b6d4", // cyan
+    ACCOUNT: "#10b981", // emerald
+    VEHICLE: "#f43f5e", // rose
+  };
+
+  const data: EntityTypeItem[] = Object.entries(dataMap).map(([type, count]) => ({
+    name: type,
+    value: count,
+    color: colorPalette[type.toUpperCase()] || "#94a3b8",
+  }));
+
+  const total = data.reduce((acc, curr) => acc + curr.value, 0);
+
+  if (!mounted) {
+    return <div className="h-56 w-full bg-slate-800/20 rounded-xl animate-pulse" />;
+  }
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="relative size-48 shrink-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Tooltip content={<CustomChartTooltip />} />
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={52}
+              outerRadius={75}
+              paddingAngle={4}
+              dataKey="value"
+              onMouseEnter={(_, index) => setActiveIndex(index)}
+              onMouseLeave={() => setActiveIndex(null)}
+            >
+              {data.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.color}
+                  stroke="#111624"
+                  strokeWidth={2}
+                  className="transition-all duration-300 hover:opacity-80 cursor-pointer"
+                  style={{
+                    filter: activeIndex === index ? `drop-shadow(0 0 6px ${entry.color}88)` : "none",
+                  }}
+                />
+              ))}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+        {/* Centered Total Count Indicator */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <span className="text-2xl font-extrabold text-white font-mono">{total}</span>
+          <span className="text-[10px] uppercase font-mono text-slate-400 tracking-wider">Entities</span>
+        </div>
+      </div>
+
+      {/* Interactive Legend Breakdown */}
+      <div className="grid grid-cols-2 gap-2 w-full text-xs font-mono">
+        {data.map((item, idx) => {
+          const pct = Math.round((item.value / (total || 1)) * 100);
+          const isSelected = activeIndex === idx;
+          return (
+            <div
+              key={item.name}
+              onMouseEnter={() => setActiveIndex(idx)}
+              onMouseLeave={() => setActiveIndex(null)}
+              className={`p-2 rounded-lg border transition-all cursor-pointer flex items-center justify-between ${
+                isSelected
+                  ? "bg-slate-800/80 border-slate-600 shadow-md"
+                  : "bg-slate-900/40 border-slate-800/60 hover:border-slate-700"
+              }`}
+            >
+              <div className="flex items-center gap-2 truncate">
+                <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                <span className="text-slate-300 truncate">{item.name}</span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="font-bold text-white">{item.value}</span>
+                <span className="text-[10px] text-slate-500">({pct}%)</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// 3. Topology Roles Horizontal Bar Chart
+interface TopologyChartProps {
+  roles: {
+    high_degree: number;
+    bridge: number;
+    financial: number;
+    communication: number;
+    peripheral: number;
+  };
+}
+
+export function TopologyRolesChart({ roles }: TopologyChartProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const data = [
+    { role: "High-Degree Hubs", count: roles.high_degree, color: "#3b82f6", tag: "Deg ≥ 3" },
+    { role: "Bridge Gateways", count: roles.bridge, color: "#a855f7", tag: "Betweenness" },
+    { role: "Communication Relays", count: roles.communication, color: "#06b6d4", tag: "Telecom / CDR" },
+    { role: "Financial Channels", count: roles.financial, color: "#10b981", tag: "Accounts" },
+    { role: "Perimeter Leaves", count: roles.peripheral, color: "#64748b", tag: "Deg = 1" },
+  ];
+
+  if (!mounted) {
+    return <div className="h-48 w-full bg-slate-800/20 rounded-xl animate-pulse" />;
+  }
+
+  return (
+    <div className="h-52 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          layout="vertical"
+          data={data}
+          margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+          barSize={14}
+        >
+          <XAxis type="number" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
+          <YAxis
+            type="category"
+            dataKey="role"
+            stroke="#94a3b8"
+            fontSize={11}
+            tickLine={false}
+            axisLine={false}
+            width={125}
+          />
+          <Tooltip content={<CustomChartTooltip />} />
+          <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+            {data.map((entry, index) => (
+              <Cell key={`bar-${index}`} fill={entry.color} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// 4. Multi-Stream Investigation Activity Velocity Chart (30-day timeline)
+export function InvestigationVelocityChart() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const timelineData = [
+    { day: "Day 1", evidence: 4, links: 7, audits: 3 },
+    { day: "Day 5", evidence: 8, links: 14, audits: 6 },
+    { day: "Day 10", evidence: 12, links: 22, audits: 11 },
+    { day: "Day 15", evidence: 9, links: 18, audits: 14 },
+    { day: "Day 20", evidence: 16, links: 29, audits: 20 },
+    { day: "Day 25", evidence: 14, links: 34, audits: 25 },
+    { day: "Current", evidence: 20, links: 42, audits: 32 },
+  ];
+
+  if (!mounted) {
+    return <div className="h-64 w-full bg-slate-800/20 rounded-xl animate-pulse" />;
+  }
+
+  return (
+    <div className="h-64 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={timelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="colorLinks" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
+            </linearGradient>
+            <linearGradient id="colorEvidence" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+            </linearGradient>
+            <linearGradient id="colorAudits" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
+            </linearGradient>
+          </defs>
+          <XAxis dataKey="day" stroke="#475569" fontSize={11} tickLine={false} />
+          <YAxis stroke="#475569" fontSize={11} tickLine={false} axisLine={false} />
+          <Tooltip content={<CustomChartTooltip />} />
+          <Area
+            type="monotone"
+            name="Graph Links"
+            dataKey="links"
+            stroke="#3b82f6"
+            strokeWidth={2}
+            fill="url(#colorLinks)"
+          />
+          <Area
+            type="monotone"
+            name="Human Verifications"
+            dataKey="audits"
+            stroke="#f59e0b"
+            strokeWidth={2}
+            fill="url(#colorAudits)"
+          />
+          <Area
+            type="monotone"
+            name="Evidence Streams"
+            dataKey="evidence"
+            stroke="#10b981"
+            strokeWidth={2}
+            fill="url(#colorEvidence)"
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}

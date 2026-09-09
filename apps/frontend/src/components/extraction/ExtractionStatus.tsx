@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { AlertTriangle } from "lucide-react";
 
 export interface ExtractionStatusProps {
   totalCandidates: number;
@@ -36,9 +37,7 @@ export default function ExtractionStatus({
           role="alert"
           className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-300"
         >
-          <span className="mt-0.5 shrink-0 text-lg leading-none" aria-hidden="true">
-            ⚠
-          </span>
+          <AlertTriangle className="size-4 shrink-0 text-amber-400 mt-0.5" />
           <div className="text-xs leading-relaxed">
             <p className="font-semibold">Development Reviewer Mode — No Authentication Active</p>
             <p className="mt-0.5 text-amber-400/80">

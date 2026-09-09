@@ -3,6 +3,7 @@
 import React, { useEffect, useState, Suspense, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { FileText } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 import { CaseResponse, RelationshipEvidenceResponse, DocumentResponse } from '@/types/api';
@@ -320,7 +321,7 @@ function EvidenceContent() {
             <div className="p-5 border-b border-[#212638] flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <span>📄</span> {selectedDocForPreview.file_name}
+                  <FileText className="size-4 text-blue-400 shrink-0" /> {selectedDocForPreview.file_name}
                 </h3>
                 <div className="text-xs text-slate-400 font-mono mt-1">
                   SHA-256: {selectedDocForPreview.file_hash || 'Uncomputed'} &bull; Ingested {new Date(selectedDocForPreview.created_at).toLocaleString()}
@@ -814,16 +815,16 @@ Investigator Assessment: Lead requires cross-referencing with call detail record
             <button
               type="button"
               onClick={loadSyntheticFir}
-              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-blue-400 px-2.5 py-1 rounded border border-slate-700 transition flex items-center gap-1"
+              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-blue-400 px-2.5 py-1 rounded border border-slate-700 transition flex items-center gap-1.5"
             >
-              <span>⚡</span> Load Synthetic FIR
+              <FileText className="size-3 text-blue-400" /> Load Synthetic FIR
             </button>
             <button
               type="button"
               onClick={loadSyntheticInterrogation}
-              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 px-2.5 py-1 rounded border border-slate-700 transition flex items-center gap-1"
+              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 px-2.5 py-1 rounded border border-slate-700 transition flex items-center gap-1.5"
             >
-              <span>⚡</span> Load Interrogation Note
+              <FileText className="size-3 text-emerald-400" /> Load Interrogation Note
             </button>
             {(reportTitle || reportContent) && (
               <button

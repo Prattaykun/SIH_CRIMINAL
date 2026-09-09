@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { PenLine, UploadCloud, FileText } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 
@@ -186,8 +187,8 @@ Subject Aditya Malhotra was observed coordinating financial transactions for Ape
                     : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700'
                 }`}
               >
-                <div className="text-xs font-semibold flex items-center gap-1">
-                  <span>✍️</span> Write Report
+                <div className="text-xs font-semibold flex items-center gap-1.5">
+                  <PenLine className="size-3.5 text-blue-400" /> Write Report
                 </div>
                 <div className="text-[11px] text-slate-500 mt-0.5">Type narrative / FIR</div>
               </button>
@@ -201,8 +202,8 @@ Subject Aditya Malhotra was observed coordinating financial transactions for Ape
                     : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700'
                 }`}
               >
-                <div className="text-xs font-semibold flex items-center gap-1">
-                  <span>📁</span> Upload File
+                <div className="text-xs font-semibold flex items-center gap-1.5">
+                  <UploadCloud className="size-3.5 text-blue-400" /> Upload File
                 </div>
                 <div className="text-[11px] text-slate-500 mt-0.5">PDF, DOCX, TXT, JSON</div>
               </button>
@@ -216,9 +217,10 @@ Subject Aditya Malhotra was observed coordinating financial transactions for Ape
                   <button
                     type="button"
                     onClick={loadSyntheticTemplate}
-                    className="text-xs bg-slate-800 hover:bg-slate-700 text-blue-400 px-2.5 py-1 rounded border border-slate-700 transition"
+                    className="text-xs bg-slate-800 hover:bg-slate-700 text-blue-400 px-2.5 py-1 rounded border border-slate-700 transition flex items-center gap-1.5"
                   >
-                    ⚡ Load Synthetic FIR
+                    <FileText className="size-3 text-blue-400" />
+                    Load Synthetic FIR
                   </button>
                 </div>
 

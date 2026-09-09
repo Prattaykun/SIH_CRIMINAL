@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Check, X, Edit2 } from 'lucide-react';
 import { VerificationStatus } from '../extraction/ExtractionCandidateCard';
 
 export function EvidenceTable({ entities, relationships, onReview, onRowClick, selectedId }: any) {
@@ -161,21 +162,21 @@ export function EvidenceTable({ entities, relationships, onReview, onRowClick, s
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         onClick={(e) => handleReview(e, 'entity', item.id, 'ACCEPTED')}
-                        className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded border border-emerald-500/40 text-xs font-semibold transition-all shadow-sm active:scale-95"
+                        className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded border border-emerald-500/40 text-xs font-semibold transition-all shadow-sm active:scale-95 flex items-center gap-1"
                       >
-                        ✓ Accept
+                        <Check className="size-3" /> Accept
                       </button>
                       <button
                         onClick={(e) => handleReview(e, 'entity', item.id, 'REJECTED')}
-                        className="px-2.5 py-1 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white rounded border border-rose-500/40 text-xs font-semibold transition-all shadow-sm active:scale-95"
+                        className="px-2.5 py-1 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white rounded border border-rose-500/40 text-xs font-semibold transition-all shadow-sm active:scale-95 flex items-center gap-1"
                       >
-                        ✗ Reject
+                        <X className="size-3" /> Reject
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); onRowClick && onRowClick(item, 'entity', true); }}
-                        className="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded border border-blue-500/40 text-xs font-semibold transition-all shadow-sm active:scale-95"
+                        className="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded border border-blue-500/40 text-xs font-semibold transition-all shadow-sm active:scale-95 flex items-center gap-1"
                       >
-                        ✎ Edit
+                        <Edit2 className="size-3" /> Edit
                       </button>
                     </div>
                   ) : (
@@ -223,21 +224,21 @@ export function EvidenceTable({ entities, relationships, onReview, onRowClick, s
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         onClick={(e) => handleReview(e, 'relationship', item.id, 'ACCEPTED')}
-                        className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded border border-emerald-500/40 text-xs font-semibold transition-all shadow-sm active:scale-95"
+                        className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded border border-emerald-500/40 text-xs font-semibold transition-all shadow-sm active:scale-95 flex items-center gap-1"
                       >
-                        ✓ Accept
+                        <Check className="size-3" /> Accept
                       </button>
                       <button
                         onClick={(e) => handleReview(e, 'relationship', item.id, 'REJECTED')}
-                        className="px-2.5 py-1 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white rounded border border-rose-500/40 text-xs font-semibold transition-all shadow-sm active:scale-95"
+                        className="px-2.5 py-1 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white rounded border border-rose-500/40 text-xs font-semibold transition-all shadow-sm active:scale-95 flex items-center gap-1"
                       >
-                        ✗ Reject
+                        <X className="size-3" /> Reject
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); onRowClick && onRowClick(item, 'relationship', true); }}
-                        className="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded border border-blue-500/40 text-xs font-semibold transition-all shadow-sm active:scale-95"
+                        className="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded border border-blue-500/40 text-xs font-semibold transition-all shadow-sm active:scale-95 flex items-center gap-1"
                       >
-                        ✎ Edit
+                        <Edit2 className="size-3" /> Edit
                       </button>
                     </div>
                   ) : (
