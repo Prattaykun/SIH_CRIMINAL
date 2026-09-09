@@ -23,18 +23,8 @@ export default function SimpleViewPage() {
   useEffect(() => {
     async function loadSimpleView() {
       try {
-        // 1. Try backend endpoint first
-        let res: any = null;
-        try {
-          res = await api.getCaseSimple(caseId);
-        } catch (backendErr) {
-          console.warn('Backend /simple endpoint returned error, falling back to case summary synthesis:', backendErr);
-        }
-
-        if (res && res.summary) {
-          setData(res);
-          return;
-        }
+        // 1. We rely entirely on the rich frontend data synthesis logic for now.
+        // It combines summary, case, and candidates data to generate highly dynamic insights.
 
         // 2. Fallback: Synthesize rich layman proceedings from existing working endpoints
         const [summaryRes, caseRes, candidatesRes] = await Promise.all([
