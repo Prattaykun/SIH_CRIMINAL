@@ -26,7 +26,7 @@ export default function SimpleViewPage() {
     async function loadSimpleView() {
       try {
         // Fetch new simple endpoint data
-        const res = await (api as any).get(`/cases/${caseId}/simple`);
+        const res = await api.getCaseSimple(caseId);
         if (!res) {
           throw new Error('Case intelligence not available for this case yet.');
         }
