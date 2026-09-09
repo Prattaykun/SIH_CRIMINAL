@@ -25,7 +25,9 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isInitialized: boolean;
+  loginSplashPending: boolean;
   login: (token: string, user: User) => void;
+  completeLoginSplash: () => void;
   logout: () => void;
 }
 
@@ -46,6 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [loginSplashPending, setLoginSplashPending] = useState(false);
   const router = useRouter();
 
   // Rehydrate on mount and listen to cross-device/tab storage events
@@ -74,6 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setMemoryToken(null);
       clearAuth();
+      setLoginSplashPending(false);
     };
 
     window.addEventListener('unauthorized', handleUnauthorized);
@@ -90,6 +94,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMemoryToken(newToken);
     setStoredToken(newToken);
     setStoredUser(newUser);
+    setLoginSplashPending(true);
+  }, []);
+
+  const completeLoginSplash = useCallback(() => {
+    setLoginSplashPending(false);
   }, []);
 
   const logout = useCallback(() => {
@@ -97,11 +106,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setMemoryToken(null);
     clearAuth();
+    setLoginSplashPending(false);
     router.push('/login');
   }, [router]);
 
   return (
-    <AuthContext.Provider value={{ user, token, isInitialized, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        isInitialized,
+        loginSplashPending,
+        login,
+        completeLoginSplash,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

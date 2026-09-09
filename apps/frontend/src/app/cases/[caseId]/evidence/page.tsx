@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useEffect, useState, Suspense, useRef } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { FileText } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 import { CaseResponse, RelationshipEvidenceResponse, DocumentResponse } from '@/types/api';
 import { CaseTimeline, TimelineEvent } from '@/components/cases/CaseTimeline';
 import ExtractionReviewPanel from '@/components/extraction/ExtractionReviewPanel';
+import { DashboardCasePicker } from '@/components/dashboard/DashboardCasePicker';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -24,10 +25,12 @@ import {
 
 function EvidenceContent() {
   const { caseId } = useParams() as { caseId: string };
+  const router = useRouter();
   const searchParams = useSearchParams();
   const relId = searchParams.get('rel');
 
   const [caseData, setCaseData] = useState<CaseResponse | null>(null);
+  const [availableCases, setAvailableCases] = useState<CaseResponse[]>([]);
   const [evidence, setEvidence] = useState<RelationshipEvidenceResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,9 +82,13 @@ function EvidenceContent() {
     async function loadData() {
       try {
         setLoading(true);
-        const caseRes = await api.getCase(caseId);
+        const [caseRes, casesRes] = await Promise.all([
+          api.getCase(caseId),
+          api.listCases().catch(() => ({ cases: [] as CaseResponse[] })),
+        ]);
         setCaseData(caseRes);
-        
+        setAvailableCases(casesRes.cases || []);
+
         if (relId) {
           const ev = await api.getRelationshipEvidence(relId).catch(() => null);
           setEvidence(ev);
@@ -125,7 +132,26 @@ function EvidenceContent() {
   return (
     <div className="-m-5 space-y-0 sm:-m-6 lg:-m-8">
       <PageHeader
-        badge={`Cases / ${caseData?.case_number || caseId}`}
+        leading={
+          <DashboardCasePicker
+            value={caseId}
+            valueKey="id"
+            includeAll={false}
+            dropdownAlign="right"
+            className="w-[min(100%,22rem)]"
+            cases={
+              availableCases.length > 0
+                ? availableCases
+                : caseData
+                  ? [caseData]
+                  : []
+            }
+            onChange={(nextCaseId) => {
+              if (nextCaseId === caseId) return;
+              router.push(`/cases/${nextCaseId}/evidence`);
+            }}
+          />
+        }
         title="Evidence Traceability"
         description="Trace extracted relationships back to their source records."
         actions={

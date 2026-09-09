@@ -96,7 +96,7 @@ def _dispatch_extraction(doc_id: str, background_tasks: BackgroundTasks) -> None
                         session.commit()
 
                 service = DocumentExtractionService(session)
-                res = service.process_document(target_id, extract_relationships=True)
+                res = service.process_document(target_id, extract_relationships=True, force=True)
                 if res.get("status") == "FAILED":
                     doc_obj.status = "FAILED"
                     doc_obj.error_message = res.get("error", "Extraction failed")

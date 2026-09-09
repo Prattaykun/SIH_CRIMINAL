@@ -4,6 +4,29 @@ import React, { useState } from 'react';
 import { Check, X, Edit2 } from 'lucide-react';
 import { VerificationStatus } from '../extraction/ExtractionCandidateCard';
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlightSourceMatch(sourceText: string, needle: string): React.ReactNode {
+  if (!needle) return sourceText;
+  try {
+    const parts = sourceText.split(new RegExp(`(${escapeRegExp(needle)})`, 'gi'));
+    const needleLower = needle.toLowerCase();
+    return parts.map((part, i) =>
+      part.toLowerCase() === needleLower ? (
+        <span key={i} className="text-yellow-400 font-bold bg-yellow-400/10 px-0.5 rounded">
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    );
+  } catch {
+    return sourceText;
+  }
+}
+
 export function EvidenceTable({ entities, relationships, onReview, onRowClick, selectedId }: any) {
   const [activeTab, setActiveTab] = useState<'entities' | 'relationships'>('entities');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'UNREVIEWED' | 'ACCEPTED' | 'REJECTED'>('UNREVIEWED');
@@ -148,9 +171,9 @@ export function EvidenceTable({ entities, relationships, onReview, onRowClick, s
                     "{item.source_text ? (
                       item.source_text.includes(item.original_value || item.normalized_value) ? (
                         <>
-                          {item.source_text.split(new RegExp(`(${item.original_value || item.normalized_value})`, 'gi')).map((part: string, i: number) => 
-                            part.toLowerCase() === (item.original_value || item.normalized_value).toLowerCase() ? 
-                            <span key={i} className="text-yellow-400 font-bold bg-yellow-400/10 px-0.5 rounded">{part}</span> : part
+                          {highlightSourceMatch(
+                            item.source_text,
+                            item.original_value || item.normalized_value || ''
                           )}
                         </>
                       ) : item.source_text

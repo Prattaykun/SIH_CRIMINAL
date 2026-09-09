@@ -47,6 +47,8 @@ class Neo4jManager:
     def verify_connectivity(self) -> bool:
         """Check if Neo4j is reachable and authentication succeeds."""
         if self._driver is None:
+            self.init_driver()
+        if self._driver is None:
             return False
 
         try:
@@ -63,8 +65,12 @@ class Neo4jManager:
             return False
 
     def is_available(self) -> bool:
-        """Return True if Neo4j is available."""
-        return self._is_available
+        """Return True if Neo4j is available (verifies lazily if not yet checked)."""
+        if self._driver is None:
+            return False
+        if self._is_available:
+            return True
+        return self.verify_connectivity()
 
     @contextmanager
     def get_session(self) -> Generator[Session, None, None]:

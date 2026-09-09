@@ -62,7 +62,7 @@ def extract_document(document_id: str, db: Session = Depends(get_db)):
         db.commit()
     svc = DocumentExtractionService(db)
     try:
-        res = svc.process_document(document_id)
+        res = svc.process_document(document_id, extract_relationships=True, force=True)
         return res
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -94,6 +94,47 @@ def get_case_extraction_candidates(
     relationships = db.query(ExtractedRelationship).filter(
         ExtractedRelationship.case_id == real_case_id
     ).all()
+
+    # #region agent log
+    try:
+        import json as _json, time as _time
+        from pathlib import Path as _Path
+        _root = _Path(__file__).resolve()
+        while _root.parent != _root and not (_root / "apps").is_dir():
+            _root = _root.parent
+        _log_path = _root / "debug-e250be.log"
+        with _log_path.open("a", encoding="utf-8") as _lf:
+            _lf.write(_json.dumps({
+                "sessionId": "e250be",
+                "hypothesisId": "C,D",
+                "location": "extraction.py:get_case_extraction_candidates",
+                "message": "case candidates served from Postgres",
+                "data": {
+                    "requested_case_id": case_id,
+                    "resolved_case_id": str(real_case_id),
+                    "case_number": getattr(case, "case_number", None),
+                    "entity_count": len(entities),
+                    "relationship_count": len(relationships),
+                    "entity_types": sorted({e.entity_type for e in entities if e.entity_type}),
+                    "phone_or_acct_entities": [
+                        {
+                            "type": e.entity_type,
+                            "value": e.original_value or e.canonical_name,
+                            "provider": e.extraction_provider,
+                        }
+                        for e in entities
+                        if e.entity_type in ("PHONE_NUMBER", "PHONE", "ACCOUNT", "BANK_ACCOUNT")
+                        or "5512830476" in str(e.original_value or "")
+                        or "6094512237" in str(e.original_value or "")
+                    ][:25],
+                    "rel_types": sorted({r.relation_type for r in relationships if r.relation_type}),
+                },
+                "timestamp": int(_time.time() * 1000),
+                "runId": "pre-fix",
+            }) + "\n")
+    except Exception:
+        pass
+    # #endregion
 
     return {
         "entities": [
@@ -451,13 +492,52 @@ def sync_case_approved(
     current_user: User | None = Depends(get_optional_user),
 ):
     from apps.backend.app.models.document import Document
+    from apps.backend.app.models.case import Case
+
+    case = db.query(Case).filter((Case.id == case_id) | (Case.case_number == case_id)).first()
+    if not case:
+        raise HTTPException(status_code=404, detail=f"Case not found: {case_id}")
+
+    real_case_id = str(case.id)
     svc = DocumentExtractionService(db)
-    docs = db.query(Document).filter(Document.case_id == case_id).all()
+    docs = db.query(Document).filter(Document.case_id == real_case_id).all()
+
+    # #region agent log
+    try:
+        import json as _json, time as _time
+        from pathlib import Path as _Path
+        _root = _Path(__file__).resolve()
+        while _root.parent != _root and not (_root / "apps").is_dir():
+            _root = _root.parent
+        _log_path = _root / "debug-e250be.log"
+        with _log_path.open("a", encoding="utf-8") as _lf:
+            _lf.write(_json.dumps({
+                "sessionId": "e250be",
+                "runId": "post-fix",
+                "hypothesisId": "H",
+                "location": "extraction.py:sync_case_approved",
+                "message": "case sync document resolution",
+                "data": {
+                    "requested_case_id": case_id,
+                    "resolved_case_id": real_case_id,
+                    "doc_count": len(docs),
+                    "doc_ids": [d.id for d in docs][:10],
+                },
+                "timestamp": int(_time.time() * 1000),
+            }) + "\n")
+    except Exception:
+        pass
+    # #endregion
+
     if not docs:
-        return svc.sync_approved_to_graph("doc-1")
-    res = {}
+        raise HTTPException(
+            status_code=404,
+            detail=f"No documents found for case {case_id}. Upload evidence before syncing.",
+        )
+    res: dict = {"status": "SUCCESS", "synced_documents": 0}
     for doc in docs:
         res = svc.sync_approved_to_graph(doc.id)
+        res["synced_documents"] = res.get("synced_documents", 0) + 1
     return res
 
 
@@ -468,9 +548,46 @@ def extract_case_documents(
     current_user: User | None = Depends(get_optional_user),
 ):
     from apps.backend.app.models.document import Document
-    docs = db.query(Document).filter(Document.case_id == case_id).all()
+    from apps.backend.app.models.case import Case
+
+    case = db.query(Case).filter((Case.id == case_id) | (Case.case_number == case_id)).first()
+    real_case_id = str(case.id) if case else case_id
+
+    docs = db.query(Document).filter(Document.case_id == real_case_id).all()
+
+    # #region agent log
+    try:
+        import json as _json, time as _time
+        from pathlib import Path as _Path
+        _root = _Path(__file__).resolve()
+        while _root.parent != _root and not (_root / "apps").is_dir():
+            _root = _root.parent
+        _log_path = _root / "debug-e250be.log"
+        with _log_path.open("a", encoding="utf-8") as _lf:
+            _lf.write(_json.dumps({
+                "sessionId": "e250be",
+                "runId": "post-fix",
+                "hypothesisId": "G",
+                "location": "extraction.py:extract_case_documents",
+                "message": "case extract document resolution",
+                "data": {
+                    "requested_case_id": case_id,
+                    "resolved_case_id": real_case_id,
+                    "case_found": case is not None,
+                    "doc_count": len(docs),
+                    "doc_ids": [d.id for d in docs][:10],
+                },
+                "timestamp": int(_time.time() * 1000),
+            }) + "\n")
+    except Exception:
+        pass
+    # #endregion
+
     if not docs:
-        return extract_document("doc-1", db=db)
+        raise HTTPException(
+            status_code=404,
+            detail=f"No documents found for case {case_id}. Upload evidence before running extraction.",
+        )
     results = []
     for doc in docs:
         results.append(extract_document(doc.id, db=db))

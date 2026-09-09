@@ -23,7 +23,7 @@ def async_extract_document(self, document_id: str):
         
         # 2. Run NLP Extraction pipeline
         service = DocumentExtractionService(db)
-        service.process_document(document_id, extract_relationships=True)
+        service.process_document(document_id, extract_relationships=True, force=True)
         
         doc.status = "PROCESSED"
         db.commit()

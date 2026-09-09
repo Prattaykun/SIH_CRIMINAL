@@ -84,7 +84,7 @@ class DocumentExtractionService:
             self.extractor = MockExtractor()
         self.graph_service = GraphService()
 
-    def process_document(self, document_id: str, extract_relationships: bool = False) -> Dict[str, Any]:
+    def process_document(self, document_id: str, extract_relationships: bool = False, force: bool = False) -> Dict[str, Any]:
         """Extract candidates from document and persist as UNREVIEWED."""
         from apps.backend.app.models.extraction_run import ExtractionRun
         from apps.backend.app.extraction.relationship_service import RelationshipExtractionService
@@ -100,14 +100,15 @@ class DocumentExtractionService:
         provider_ver = self.extractor.provider_version
         model_ver = self.extractor.model_version
         extraction_ver = self.extractor.extraction_version
-        post_proc_ver = "1.0.0" # Deterministic post-processing version
-        rel_rule_ver = "1.0.0" # Relationship rules version
+        # Bumped: ACCOUNT preferred over digit-substring PHONE; keyword-gated relationships
+        post_proc_ver = "1.1.0-acct-priority"
+        rel_rule_ver = "1.1.0-keyword-gated"
         
         run_identity = f"{document_id}:{provider_name}:{provider_ver}:{model_ver}:{extraction_ver}:{post_proc_ver}:{rel_rule_ver}"
         extraction_run_id = hashlib.sha256(run_identity.encode("utf-8")).hexdigest()
         
         run = self.db.query(ExtractionRun).filter(ExtractionRun.extraction_run_id == extraction_run_id).first()
-        if run and run.status == "COMPLETED" and run.entity_candidate_count > 0:
+        if run and run.status == "COMPLETED" and run.entity_candidate_count > 0 and not force:
             return {
                 "status": "success",
                 "extraction_run_id": run.extraction_run_id,
@@ -115,6 +116,15 @@ class DocumentExtractionService:
                 "relationships": run.relationship_candidate_count,
                 "warning": "Run already exists (idempotency matched). Returned cached counts."
             }
+
+        # Replace prior candidates for this document so corrected typing/rels take effect
+        self.db.query(ExtractedRelationship).filter(
+            ExtractedRelationship.document_id == document_id
+        ).delete(synchronize_session=False)
+        self.db.query(ExtractedEntity).filter(
+            ExtractedEntity.document_id == document_id
+        ).delete(synchronize_session=False)
+        self.db.commit()
             
         if not run:
             run = ExtractionRun(
@@ -132,6 +142,12 @@ class DocumentExtractionService:
             )
             self.db.add(run)
             self.db.commit()
+        else:
+            run.status = "RUNNING"
+            run.started_at = datetime.now(timezone.utc)
+            run.entity_candidate_count = 0
+            run.relationship_candidate_count = 0
+            self.db.commit()
             
         # --- Robust Hybrid Extraction Engine ---
         import re
@@ -148,21 +164,41 @@ class DocumentExtractionService:
 
         extracted_entities_data = []
 
-        # 1. Regex Patterns
+        # ACCOUNT before PHONE in intent; phone must not steal ACCT- digit spans.
         patterns = {
-            "PHONE_NUMBER": r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|(?:\+?91[-\s]?)?[6-9]\d{9}|\+1\d{10}',
+            "ACCOUNT": r'\bACCT-\d{6,16}\b',
+            "PHONE_NUMBER": (
+                r'(?<!ACCT-)'
+                r'(?:'
+                r'\+91[-\s]?\d{5}[-\s]?\d{5}'
+                r'|(?:\+?91[-\s]?)?[6-9]\d{9}'
+                r'|\+1\d{10}'
+                r'|\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
+                r')'
+            ),
             "VEHICLE": r'\b[A-Z]{2}[-\s]?\d{2}[-\s]?[A-Z]{1,2}[-\s]?\d{4}\b|\b(?:Hyundai Creta|Maruti Swift|Honda Activa|Black SUV)\b',
-            "ACCOUNT": r'\b(?:ACCT-)?\d{9,16}\b',
             "MONEY": r'(?:INR|₹|Rs\.?)\s?[\d,]+(?:\s?(?:lakhs?|crores?|thousand))?',
-            "ORGANIZATION": r'\b[A-Z][A-Za-z0-9&.\'-]*(?:\s+(?:of|and|&|[A-Z][A-Za-z0-9&.\'-]*)){0,4}\s+(?:Pvt\.?\s*Ltd\.?|Ltd\.?|LLC|Inc\.?|Corp\.?|Corporation|Logistics|Bank|Traders|Enterprises|Solutions|Industries)\b',
-            "PERSON": r'\b(?:Aditya Malhotra|Sneha Kapoor|Rajesh Kumar|Priya Mehta|Amit Sharma|Deepak|Rohit|Mike Johnson|[A-Z][a-z]+ [A-Z][a-z]+)\b'
+            "ORGANIZATION": r'\b[A-Z][A-Za-z0-9&.\'-]*(?:\s+(?:of|and|&|[A-Z][A-Za-z0-9&.\'-]*)){0,4}\s+(?:Pvt\.?\s*Ltd\.?|Ltd\.?|LLC|Inc\.?|Corp\.?|Corporation|Logistics|Bank|Traders|Enterprises|Solutions|Industries|Institute|Centre|Center)\b',
+            # No hardcoded demo names — only general capitalized person pattern
+            "PERSON": r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}\b',
         }
 
         NON_PERSON_KWS = {
             "case", "report", "reference", "station", "department", "officer",
             "incident", "summary", "target", "dossier", "account", "investigat",
             "intelligence", "priority", "status", "delhi", "mumbai", "kolkata",
-            "pvt", "ltd", "corporation", "traders", "logistics", "bank", "vehicle", "phone"
+            "lucknow", "pvt", "ltd", "corporation", "traders", "logistics", "bank",
+            "vehicle", "phone", "police", "commissionerate", "first information",
+        }
+
+        TYPE_PRIORITY = {
+            "ACCOUNT": 5,
+            "ORGANIZATION": 4,
+            "VEHICLE": 4,
+            "MONEY": 3,
+            "PERSON": 2,
+            "PHONE_NUMBER": 1,
+            "LOCATION": 2,
         }
         
         for ent_type, pat in patterns.items():
@@ -172,12 +208,54 @@ class DocumentExtractionService:
                     val_lower = val.lower()
                     if any(k in val_lower for k in NON_PERSON_KWS) or len(val) < 3 or len(val) > 40:
                         continue
+                if ent_type == "PHONE_NUMBER":
+                    # Reject bare bank-account tails that appear as ACCT-<digits> in source
+                    digits = re.sub(r"\D", "", val)
+                    core = digits[2:] if digits.startswith("91") and len(digits) == 12 else digits
+                    if len(core) == 10 and f"ACCT-{core}" in text.upper():
+                        continue
                 extracted_entities_data.append({
                     "type": ent_type,
                     "value": val,
                     "start": match.start(),
                     "end": match.end()
                 })
+
+        # #region agent log
+        try:
+            import json as _json, time as _time
+            from pathlib import Path as _Path
+            _acct_hits = [e for e in extracted_entities_data if "5512830476" in e["value"] or "6094512237" in e["value"] or e["value"].upper().startswith("ACCT-")]
+            _phone_hits = [e for e in extracted_entities_data if e["type"] == "PHONE_NUMBER"]
+            _hardcoded = [e for e in extracted_entities_data if e["type"] == "PERSON" and e["value"] in ("Aditya Malhotra", "Sneha Kapoor", "Rajesh Kumar", "Priya Mehta", "Amit Sharma", "Mike Johnson")]
+            _root = _Path(__file__).resolve()
+            while _root.parent != _root and not (_root / "apps").is_dir():
+                _root = _root.parent
+            _log_path = _root / "debug-e250be.log"
+            with _log_path.open("a", encoding="utf-8") as _lf:
+                _lf.write(_json.dumps({
+                    "sessionId": "e250be",
+                    "hypothesisId": "A,E",
+                    "location": "extraction/service.py:patterns",
+                    "message": "raw pattern matches before dedup",
+                    "data": {
+                        "document_id": document_id,
+                        "case_id": str(doc.case_id),
+                        "text_len": len(text),
+                        "post_proc_ver": post_proc_ver,
+                        "text_has_acct_5512": "ACCT-5512830476" in text.upper(),
+                        "raw_count": len(extracted_entities_data),
+                        "acct_related_raw": _acct_hits[:20],
+                        "phone_raw_sample": _phone_hits[:15],
+                        "hardcoded_person_hits": _hardcoded[:10],
+                        "type_counts_raw": {t: sum(1 for e in extracted_entities_data if e["type"] == t) for t in ("PHONE_NUMBER", "ACCOUNT", "PERSON", "ORGANIZATION", "VEHICLE")},
+                    },
+                    "timestamp": int(_time.time() * 1000),
+                    "runId": "post-fix",
+                }) + "\n")
+        except Exception:
+            pass
+        # #endregion
         
         # 2. spaCy NER (if installed)
         try:
@@ -198,7 +276,14 @@ class DocumentExtractionService:
         except Exception:
             pass # fallback gracefully if spacy not installed
 
-        # Deduplicate entities by span
+        # Deduplicate: longer span wins; on overlap prefer higher-priority types (ACCOUNT > PHONE)
+        extracted_entities_data.sort(
+            key=lambda e: (
+                -(e["end"] - e["start"]),
+                -TYPE_PRIORITY.get(e["type"], 0),
+                e["start"],
+            )
+        )
         seen_spans = set()
         unique_entities = []
         for e in extracted_entities_data:
@@ -207,6 +292,39 @@ class DocumentExtractionService:
             if not overlap:
                 seen_spans.add(span)
                 unique_entities.append(e)
+
+        # #region agent log
+        try:
+            import json as _json, time as _time
+            from pathlib import Path as _Path
+            _kept_spans = {(u["start"], u["end"]) for u in unique_entities}
+            _dropped = [e for e in extracted_entities_data if (e["start"], e["end"]) not in _kept_spans]
+            _acct_kept = [e for e in unique_entities if "5512830476" in e["value"] or "6094512237" in e["value"] or e["value"].upper().startswith("ACCT-")]
+            _phone_kept = [e for e in unique_entities if e["type"] == "PHONE_NUMBER" and ("5512830476" in e["value"] or "6094512237" in e["value"])]
+            _root = _Path(__file__).resolve()
+            while _root.parent != _root and not (_root / "apps").is_dir():
+                _root = _root.parent
+            _log_path = _root / "debug-e250be.log"
+            with _log_path.open("a", encoding="utf-8") as _lf:
+                _lf.write(_json.dumps({
+                    "sessionId": "e250be",
+                    "hypothesisId": "A",
+                    "location": "extraction/service.py:dedup",
+                    "message": "after span dedup — account vs phone winners",
+                    "data": {
+                        "unique_count": len(unique_entities),
+                        "dropped_count": len(_dropped),
+                        "acct_kept": _acct_kept[:15],
+                        "phone_kept_for_acct_digits": _phone_kept[:15],
+                        "dropped_acct_or_phone": [e for e in _dropped if e["type"] in ("ACCOUNT", "PHONE_NUMBER") and ("5512" in e["value"] or "6094" in e["value"] or "ACCT" in e["value"].upper())][:15],
+                        "type_counts_unique": {t: sum(1 for e in unique_entities if e["type"] == t) for t in ("PHONE_NUMBER", "ACCOUNT", "PERSON", "ORGANIZATION", "VEHICLE")},
+                    },
+                    "timestamp": int(_time.time() * 1000),
+                    "runId": "post-fix",
+                }) + "\n")
+        except Exception:
+            pass
+        # #endregion
 
         # 3. Save Candidates with Both case_id and document_id
         db_entities = []
@@ -239,7 +357,7 @@ class DocumentExtractionService:
                     confidence_score=dyn_conf,
                     verification_status="UNREVIEWED",
                     extraction_provider="hybrid_nlp_engine",
-                    extraction_version="1.0",
+                    extraction_version="1.1",
                     attributes=json.dumps({"resolution": res})
                 )
                 self.db.add(db_ent)
@@ -250,13 +368,14 @@ class DocumentExtractionService:
 
         run.entity_candidate_count = len(db_entities)
 
-        # 4. Extract Relationships Between Co-Occurring Entities
+        # 4. Extract Relationships Between Co-Occurring Entities (keyword-gated)
         rel_count = 0
         entity_link_counts = {e.id: 0 for e in db_entities}
 
         if extract_relationships:
             sentences = [s.strip() for s in re.split(r'[.!?\n]+', text) if s.strip()]
             for sentence in sentences:
+                sent_l = sentence.lower()
                 sent_ents = [e for e in db_entities if e.original_value and e.original_value in sentence]
                 for i in range(len(sent_ents)):
                     for j in range(i + 1, len(sent_ents)):
@@ -267,27 +386,35 @@ class DocumentExtractionService:
                             continue
                             
                         rel_type = None
-                        if e1.entity_type == "PERSON" and e2.entity_type == "VEHICLE":
+                        t1, t2 = e1.entity_type, e2.entity_type
+
+                        def _pair(a: str, b: str) -> bool:
+                            return (t1 == a and t2 == b) or (t1 == b and t2 == a)
+
+                        if _pair("PERSON", "VEHICLE") and any(
+                            k in sent_l for k in ("drive", "drove", "driven", "vehicle", "registration", "plate", "car ", "bike")
+                        ):
                             rel_type = "DRIVES"
-                        elif e1.entity_type == "PERSON" and e2.entity_type == "ACCOUNT":
-                            rel_type = "OWNS_ACCOUNT" if "own" in sentence.lower() else "TRANSFERRED"
-                        elif e1.entity_type == "PERSON" and e2.entity_type == "ORGANIZATION":
-                            rel_type = "DIRECTOR_OF" if "director" in sentence.lower() else "EMPLOYED_BY"
-                        elif e1.entity_type == "PERSON" and e2.entity_type == "PHONE_NUMBER":
+                            if t1 == "VEHICLE":
+                                e1, e2 = e2, e1
+                        elif _pair("PERSON", "ACCOUNT") and any(
+                            k in sent_l for k in ("transfer", "account", "acct-", "payment", "rtgs", "upi", "deposit", "beneficiary")
+                        ):
+                            rel_type = "OWNS_ACCOUNT" if "own" in sent_l else "TRANSFERRED"
+                            if t1 == "ACCOUNT":
+                                e1, e2 = e2, e1
+                        elif _pair("PERSON", "ORGANIZATION"):
+                            if "director" in sent_l:
+                                rel_type = "DIRECTOR_OF"
+                            elif any(k in sent_l for k in ("employ", "employee", "works for", "staff of", "joined")):
+                                rel_type = "EMPLOYED_BY"
+                            if rel_type and t1 == "ORGANIZATION":
+                                e1, e2 = e2, e1
+                        elif _pair("PERSON", "PHONE_NUMBER") and any(
+                            k in sent_l for k in ("call", "called", "phone", "mobile", "sms", "whatsapp", "message", "contact", "dial")
+                        ):
                             rel_type = "COMMUNICATED_WITH"
-                        
-                        if not rel_type:
-                            if e2.entity_type == "PERSON" and e1.entity_type == "VEHICLE":
-                                rel_type = "DRIVES"
-                                e1, e2 = e2, e1
-                            elif e2.entity_type == "PERSON" and e1.entity_type == "ACCOUNT":
-                                rel_type = "OWNS_ACCOUNT" if "own" in sentence.lower() else "TRANSFERRED"
-                                e1, e2 = e2, e1
-                            elif e2.entity_type == "PERSON" and e1.entity_type == "ORGANIZATION":
-                                rel_type = "DIRECTOR_OF" if "director" in sentence.lower() else "EMPLOYED_BY"
-                                e1, e2 = e2, e1
-                            elif e2.entity_type == "PERSON" and e1.entity_type == "PHONE_NUMBER":
-                                rel_type = "COMMUNICATED_WITH"
+                            if t1 == "PHONE_NUMBER":
                                 e1, e2 = e2, e1
                                 
                         if rel_type:
@@ -300,6 +427,36 @@ class DocumentExtractionService:
                             
                             if not existing_rel:
                                 rel_conf = round(min(e1.confidence_score, e2.confidence_score) * 0.95, 2)
+
+                                # #region agent log
+                                try:
+                                    import json as _json, time as _time
+                                    from pathlib import Path as _Path
+                                    if rel_type in ("DIRECTOR_OF", "EMPLOYED_BY", "DRIVES", "COMMUNICATED_WITH", "TRANSFERRED", "OWNS_ACCOUNT") or "5512830476" in (e1.original_value or "") or "5512830476" in (e2.original_value or "") or "6094512237" in (e1.original_value or "") or "6094512237" in (e2.original_value or ""):
+                                        _root = _Path(__file__).resolve()
+                                        while _root.parent != _root and not (_root / "apps").is_dir():
+                                            _root = _root.parent
+                                        _log_path = _root / "debug-e250be.log"
+                                        with _log_path.open("a", encoding="utf-8") as _lf:
+                                            _lf.write(_json.dumps({
+                                                "sessionId": "e250be",
+                                                "hypothesisId": "B",
+                                                "location": "extraction/service.py:rel",
+                                                "message": "heuristic relationship created",
+                                                "data": {
+                                                    "rel_type": rel_type,
+                                                    "e1_type": e1.entity_type,
+                                                    "e1_value": e1.original_value,
+                                                    "e2_type": e2.entity_type,
+                                                    "e2_value": e2.original_value,
+                                                    "sentence_preview": sentence[:180],
+                                                },
+                                                "timestamp": int(_time.time() * 1000),
+                                                "runId": "post-fix",
+                                            }) + "\n")
+                                except Exception:
+                                    pass
+                                # #endregion
                                 
                                 rel = ExtractedRelationship(
                                     extraction_run_id=extraction_run_id,
@@ -383,8 +540,42 @@ class DocumentExtractionService:
             ExtractedRelationship.verification_status.in_(["ACCEPTED", "CORRECTED"]),
             ExtractedRelationship.graph_sync_status != "SYNCED"
         ).all()
+
+        # Lazily verify — init_driver alone never sets availability True
+        neo4j_ok = neo4j_manager.verify_connectivity()
+
+        # #region agent log
+        try:
+            import json as _json, time as _time
+            from pathlib import Path as _Path
+            from apps.backend.app.core.config import settings as _settings
+            _root = _Path(__file__).resolve()
+            while _root.parent != _root and not (_root / "apps").is_dir():
+                _root = _root.parent
+            _log_path = _root / "debug-e250be.log"
+            with _log_path.open("a", encoding="utf-8") as _lf:
+                _lf.write(_json.dumps({
+                    "sessionId": "e250be",
+                    "runId": "post-fix",
+                    "hypothesisId": "F",
+                    "location": "extraction/service.py:sync_approved_to_graph",
+                    "message": "neo4j sync availability check",
+                    "data": {
+                        "document_id": document_id,
+                        "neo4j_ok": neo4j_ok,
+                        "driver_present": neo4j_manager._driver is not None,
+                        "uri_scheme": (_settings.NEO4J_URI or "").split("://", 1)[0],
+                        "database": _settings.NEO4J_DATABASE,
+                        "entity_count": len(entities),
+                        "relationship_count": len(relationships),
+                    },
+                    "timestamp": int(_time.time() * 1000),
+                }) + "\n")
+        except Exception:
+            pass
+        # #endregion
         
-        if not neo4j_manager.is_available():
+        if not neo4j_ok:
             # Retryable fallback
             for e in entities:
                 e.graph_sync_status = "RETRYABLE_FAILURE"
@@ -425,7 +616,7 @@ class DocumentExtractionService:
                         r.graph_sync_error = "Endpoints not synced"
             
             self.db.commit()
-            return {"status": "SUCCESS"}
+            return {"status": "SUCCESS", "synced_entities": len(entities), "synced_relationships": len(relationships)}
         except Exception as ex:
             for e in entities:
                 e.graph_sync_status = "RETRYABLE_FAILURE"

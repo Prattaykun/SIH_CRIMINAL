@@ -90,7 +90,7 @@ export default function ExtractionReviewPanel({ documentId, caseId }: Props) {
   const handleSync = async () => {
     try {
       setSyncStatus(null);
-      const data = await api.syncApprovedCandidates(targetId);
+      const data = await api.syncApprovedCandidates(targetId, targetType);
       const isSuccess = data?.status === "SUCCESS";
       setSyncStatus({
         message: isSuccess 
@@ -110,7 +110,7 @@ export default function ExtractionReviewPanel({ documentId, caseId }: Props) {
     try {
       setLoading(true);
       setError(null);
-      await api.runDocumentExtraction(targetId);
+      await api.runDocumentExtraction(targetId, targetType);
       await fetchCandidates();
     } catch (err: unknown) {
       setError(`Extraction notice: ${err instanceof Error ? err.message : String(err)}`);

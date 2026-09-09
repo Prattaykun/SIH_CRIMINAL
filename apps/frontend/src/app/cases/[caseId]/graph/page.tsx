@@ -207,6 +207,9 @@ export default function CaseGraphPage() {
       if (caseRes) setCaseData(caseRes);
 
       const normalized = normalizeGraphData(rawEntities, rawRels);
+      // #region agent log
+      fetch('http://127.0.0.1:7267/ingest/e2dbf843-7e56-4e83-b0d0-931cc70abd78',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e250be'},body:JSON.stringify({sessionId:'e250be',runId:'post-fix',hypothesisId:'C,D',location:'graph/page.tsx:fetchGraphData',message:'graph candidates loaded from API',data:{caseId,rawEntityCount:rawEntities.length,rawRelCount:rawRels.length,normalizedEntityCount:normalized.entities.length,normalizedRelCount:normalized.relationships.length,phoneLike:normalized.entities.filter((e)=>e.type==='PHONE_NUMBER'||e.type==='PHONE').map((e)=>({id:e.id,label:e.label,type:e.type})).slice(0,20),accountLike:normalized.entities.filter((e)=>e.type==='ACCOUNT'||e.type==='BANK_ACCOUNT').map((e)=>({id:e.id,label:e.label,type:e.type})).slice(0,20),relTypes:Array.from(new Set(normalized.relationships.map((r)=>r.type))),sampleRels:normalized.relationships.slice(0,12).map((r)=>({type:r.type,source:r.source,target:r.target})),labelsWithAcctDigits:normalized.entities.filter((e)=>/5512830476|6094512237/.test(e.label)).map((e)=>({label:e.label,type:e.type}))},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       setEntities(normalized.entities);
       setRelationships(normalized.relationships);
       setClusters(normalized.clusters);

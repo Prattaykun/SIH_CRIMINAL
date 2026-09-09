@@ -436,19 +436,38 @@ export const api = {
     return handleResponse<any>(response);
   },
 
-  async runDocumentExtraction(docOrCaseId: string): Promise<any> {
-    const url = docOrCaseId.startsWith("doc-")
+  async runDocumentExtraction(
+    docOrCaseId: string,
+    scope: "document" | "case" = "case"
+  ): Promise<any> {
+    // Prefer explicit scope — real document UUIDs do not start with "doc-".
+    const isDocument =
+      scope === "document" || docOrCaseId.startsWith("doc-");
+    const url = isDocument
       ? `${API_BASE_URL}/documents/${docOrCaseId}/extract`
       : `${API_BASE_URL}/cases/${docOrCaseId}/extract`;
+
+    // #region agent log
+    fetch('http://127.0.0.1:7267/ingest/e2dbf843-7e56-4e83-b0d0-931cc70abd78',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e250be'},body:JSON.stringify({sessionId:'e250be',runId:'post-fix',hypothesisId:'H',location:'api.ts:runDocumentExtraction',message:'extract route selected',data:{docOrCaseId,scope,isDocument,url},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     const response = await fetchWithTimeout(url, { method: "POST" });
     return handleResponse<any>(response);
   },
 
-  async syncApprovedCandidates(docOrCaseId: string): Promise<any> {
-    const url = docOrCaseId.startsWith("doc-")
+  async syncApprovedCandidates(
+    docOrCaseId: string,
+    scope: "document" | "case" = "case"
+  ): Promise<any> {
+    const isDocument =
+      scope === "document" || docOrCaseId.startsWith("doc-");
+    const url = isDocument
       ? `${API_BASE_URL}/documents/${docOrCaseId}/sync-approved`
       : `${API_BASE_URL}/cases/${docOrCaseId}/sync-approved`;
+
+    // #region agent log
+    fetch('http://127.0.0.1:7267/ingest/e2dbf843-7e56-4e83-b0d0-931cc70abd78',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e250be'},body:JSON.stringify({sessionId:'e250be',runId:'post-fix',hypothesisId:'H',location:'api.ts:syncApprovedCandidates',message:'sync route selected',data:{docOrCaseId,scope,isDocument,url},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     const response = await fetchWithTimeout(url, { method: "POST" });
     return handleResponse<any>(response);
