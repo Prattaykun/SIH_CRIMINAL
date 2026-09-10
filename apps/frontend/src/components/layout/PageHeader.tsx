@@ -21,8 +21,8 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <div className={cn(surfaceHeader, className)}>
-      <div className="flex max-h-[20vh] flex-col gap-3 overflow-y-auto sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+    <div className={cn(surfaceHeader, "relative z-40 overflow-visible", className)}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="flex min-w-0 flex-1 items-start gap-3 md:gap-4 sm:max-w-[58%]">
           <div className="min-w-0 flex-1">
             {badge ? (
@@ -47,10 +47,10 @@ export function PageHeader({
               </p>
             ) : null}
           </div>
-          {leading ? <div className="shrink-0 pt-0.5">{leading}</div> : null}
+          {leading ? <div className="relative z-50 shrink-0 pt-0.5">{leading}</div> : null}
         </div>
         {actions ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:max-w-[42%] sm:justify-end">
+          <div className="relative z-50 flex shrink-0 flex-wrap items-center gap-2 sm:max-w-[42%] sm:justify-end">
             {actions}
           </div>
         ) : null}

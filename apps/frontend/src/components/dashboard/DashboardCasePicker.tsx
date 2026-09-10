@@ -138,7 +138,7 @@ export function DashboardCasePicker({
         <div
           className={cn(
             surfaceCard,
-            'absolute top-full z-50 mt-2 w-[min(22rem,calc(100vw-3rem))] overflow-hidden p-0',
+            'absolute top-full z-[200] mt-2 w-[min(22rem,calc(100vw-3rem))] overflow-hidden p-0',
             dropdownAlign === 'left' ? 'left-0' : 'right-0'
           )}
         >

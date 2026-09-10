@@ -104,7 +104,7 @@ export function CaseWorkspacePicker({
         <div
           className={cn(
             surfaceCard,
-            'absolute left-0 top-full z-50 mt-2 w-[min(22rem,90vw)] overflow-hidden p-0 shadow-2xl'
+            'absolute left-0 top-full z-[200] mt-2 w-[min(22rem,90vw)] overflow-hidden p-0 shadow-2xl'
           )}
           role="listbox"
         >
